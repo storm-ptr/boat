@@ -1,0 +1,44 @@
+// Andrew Naplavkov
+
+#ifndef BOAT_TEST_DATA_HPP
+#define BOAT_TEST_DATA_HPP
+
+#include <boat/pfr/io.hpp>
+#include <boat/sql/reflection.hpp>
+#include "utility.hpp"
+
+struct object_struct {
+    int id;
+    std::chrono::utc_seconds time;
+    boat::geometry::geographic::variant geom;
+    std::string commander;
+    std::optional<double> kms;
+};
+
+inline auto const object_table = [] {
+    auto ret = boat::sql::get_table<object_struct>();
+    ret.index_keys = {
+        {.index_name = "pk",
+         .column_name = std::string(boost::pfr::get_name<0, object_struct>()),
+         .primary = true},
+        {.index_name = "rtree",
+         .column_name = std::string(boost::pfr::get_name<2, object_struct>())}};
+    return ret;
+}();
+
+inline object_struct const objects[] = {
+    {.id = 1,
+     .time{boat::pfr::get<std::chrono::utc_seconds>("1961-04-12 06:07:00")},
+     .geom = boost::geometry::from_wkt<boat::geometry::geographic::variant>(
+         "GEOMETRYCOLLECTION(POINT (20 40),LINESTRING (40 40, 20 45, 45 30))"),
+     .commander{boat::as_chars(u8"\u042e\u0440\u0438\u0439\u0020"
+                               u8"\u0413\u0430\u0433\u0430\u0440\u0438\u043d")},
+     .kms = 7.61},
+    {.id = 2,
+     .time{boat::pfr::get<std::chrono::utc_seconds>("1969-07-16 13:32:00")},
+     .geom = boost::geometry::from_wkt<boat::geometry::geographic::variant>(
+         "POLYGON((20 35,10 30,10 10,30 5,45 20,20 35),"
+         "(30 20,20 15,20 25,30 20))"),
+     .commander{"Neil Armstrong"}}};
+
+#endif  // BOAT_TEST_DATA_HPP
