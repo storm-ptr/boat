@@ -5,7 +5,7 @@
 
 BOOST_AUTO_TEST_CASE(caches_lru)
 {
-    auto lru = boat::gui::caches::lru(2);
+    auto lru = boat::gui::caches::lru{2u};
     lru.put(1, 1);                                         //< {1:1}
     lru.put(2, 2);                                         //< {1:1, 2:2}
     BOOST_CHECK_EQUAL(std::any_cast<int>(lru.get(1)), 1);  //< {2:2, 1:1}

@@ -1,9 +1,8 @@
 QT = core gui
-CONFIG += c++latest console
+CONFIG += c++latest console warn_off
 SOURCES = *.cpp
 
 windows:{
-QMAKE_CXX = clang-cl
 QMAKE_CXXFLAGS += -EHsc -bigobj
 INCLUDEPATH += ../../../include
 LIBS += \

@@ -3,7 +3,6 @@
 #ifndef BOAT_GUI_DATASETS_DATASET_HPP
 #define BOAT_GUI_DATASETS_DATASET_HPP
 
-#include <boat/gui/caches/cache.hpp>
 #include <boat/gui/feature.hpp>
 #include <generator>
 

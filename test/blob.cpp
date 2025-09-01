@@ -16,11 +16,11 @@ BOOST_AUTO_TEST_CASE(blob_io)
 BOOST_AUTO_TEST_CASE(blob_endian)
 {
     auto bytes = boat::blob{} << char8_t(0xfe) << char8_t(0xff);
-    for (auto [end, expect] : {
+    for (auto [endian, expect] : {
              std::pair{std::endian::big, 0xfeff},
              std::pair{std::endian::little, 0xfffe},
          }) {
         auto in = boat::blob_view{bytes};
-        BOOST_CHECK(boat::get<char16_t>(in, end) == char16_t(expect));
+        BOOST_CHECK(boat::get<char16_t>(in, endian) == char16_t(expect));
     }
 }

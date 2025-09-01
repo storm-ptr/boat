@@ -8,7 +8,7 @@
 inline std::generator<std::unique_ptr<boat::db::command>> commands()
 {
     co_yield boat::db::create(
-        "postgres://postgres:E207cGYM@192.168.31.128/"
+        "postgresql://postgres:E207cGYM@192.168.31.128/"
         "postgres?client_encoding=UTF8");
     co_yield boat::db::create(
         "odbc://sa:E207cGYM@192.168.31.128/master?DRIVER=SQL Server");

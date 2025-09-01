@@ -17,8 +17,8 @@ BOOST_AUTO_TEST_CASE(uri)
           .host = "192.168.31.128",
           .path = "master",
           .query = "DRIVER=SQL Server"}},
-        {"postgresql://postgres:E207cGYM@192.168.31.128:5432"
-         "/postgres?client_encoding=UTF8",
+        {"postgresql://postgres:E207cGYM@192.168.31.128:5432/"
+         "postgres?client_encoding=UTF8",
          {.scheme = "postgresql",
           .user = "postgres",
           .password = "E207cGYM",
@@ -26,8 +26,7 @@ BOOST_AUTO_TEST_CASE(uri)
           .port = 5432,
           .path = "postgres",
           .query = "client_encoding=UTF8"}},
-        {"sqlite:///C:/home/gis_data/sqlite/Mexico.sqlite",
-         {.scheme = "sqlite", .path = "C:/home/gis_data/sqlite/Mexico.sqlite"}},
+        {"sqlite:///:memory:", {.scheme = "sqlite", .path = ":memory:"}},
         {"slippy://algol@", {.scheme = "slippy", .user = "algol"}},
     };
     for (auto& [str, expect] : tests) {
