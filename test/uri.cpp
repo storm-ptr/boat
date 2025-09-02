@@ -10,19 +10,19 @@ BOOST_AUTO_TEST_CASE(uri)
         std::string_view str;
         boat::uri expect;
     } tests[] = {
-        {"odbc://sa:E207cGYM@192.168.31.128/master?DRIVER=SQL Server",
+        {"odbc://sa:Password12!@(local)\\SQL2019/master?DRIVER=SQL Server",
          {.scheme = "odbc",
           .user = "sa",
-          .password = "E207cGYM",
-          .host = "192.168.31.128",
+          .password = "Password12!",
+          .host = "(local)\\SQL2019",
           .path = "master",
           .query = "DRIVER=SQL Server"}},
-        {"postgresql://postgres:E207cGYM@192.168.31.128:5432/"
+        {"postgresql://postgres:Password12!@localhost:5432/"
          "postgres?client_encoding=UTF8",
          {.scheme = "postgresql",
           .user = "postgres",
-          .password = "E207cGYM",
-          .host = "192.168.31.128",
+          .password = "Password12!",
+          .host = "localhost",
           .port = 5432,
           .path = "postgres",
           .query = "client_encoding=UTF8"}},

@@ -49,7 +49,7 @@ struct uri {
 inline std::optional<uri> parse_uri(std::string_view str)
 {
     static auto const regex = std::regex{
-        R"(^(\w+):\/\/(([^:@]*)(:([^@]*))?\@)?(([\w\d\.-]+)(:(\d+))?)?(\/([\w\d\.\/\-\:]*))?(\?([\w\d\s\.\=\&]*))?(\#[\w\d\-]*)?$)"};
+        R"(^(\w+):\/\/(([^:@]*)(:([^@]*))?\@)?(([\w\d\.\(\)\\-]+)(:(\d+))?)?(\/([\w\d\.\/\-\:]*))?(\?([\w\d\s\.\=\&]*))?(\#[\w\d\-]*)?$)"};
     auto match = std::cmatch{};
     return std::regex_match(str.data(), str.data() + str.size(), match, regex)
                ? std::optional{uri{.scheme = match[1],

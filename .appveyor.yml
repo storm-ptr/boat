@@ -1,0 +1,55 @@
+image:
+  - Visual Studio 2022
+
+platform: x64
+
+configuration: Release
+
+clone_depth: 1
+
+skip_tags: true
+
+for:
+- matrix:
+    only:
+      - image: Visual Studio 2022
+
+  services:
+    - mssql2019
+    - postgresql16
+
+  init:
+    - net start MSSQL$SQL2019
+
+  environment:
+    OSGEO4W_ROOT: C:\OSGeo4W64
+    PGUSER: postgres
+    PGPASSWORD: Password12!
+
+  install:
+    - mkdir %OSGEO4W_ROOT%
+    - ps: Invoke-WebRequest -Uri http://download.osgeo.org/osgeo4w/setup.exe -OutFile $env:OSGEO4W_ROOT\setup.exe
+    - call %OSGEO4W_ROOT%\setup.exe -q -k -r -A -s http://download.osgeo.org/osgeo4w/ -a x86_64 -P curl,libpq,spatialite,sqlite3 -R %OSGEO4W_ROOT% > NUL
+    - del /Q /F %OSGEO4W_ROOT%\bin\boost*.dll %OSGEO4W_ROOT%\bin\mod_spatialite.dll
+    - curl -L -O -S -s http://download.osgeo.org/postgis/windows/pg16/postgis-bundle-pg16-3.5.3x64.zip
+    - call "C:\Program Files\7-Zip\7z.exe" x postgis-bundle-pg16-3.5.3x64.zip > nul
+    - xcopy /s /y /q postgis-bundle-pg16-3.5.3x64 "C:\Program Files\PostgreSQL\16"
+    - 'SET INCLUDE=%INCLUDE%;%APPVEYOR_BUILD_FOLDER%\include;C:\Libraries\boost_1_86_0;%OSGEO4W_ROOT%\include;%OSGEO4W_ROOT%\include\libpq'
+    - 'SET LIB=%LIB%;%OSGEO4W_ROOT%\lib'
+    - call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+    - call C:\Qt\6.8\msvc2022_64\bin\qtenv2.bat
+
+  build_script:
+    - cd %APPVEYOR_BUILD_FOLDER%\test
+    - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=Password12! /DBOAT_TEST_MSSQL_HOST=(local)\\SQL2019 /DBOAT_TEST_POSTGRESQL_HOST=localhost&& nmake -f ./makefile.windows
+    - cd %APPVEYOR_BUILD_FOLDER%\test\gui\qt
+    - qmake "DEFINES+='BOAT_TEST_PASSWORD=Password12!' 'BOAT_TEST_MSSQL_HOST=(local)\\SQL2019' 'BOAT_TEST_POSTGRESQL_HOST=localhost'"
+
+  before_test:
+    - call "C:\Program Files\PostgreSQL\16\bin\psql" -d postgres -U postgres -c "CREATE EXTENSION postgis;"
+
+  test_script:
+    - cd %APPVEYOR_BUILD_FOLDER%\test
+    - nmake -f ./makefile.windows test
+    - cd %APPVEYOR_BUILD_FOLDER%\test\gui\qt
+    - nmake test
