@@ -30,7 +30,7 @@ inline std::unique_ptr<adaptor> create(table const& tbl, column const& col)
 {
     if (auto ret = try_create(tbl, col))
         return ret;
-    throw std::runtime_error(col.column_name);
+    throw std::runtime_error(concat(col.column_name, " ", col.type_name));
 }
 
 }  // namespace boat::sql::adaptors

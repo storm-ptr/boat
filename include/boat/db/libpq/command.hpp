@@ -15,7 +15,7 @@ class command : public db::command {
 public:
     explicit command(char const* connection) : dbc_(PQconnectdb(connection))
     {
-        check(dbc_.get(), dbc_ && PQstatus(dbc_.get()) == CONNECTION_OK);
+        check(dbc_ && PQstatus(dbc_.get()) == CONNECTION_OK, dbc_);
     }
 
     pfr::rowset exec(query const& qry) override
@@ -45,7 +45,7 @@ public:
                                          formats.data(),
                                          text_fmt)};
         auto rc = PQresultStatus(res.get());
-        check(dbc_.get(), rc == PGRES_COMMAND_OK || rc == PGRES_TUPLES_OK);
+        check(rc == PGRES_COMMAND_OK || rc == PGRES_TUPLES_OK, dbc_);
         ret.columns.resize(res ? PQnfields(res.get()) : 0);
         ret.rows.resize(res ? PQntuples(res.get()) : 0);
         for (int col{}; col < ret.columns.size(); ++col)

@@ -11,11 +11,7 @@ namespace boat::db::libpq {
 template <arithmetic T>
 T get(PGresult* res, int row, int col)
 {
-    T ret;
-    auto first = PQgetvalue(res, row, col);
-    auto last = first + PQgetlength(res, row, col);
-    std::from_chars(first, last, ret);
-    return ret;
+    return from_chars<T>(PQgetvalue(res, row, col), PQgetlength(res, row, col));
 }
 
 inline pfr::variant get_blob(PGresult* res, int row, int col)

@@ -23,6 +23,13 @@ inline std::generator<std::unique_ptr<boat::db::command>> commands()
         host
 #endif
             ;
+    constexpr auto mysql_host =
+#if defined(BOAT_TEST_MYSQL_HOST)
+        BOOST_PP_STRINGIZE(BOAT_TEST_MYSQL_HOST)
+#else
+        host
+#endif
+            ;
     constexpr auto postgresql_host =
 #if defined(BOAT_TEST_POSTGRESQL_HOST)
         BOOST_PP_STRINGIZE(BOAT_TEST_POSTGRESQL_HOST)
@@ -30,13 +37,15 @@ inline std::generator<std::unique_ptr<boat::db::command>> commands()
         host
 #endif
             ;
+    co_yield boat::db::create(
+        boat::concat("mysql://root:", password, "@", mysql_host, "/mysql"));
+    co_yield boat::db::create(boat::concat(
+        "odbc://sa:", password, "@", mssql_host, "/master?DRIVER=SQL Server"));
     co_yield boat::db::create(boat::concat("postgresql://postgres:",
                                            password,
                                            "@",
                                            postgresql_host,
                                            "/postgres?client_encoding=UTF8"));
-    co_yield boat::db::create(boat::concat(
-        "odbc://sa:", password, "@", mssql_host, "/master?DRIVER=SQL Server"));
     auto cmd = boat::db::create("sqlite:///:memory:");
     cmd->exec("SELECT InitSpatialMetaData('WGS84')");
     co_yield std::move(cmd);

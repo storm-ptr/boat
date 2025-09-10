@@ -148,7 +148,7 @@ struct mssql : dialect {
             if (any_primary(tbl.index_keys, col.column_name))
                 q << " not null";
         }
-        q << "\n )";
+        q << "\n );";
         for (auto& col : tbl.columns | std::views::filter(geo))
             q << "\n exec sp_addextendedproperty @name = 'srid'"
               << "\n , @value = " << to_chars(col.srid)
@@ -158,21 +158,7 @@ struct mssql : dialect {
               << "\n , @level1name = " << pfr::variant(tbl.table_name)
               << "\n , @level2type = 'column'"
               << "\n , @level2name = " << pfr::variant(col.column_name);
-        auto i = 0;
-        for (auto idx : tbl.indices() | std::views::filter(constructible)) {
-            auto key = std::ranges::begin(idx);
-            auto spatial = any_geo(tbl.columns, key->column_name);
-            if (spatial && std::ranges::size(idx) > 1u)
-                continue;
-            auto type = spatial ? "spatial" : key->unique ? "unique" : "";
-            if (key->primary)
-                q << "\n alter table " << id{tbl} << " add primary key ";
-            else
-                q << "\n create " << type << " index _" << to_chars(++i)
-                  << " on " << id{tbl} << " ";
-            q << index_spec{idx};
-        }
-        return q;
+        return q << "\n ;" << create_indices{tbl};
     }
 };
 

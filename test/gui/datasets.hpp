@@ -30,6 +30,7 @@ inline std::generator<std::shared_ptr<boat::gui::datasets::dataset>> datasets()
 
     for (auto cmd : commands()) {
         cmd->set_autocommit(false);
+        cmd->exec({"drop table if exists ", db::id{object_table.table_name}});
         auto tbl = sql::create(*cmd, object_table);
         sql::insert(*cmd, tbl, pfr::to_rowset(objects));
         co_yield std::make_shared<gui::datasets::sql>(

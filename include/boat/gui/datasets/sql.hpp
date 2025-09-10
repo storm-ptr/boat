@@ -23,10 +23,8 @@ public:
     {
     }
 
-    sql(std::string const& scheme,
-        std::string const& connection,
-        std::shared_ptr<caches::cache> const& cache)
-        : sql([=] { return db::create(scheme, connection); }, cache)
+    sql(std::string url, std::shared_ptr<caches::cache> const& cache)
+        : sql([url = std::move(url)] { return db::create(url); }, cache)
     {
     }
 

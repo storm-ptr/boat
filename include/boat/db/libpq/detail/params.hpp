@@ -35,11 +35,11 @@ public:
 };
 
 template <class T, Oid oid, int fmt>
-class sequence : public param {
+class array : public param {
     T view_;
 
 public:
-    explicit sequence(T view) : view_(view) {}
+    explicit array(T view) : view_(view) {}
     Oid type() override { return oid; }
     char const* value() override { return as_chars(view_.data()); }
     int length() override { return int(view_.size()); }
@@ -50,8 +50,8 @@ inline std::unique_ptr<param> create(pfr::variant const& var)
 {
     using integer = scalar<int64_t, int8_oid>;
     using real = scalar<double, float8_oid>;
-    using text = sequence<std::string_view, text_oid, text_fmt>;
-    using binary = sequence<blob_view, bytea_oid, binary_fmt>;
+    using text = array<std::string_view, text_oid, text_fmt>;
+    using binary = array<blob_view, bytea_oid, binary_fmt>;
     auto ret = std::unique_ptr<param>{};
     auto vis =
         overloaded{[](pfr::null) { throw std::runtime_error{"null param"}; },

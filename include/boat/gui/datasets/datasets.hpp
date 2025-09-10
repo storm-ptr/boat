@@ -12,18 +12,17 @@
 namespace boat::gui::datasets {
 
 inline std::shared_ptr<dataset> create(
-    std::string_view uri,
+    std::string_view url,
     std::shared_ptr<caches::cache> const& cache)
 {
-    auto u = parse_uri(uri);
-    check(!!u, "datasets::create");
-    if (u->scheme == "slippy")
+    if (url.starts_with("slippy"))
 #if __has_include(<curl/curl.h>)
-        return std::make_shared<slippy>(u->user, cache);
+        return std::make_shared<slippy>(std::string{uri::parse(url).user},
+                                        cache);
 #else
-        throw std::runtime_error(concat("datasets::create ", u->scheme));
+        throw std::runtime_error("no curl");
 #endif
-    return std::make_shared<sql>(u->scheme, to_string(*u), cache);
+    return std::make_shared<sql>(std::string{url}, cache);
 }
 
 }  // namespace boat::gui::datasets

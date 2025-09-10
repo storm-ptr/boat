@@ -63,39 +63,6 @@ constexpr auto as_chars(auto* ptr)
     return reinterpret_cast<char const*>(ptr);
 }
 
-bool any(std::initializer_list<std::string_view> list, auto&& pred)
-{
-    return std::ranges::any_of(list, pred);
-}
-
-constexpr auto equal(std::string_view lhs)
-{
-    return [lhs](std::string_view rhs) { return lhs == rhs; };
-}
-
-constexpr auto within(std::string_view lhs)
-{
-    return [lhs](std::string_view rhs) { return lhs.contains(rhs); };
-}
-
-template <class CharT = char>
-std::basic_string<CharT> concat(auto&&... vals)
-{
-    auto os = std::basic_ostringstream<CharT>{};
-    os.imbue(std::locale::classic());
-    ((os << vals), ...);
-    return std::move(os).str();
-}
-
-template <std::integral T>
-std::string to_chars(T val)
-{
-    auto str = std::string(std::numeric_limits<T>::digits10 + 2, 0);
-    auto [ptr, _] = std::to_chars(str.data(), str.data() + str.size(), val);
-    str.resize(ptr - str.data());
-    return str;
-}
-
 constexpr auto single_span(arithmetic auto& val)
 {
     return std::span{&val, 1};
@@ -118,6 +85,34 @@ inline void check(bool success, char const* what)
 {
     if (!success)
         throw std::runtime_error(what);
+}
+
+template <class CharT = char>
+std::basic_string<CharT> concat(auto&&... vals)
+{
+    auto os = std::basic_ostringstream<CharT>{};
+    os.imbue(std::locale::classic());
+    ((os << vals), ...);
+    return std::move(os).str();
+}
+
+template <arithmetic T>
+T from_chars(char const* str, size_t len)
+{
+    T ret;
+    auto [end, ec] = std::from_chars(str, str + len, ret);
+    check(ec == std::errc{} && end == str + len, "from_chars");
+    return ret;
+}
+
+template <std::integral T>
+std::string to_chars(T val)
+{
+    auto ret = std::string(std::numeric_limits<T>::digits10 + 2, 0);
+    auto [end, ec] = std::to_chars(ret.data(), ret.data() + ret.size(), val);
+    check(ec == std::errc{}, "to_chars");
+    ret.resize(end - ret.data());
+    return ret;
 }
 
 }  // namespace boat

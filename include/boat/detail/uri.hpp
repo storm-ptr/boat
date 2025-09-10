@@ -3,92 +3,61 @@
 #ifndef BOAT_URI_HPP
 #define BOAT_URI_HPP
 
-#include <cstdlib>
-#include <locale>
-#include <optional>
-#include <ranges>
 #include <regex>
-#include <sstream>
+#include <stdexcept>
 
 namespace boat {
 
 struct uri {
-    std::string scheme;
-    std::string user;
-    std::string password;
-    std::string host;
-    int port;
-    std::string path;
-    std::string query;
-    std::string fragment;
+    std::string_view scheme;
+    std::string_view user;
+    std::string_view password;
+    std::string_view host_spec;  //< [host][:port][,...]
+    std::string_view path;
+    std::string_view query;
+    std::string_view fragment;
 
-    friend auto operator<=>(uri const&, uri const&) = default;
+    friend bool operator==(uri const&, uri const&) = default;
 
-    friend auto& operator<<(std::ostream& out, uri const& in)
+    static uri parse(std::string_view str)
     {
-        out << in.scheme << "://";
-        if (!in.user.empty()) {
-            out << in.user;
-            if (!in.password.empty())
-                out << ':' << in.password;
-            out << '@';
-        }
-        out << in.host;
-        if (in.port)
-            out << ':' << in.port;
-        if (!in.path.empty())
-            out << '/' << in.path;
-        if (!in.query.empty())
-            out << '?' << in.query;
-        if (!in.fragment.empty())
-            out << '#' << in.fragment;
-        return out;
+        static auto const regex = std::regex{
+            R"(^(\w+):\/\/(([^:@]*)(:([^@]*))?\@)?([^/?#]+)?(\/([^?#]*))?(\?([^#]*))?(\#(.*))?$)"};
+        static auto const adapt = [](auto const& val) {
+            return std::string_view{val.first, val.second};
+        };
+        auto match = std::cmatch{};
+        return std::regex_match(
+                   str.data(), str.data() + str.size(), match, regex)
+                   ? uri{.scheme = adapt(match[1]),
+                         .user = adapt(match[3]),
+                         .password = adapt(match[5]),
+                         .host_spec = adapt(match[6]),
+                         .path = adapt(match[8]),
+                         .query = adapt(match[10]),
+                         .fragment = adapt(match[12])}
+                   : throw std::runtime_error("uri::parse");
     }
 };
 
-inline std::optional<uri> parse_uri(std::string_view str)
-{
-    static auto const regex = std::regex{
-        R"(^(\w+):\/\/(([^:@]*)(:([^@]*))?\@)?(([\w\d\.\(\)\\-]+)(:(\d+))?)?(\/([\w\d\.\/\-\:]*))?(\?([\w\d\s\.\=\&]*))?(\#[\w\d\-]*)?$)"};
-    auto match = std::cmatch{};
-    return std::regex_match(str.data(), str.data() + str.size(), match, regex)
-               ? std::optional{uri{.scheme = match[1],
-                                   .user = match[3],
-                                   .password = match[5],
-                                   .host = match[7],
-                                   .port = std::atoi(match[9].str().data()),
-                                   .path = match[11],
-                                   .query = match[13],
-                                   .fragment = match[14]}}
-               : std::nullopt;
-}
+struct socket_address {
+    std::string_view host;
+    std::string_view port;
 
-inline std::string to_string(uri const& val)
-{
-    auto os = std::ostringstream{};
-    os.imbue(std::locale::classic());
-    if ("odbc" == val.scheme) {
-        if (!val.user.empty())
-            os << "uid=" << val.user << ';';
-        if (!val.password.empty())
-            os << "pwd=" << val.password << ';';
-        if (!val.host.empty())
-            os << "server=" << val.host << ';';
-        if (val.port)
-            os << "port=" << val.port << ';';
-        if (!val.path.empty())
-            os << "database=" << val.path << ';';
-        for (char c : val.query | std::views::transform([](char c) {
-                          return c == '&' ? ';' : c;
-                      }))
-            os << c;
+    static socket_address parse(std::string_view host_spec)
+    {
+        if (host_spec.contains(','))
+            return {host_spec};
+        auto pos = host_spec.find_last_not_of("0123456789");
+        if (pos == std::string::npos || host_spec[pos] != ':')
+            return {host_spec};
+        auto host = host_spec.substr(0, pos);
+        auto port = host_spec.substr(pos + 1);
+        if (host.empty() || port.empty())
+            return {host_spec};
+        return {host, port};
     }
-    else if ("file" == val.scheme || "sqlite" == val.scheme)
-        os << val.path;
-    else
-        os << val;
-    return std::move(os).str();
-}
+};
 
 }  // namespace boat
 

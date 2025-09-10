@@ -4,6 +4,7 @@
 #define BOAT_SQL_ADAPTORS_BINARY_HPP
 
 #include <boat/sql/detail/adaptors/adaptor.hpp>
+#include <boat/sql/detail/utility.hpp>
 
 namespace boat::sql::adaptors {
 

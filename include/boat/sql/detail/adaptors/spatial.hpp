@@ -32,6 +32,10 @@ public:
         if (tbl_->dbms_name.contains("microsoft sql server"))
             qry << db::id{tbl_->table_name} << "." << db::id{col_->column_name}
                 << ".STAsBinary() " << db::id{col_->column_name};
+        else if (tbl_->dbms_name.contains("mysql"))
+            qry << "ST_AsBinary(" << db::id{tbl_->table_name} << "."
+                << db::id{col_->column_name} << ", 'axis-order=long-lat') "
+                << db::id{col_->column_name};
         else
             qry << "ST_AsBinary(" << db::id{tbl_->table_name} << "."
                 << db::id{col_->column_name} << ") "
@@ -43,6 +47,9 @@ public:
         if (tbl_->dbms_name.contains("microsoft sql server"))
             qry << col_->type_name << "::STGeomFromWKB(" << std::move(var)
                 << ", " << to_chars(col_->srid) << ")";
+        else if (tbl_->dbms_name.contains("mysql"))
+            qry << "ST_GeomFromWKB(" << std::move(var) << ", "
+                << to_chars(col_->srid) << ", 'axis-order=long-lat')";
         else if (tbl_->dbms_name.contains("postgresql") &&
                  col_->type_name == "geography")
             qry << "ST_GeogFromWKB(" << std::move(var) << ")";

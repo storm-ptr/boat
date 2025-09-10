@@ -35,6 +35,29 @@ struct index_spec {
     }
 };
 
+struct create_indices {
+    table const& tbl;
+
+    friend db::query& operator<<(db::query& out, create_indices const& in)
+    {
+        auto i = 0;
+        for (auto idx : in.tbl.indices() | std::views::filter(constructible)) {
+            auto key = std::ranges::begin(idx);
+            auto spatial = any_geo(in.tbl.columns, key->column_name);
+            if (spatial && std::ranges::size(idx) > 1u)
+                continue;
+            auto type = spatial ? "spatial" : key->unique ? "unique" : "";
+            if (key->primary)
+                out << "\n alter table " << id{in.tbl} << " add primary key ";
+            else
+                out << "\n create " << type << " index _" << to_chars(++i)
+                    << " on " << id{in.tbl} << " ";
+            out << index_spec{idx} << ";";
+        }
+        return out;
+    }
+};
+
 struct select_list {
     table const& tbl;
     std::vector<std::string> const& column_names;

@@ -8,6 +8,21 @@
 
 namespace boat::sql {
 
+bool any(std::initializer_list<std::string_view> list, auto&& pred)
+{
+    return std::ranges::any_of(list, pred);
+}
+
+constexpr auto equal(std::string_view lhs)
+{
+    return [lhs](std::string_view rhs) { return lhs == rhs; };
+}
+
+constexpr auto within(std::string_view lhs)
+{
+    return [lhs](std::string_view rhs) { return lhs.contains(rhs); };
+}
+
 constexpr auto geo = [](column const& col) { return col.srid > 0; };
 
 constexpr auto constructible = [](range_of<index_key> auto&& idx) {

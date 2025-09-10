@@ -4,6 +4,7 @@
 #define BOAT_SQL_ADAPTORS_TEXT_HPP
 
 #include <boat/sql/detail/adaptors/adaptor.hpp>
+#include <boat/sql/detail/utility.hpp>
 
 namespace boat::sql::adaptors {
 
@@ -30,6 +31,7 @@ public:
                     "nvarchar",
                     "varchar"},
                    equal(col.type_name)) ||
+               (tbl.dbms_name.contains("mysql") && col.type_name == "text") ||
                (tbl.dbms_name.contains("postgresql") &&
                 any({"bpchar", "text"}, equal(col.type_name))) ||
                (tbl.dbms_name.contains("sqlite") &&

@@ -12,7 +12,7 @@ struct object_struct {
     std::chrono::utc_seconds time;
     boat::geometry::geographic::variant geom;
     std::string commander;
-    std::optional<double> kms;
+    std::optional<double> sample;
 };
 
 inline auto const object_table = [] {
@@ -31,14 +31,15 @@ inline object_struct const objects[] = {
      .time{boat::pfr::get<std::chrono::utc_seconds>("1961-04-12 06:07:00")},
      .geom = boost::geometry::from_wkt<boat::geometry::geographic::variant>(
          "GEOMETRYCOLLECTION(POINT (20 40),LINESTRING (40 40, 20 45, 45 30))"),
-     .commander{boat::as_chars(u8"\u042e\u0440\u0438\u0439\u0020"
-                               u8"\u0413\u0430\u0433\u0430\u0440\u0438\u043d")},
-     .kms = 7.61},
+     .commander{
+         boat::as_chars(u8"\u042e\u0440\u0438\u0439\u0020"
+                        u8"\u0413\u0430\u0433\u0430\u0440\u0438\u043d")}},
     {.id = 2,
      .time{boat::pfr::get<std::chrono::utc_seconds>("1969-07-16 13:32:00")},
      .geom = boost::geometry::from_wkt<boat::geometry::geographic::variant>(
          "POLYGON((20 35,10 30,10 10,30 5,45 20,20 35),"
          "(30 20,20 15,20 25,30 20))"),
-     .commander{"Neil Armstrong"}}};
+     .commander{"Neil Armstrong"},
+     .sample = 21.55}};
 
 #endif  // BOAT_TEST_DATA_HPP

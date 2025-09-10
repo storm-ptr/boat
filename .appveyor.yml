@@ -28,22 +28,22 @@ for:
   install:
     - mkdir %OSGEO4W_ROOT%
     - ps: Invoke-WebRequest -Uri http://download.osgeo.org/osgeo4w/setup.exe -OutFile $env:OSGEO4W_ROOT\setup.exe
-    - call %OSGEO4W_ROOT%\setup.exe -q -k -r -A -s http://download.osgeo.org/osgeo4w/v2 -P curl,libpq,libspatialite,sqlite3 -R %OSGEO4W_ROOT% > NUL
+    - call %OSGEO4W_ROOT%\setup.exe -q -k -r -A -s http://download.osgeo.org/osgeo4w/v2 -P curl,libmysql,libpq,libspatialite,sqlite3 -R %OSGEO4W_ROOT% > NUL
     - del /Q /F %OSGEO4W_ROOT%\bin\mod_spatialite.dll
     - call %OSGEO4W_ROOT%\bin\o4w_env.bat
     - curl -L -O -S -s http://download.osgeo.org/postgis/windows/pg16/postgis-bundle-pg16-3.5.3x64.zip
     - call "C:\Program Files\7-Zip\7z.exe" x postgis-bundle-pg16-3.5.3x64.zip > nul
     - xcopy /s /y /q postgis-bundle-pg16-3.5.3x64 "C:\Program Files\PostgreSQL\16"
-    - 'SET INCLUDE=%INCLUDE%;%APPVEYOR_BUILD_FOLDER%\include;C:\Libraries\boost_1_86_0;%OSGEO4W_ROOT%\include;%OSGEO4W_ROOT%\include\libpq'
+    - 'SET INCLUDE=%INCLUDE%;%APPVEYOR_BUILD_FOLDER%\include;C:\Libraries\boost_1_86_0;%OSGEO4W_ROOT%\include'
     - 'SET LIB=%LIB%;%OSGEO4W_ROOT%\lib'
     - call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
     - call C:\Qt\6.8\msvc2022_64\bin\qtenv2.bat
 
   build_script:
     - cd %APPVEYOR_BUILD_FOLDER%\test
-    - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=Password12! /DBOAT_TEST_MSSQL_HOST=(local)\\SQL2019 /DBOAT_TEST_POSTGRESQL_HOST=localhost&& nmake -f ./makefile.windows
+    - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=Password12! /DBOAT_TEST_MSSQL_HOST=(local)\\SQL2019 /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRESQL_HOST=localhost&& nmake -f ./makefile.windows
     - cd %APPVEYOR_BUILD_FOLDER%\test\gui\qt
-    - qmake "DEFINES+='BOAT_TEST_PASSWORD=Password12!' 'BOAT_TEST_MSSQL_HOST=(local)\\SQL2019' 'BOAT_TEST_POSTGRESQL_HOST=localhost'"
+    - qmake "DEFINES+='BOAT_TEST_PASSWORD=Password12!' 'BOAT_TEST_MSSQL_HOST=(local)\\SQL2019' 'BOAT_TEST_MYSQL_HOST=localhost' 'BOAT_TEST_POSTGRESQL_HOST=localhost'"
 
   before_test:
     - call "C:\Program Files\PostgreSQL\16\bin\psql" -d postgres -U postgres -c "CREATE EXTENSION postgis;"
@@ -60,4 +60,4 @@ for:
       - image: Ubuntu2204
 
   build_script:
-    - sh: echo "Hello, Ubuntu2204!"
+    - sh: echo "todo"

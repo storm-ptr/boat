@@ -21,7 +21,7 @@ class reader {
                   SQLPOINTER ptr,
                   SQLLEN len)
     {
-        check(hdl, SQLGetData(hdl.get(), col, type, ptr, len, &ind_));
+        check(SQLGetData(hdl.get(), col, type, ptr, len, &ind_), hdl);
         if (ind_ == SQL_NO_TOTAL)
             throw std::runtime_error{concat(name(hdl, col), " SQL_NO_TOTAL")};
         return SQL_NULL_DATA != ind_;
@@ -58,8 +58,8 @@ public:
     pfr::variant get_data(handle_stmt const& hdl, SQLUSMALLINT col)
     {
         SQLLEN type;
-        check(hdl,
-              SQLColAttribute(hdl.get(), col, SQL_DESC_TYPE, 0, 0, 0, &type));
+        check(SQLColAttribute(hdl.get(), col, SQL_DESC_TYPE, 0, 0, 0, &type),
+              hdl);
         switch (type) {
             case SQL_BIGINT:
             case SQL_BIT:

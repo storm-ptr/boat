@@ -4,6 +4,7 @@
 #define BOAT_SQL_ADAPTORS_INTEGER_HPP
 
 #include <boat/sql/detail/adaptors/adaptor.hpp>
+#include <boat/sql/detail/utility.hpp>
 
 namespace boat::sql::adaptors {
 
@@ -21,6 +22,8 @@ public:
                    equal(col.type_name)) ||
                (tbl.dbms_name.contains("microsoft sql server") &&
                 any({"bit", "tinyint"}, equal(col.type_name))) ||
+               (tbl.dbms_name.contains("mysql") &&
+                any({"mediumint", "tinyint"}, equal(col.type_name))) ||
                (tbl.dbms_name.contains("postgresql") &&
                 any({"bigserial", "smallserial", "serial"},
                     equal(col.type_name)));

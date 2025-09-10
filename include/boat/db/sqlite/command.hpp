@@ -18,7 +18,7 @@ public:
         constexpr int flags =
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
         sqlite3* dbc;
-        check(0, sqlite3_open_v2(file, &dbc, flags, 0));
+        check(sqlite3_open_v2(file, &dbc, flags, 0), dbc_);
         dbc_.reset(dbc);
         spatial_.reset(spatialite_alloc_connection());
         spatialite_init_ex(dbc_.get(), spatial_.get(), 0);
@@ -35,19 +35,19 @@ public:
         while (first != last) {
             ret = {};
             sqlite3_stmt* stmt;
-            check(dbc_.get(),
-                  sqlite3_prepare_v2(
-                      dbc_.get(), first, int(last - first), &stmt, &first));
+            check(sqlite3_prepare_v2(
+                      dbc_.get(), first, int(last - first), &stmt, &first),
+                  dbc_);
             auto _ = unique_ptr<sqlite3_stmt, sqlite3_finalize>{stmt};
             int num_params = sqlite3_bind_parameter_count(stmt);
             for (int i{}; i < num_params && it != params.end(); ++i, ++it)
-                check(dbc_.get(), bind_value(stmt, i + 1, *it));
+                check(bind_value(stmt, i + 1, *it), dbc_);
             ret.columns.resize(sqlite3_column_count(stmt));
             for (int i{}; i < ret.columns.size(); ++i)
                 ret.columns[i] = sqlite3_column_name(stmt, i);
             int rc = sqlite3_step(stmt);
             for (; SQLITE_DONE != rc; rc = sqlite3_step(stmt)) {
-                check(dbc_.get(), rc);
+                check(rc, dbc_);
                 auto& row = ret.rows.emplace_back(ret.columns.size());
                 for (int i{}; i < ret.columns.size(); ++i)
                     row[i] = column_value(stmt, i);

@@ -8,6 +8,7 @@ INCLUDEPATH += ../../../include
 LIBS += \
   -L$$(LIB)\
   -llibcurl_imp\
+  -llibmysql\
   -llibpq\
   -lodbc32\
   -lspatialite_i\

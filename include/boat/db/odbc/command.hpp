@@ -17,22 +17,21 @@ public:
     explicit command(std::string_view connection)
     {
         env_ = alloc<SQL_HANDLE_ENV>(env_);
-        check(env_,
-              SQLSetEnvAttr(env_.get(),
-                            SQL_ATTR_ODBC_VERSION,
-                            SQLPOINTER(SQL_OV_ODBC3),
-                            0));
+        check(
+            SQLSetEnvAttr(
+                env_.get(), SQL_ATTR_ODBC_VERSION, SQLPOINTER(SQL_OV_ODBC3), 0),
+            env_);
         dbc_ = alloc<SQL_HANDLE_DBC>(env_);
         SQLSMALLINT len;
-        check(dbc_,
-              SQLDriverConnectW(dbc_.get(),
+        check(SQLDriverConnectW(dbc_.get(),
                                 0,
                                 unicode::string<SQLWCHAR>(connection).data(),
                                 SQL_NTS,
                                 0,
                                 0,
                                 &len,
-                                SQL_DRIVER_NOPROMPT));
+                                SQL_DRIVER_NOPROMPT),
+              dbc_);
     }
 
     pfr::rowset exec(query const& qry) override
@@ -41,12 +40,11 @@ public:
         auto stmt = alloc<SQL_HANDLE_STMT>(dbc_);
         auto sql =
             qry.sql(id_quote(), param_mark()) | unicode::string<SQLWCHAR>;
-        check(stmt, SQLPrepareW(stmt.get(), sql.data(), SQL_NTS));
+        check(SQLPrepareW(stmt.get(), sql.data(), SQL_NTS), stmt);
         auto binds = std::vector<std::unique_ptr<params::param>>{};
         for (auto [i, var] : qry.params() | std::views::enumerate) {
             auto bnd = binds.emplace_back(params::create(var)).get();
-            check(stmt,
-                  SQLBindParameter(stmt.get(),
+            check(SQLBindParameter(stmt.get(),
                                    SQLUSMALLINT(i + 1),
                                    SQL_PARAM_INPUT,
                                    bnd->c_type(),
@@ -55,21 +53,22 @@ public:
                                    0,
                                    bnd->value(),
                                    0,
-                                   bnd->indicator()));
+                                   bnd->indicator()),
+                  stmt);
         }
         auto rc = SQLExecute(stmt.get());
         for (; SQL_NO_DATA != rc; rc = SQLMoreResults(stmt.get())) {
-            check(stmt, rc);
+            check(rc, stmt);
             ret = {};
             SQLSMALLINT num_cols;
-            check(stmt, SQLNumResultCols(stmt.get(), &num_cols));
+            check(SQLNumResultCols(stmt.get(), &num_cols), stmt);
             if (num_cols) {
                 for (int i{}; i < num_cols; ++i)
                     ret.columns.push_back(name(stmt, i + 1));
                 auto rdr = reader{};
                 rc = SQLFetch(stmt.get());
                 for (; SQL_NO_DATA != rc; rc = SQLFetch(stmt.get())) {
-                    check(stmt, rc);
+                    check(rc, stmt);
                     auto& row = ret.rows.emplace_back(num_cols);
                     for (int i{}; i < num_cols; ++i)
                         row[i] = rdr.get_data(stmt, i + 1);
@@ -82,15 +81,15 @@ public:
     void set_autocommit(bool on) override
     {
         if (on)
-            check(dbc_, SQLEndTran(SQL_HANDLE_DBC, dbc_.get(), SQL_ROLLBACK));
+            check(SQLEndTran(SQL_HANDLE_DBC, dbc_.get(), SQL_ROLLBACK), dbc_);
         intptr_t val = on ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
         auto ptr = SQLPOINTER(val);
-        check(dbc_, SQLSetConnectAttr(dbc_.get(), SQL_ATTR_AUTOCOMMIT, ptr, 0));
+        check(SQLSetConnectAttr(dbc_.get(), SQL_ATTR_AUTOCOMMIT, ptr, 0), dbc_);
     }
 
     void commit() override
     {
-        check(dbc_, SQLEndTran(SQL_HANDLE_DBC, dbc_.get(), SQL_COMMIT));
+        check(SQLEndTran(SQL_HANDLE_DBC, dbc_.get(), SQL_COMMIT), dbc_);
     }
 
     char id_quote() override

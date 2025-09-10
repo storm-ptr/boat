@@ -33,7 +33,7 @@ using handle_dbc = handle<SQL_HANDLE_DBC>;
 using handle_stmt = handle<SQL_HANDLE_STMT>;
 
 template <SQLSMALLINT type>
-void check(handle<type> const& hdl, SQLRETURN rc)
+void check(SQLRETURN rc, handle<type> const& hdl)
 {
     auto os = std::basic_ostringstream<SQLWCHAR>{};
     if (hdl && (SQL_ERROR == rc || SQL_SUCCESS_WITH_INFO == rc)) {
@@ -61,7 +61,7 @@ template <SQLSMALLINT type_out, SQLSMALLINT type_in>
 auto alloc(handle<type_in> const& hdl)
 {
     SQLHANDLE out;
-    check(hdl, SQLAllocHandle(type_out, hdl.get(), &out));
+    check(SQLAllocHandle(type_out, hdl.get(), &out), hdl);
     return handle<type_out>{out};
 }
 
@@ -69,7 +69,7 @@ inline std::string info(handle_dbc const& hdl, SQLUSMALLINT key)
 {
     auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
     auto sz = SQLSMALLINT(buf.size());
-    check(hdl, SQLGetInfoW(hdl.get(), key, buf.data(), sz, 0));
+    check(SQLGetInfoW(hdl.get(), key, buf.data(), sz, 0), hdl);
     return std::basic_string_view{buf.data()} | unicode::string<char>;
 }
 
@@ -78,7 +78,7 @@ inline std::string name(handle_stmt const& hdl, SQLUSMALLINT col)
     auto key = SQL_DESC_NAME;
     auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
     auto sz = SQLSMALLINT(buf.size());
-    check(hdl, SQLColAttributeW(hdl.get(), col, key, buf.data(), sz, 0, 0));
+    check(SQLColAttributeW(hdl.get(), col, key, buf.data(), sz, 0, 0), hdl);
     return std::basic_string_view{buf.data()} | unicode::string<char>;
 }
 

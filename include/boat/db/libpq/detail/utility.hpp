@@ -25,10 +25,11 @@ constexpr Oid numeric_oid = 1700;
 constexpr int text_fmt = 0;
 constexpr int binary_fmt = 1;
 
-inline void check(PGconn* dbc, bool success)
+inline void check(bool success, auto& dbc)
+    requires requires { PQerrorMessage(dbc.get()); }
 {
     if (!success)
-        throw std::runtime_error(dbc ? PQerrorMessage(dbc) : "libpq");
+        throw std::runtime_error(dbc ? PQerrorMessage(dbc.get()) : "libpq");
 }
 
 }  // namespace boat::db::libpq

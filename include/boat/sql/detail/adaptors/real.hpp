@@ -4,6 +4,7 @@
 #define BOAT_SQL_ADAPTORS_REAL_HPP
 
 #include <boat/sql/detail/adaptors/adaptor.hpp>
+#include <boat/sql/detail/utility.hpp>
 
 namespace boat::sql::adaptors {
 
@@ -24,6 +25,7 @@ public:
                     "numeric",
                     "real"},
                    equal(col.type_name)) ||
+               (tbl.dbms_name.contains("mysql") && col.type_name == "double") ||
                (tbl.dbms_name.contains("sqlite") &&
                 any({"real", "floa", "doub"}, within(col.type_name)));
     }
