@@ -77,9 +77,9 @@ struct mysql : dialect {
         auto col = find_or_geo(tbl.columns, req.spatial_column);
         auto q = db::query{};
         q << "\n select " << select_list{tbl, req.select_list} << "\n from "
-          << id{tbl} << "\n where MBRIntersects(" << db::id(col->column_name)
-          << ", " << polygon{tbl, *col, req.xmin, req.ymin, req.xmax, req.ymax}
-          << ")\n limit " << to_chars(req.limit);
+          << id{tbl} << "\n where MBRIntersects("
+          << polygon{tbl, *col, req.xmin, req.ymin, req.xmax, req.ymax} << ", "
+          << db::id(col->column_name) << ")\n limit " << to_chars(req.limit);
         return q;
     }
 
