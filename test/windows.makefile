@@ -1,9 +1,9 @@
 CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX $(CXXFLAGS)
-EXECUTABLE=main.exe
+EXECUTABLE=run_me.exe
 INCLUDE=..\include\;$(INCLUDE)
 LIBS=libmysql.lib libpq.lib odbc32.lib spatialite_i.lib sqlite3_i.lib
 OBJECTS=$(SOURCES:.cpp=.obj)
-SOURCES=*.cpp
+SOURCES=blob.cpp caches.cpp main.cpp slippy.cpp
 
 all: $(SOURCES) $(EXECUTABLE)
 

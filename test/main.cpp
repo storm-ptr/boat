@@ -4,7 +4,6 @@
 
 #include <boat/blob.hpp>
 #include <boat/db/commands.hpp>
-#include <boat/detail/curl.hpp>
 #include <boat/detail/unicode.hpp>
 #include <boat/detail/uri.hpp>
 #include <boat/geometry/map.hpp>
