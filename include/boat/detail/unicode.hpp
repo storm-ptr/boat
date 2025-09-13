@@ -53,9 +53,9 @@ constexpr auto view = closure<Unit>{};
 template <class Unit>
 constexpr auto string = view<Unit> | std::ranges::to<std::basic_string>();
 
-inline auto const lower = view<wchar_t> | std::views::transform(std::towlower);
+static auto const lower = view<wchar_t> | std::views::transform(std::towlower);
 
-inline auto const upper = view<wchar_t> | std::views::transform(std::towupper);
+static auto const upper = view<wchar_t> | std::views::transform(std::towupper);
 
 template <std::ranges::input_range R>
 struct manip {

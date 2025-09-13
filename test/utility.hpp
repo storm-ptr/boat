@@ -16,8 +16,6 @@ bool operator==(T const& lhs, T const& rhs)
 
 }  // namespace boost::geometry
 
-inline auto const utf8_locale = std::locale{};  //< "en_US.utf8"
-
 template <class F, class Arg>
 struct revoke {
     F f_;

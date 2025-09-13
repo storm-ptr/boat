@@ -8,7 +8,7 @@
 
 namespace boat::slippy {
 
-inline auto const steps = std::views::iota(0, zmax) |
+static auto const steps = std::views::iota(0, zmax) |
                           std::views::transform([](int z) {
                               return 2 * pi * 6'378'137 / std::pow(2, z);
                           }) |

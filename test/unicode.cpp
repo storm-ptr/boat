@@ -7,6 +7,7 @@
 
 BOOST_AUTO_TEST_CASE(unicode)
 {
+    auto utf8_locale = std::locale{};  //< "en_US.utf8"
     auto u16 = std::u16string{
         0x68,
         0x65,
