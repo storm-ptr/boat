@@ -6,8 +6,8 @@
 
 BOOST_AUTO_TEST_CASE(pfr)
 {
-    auto utf8_locale = std::locale{};  //< "en_US.utf8"
-    auto objs = objects();
+    auto utf8_locale = std::locale{"en_US.UTF-8"};
+    auto objs = get_objects();
     auto rows = boat::pfr::to_rowset(objs);
     BOOST_CHECK(std::ranges::equal(objs,
                                    rows | boat::pfr::view<object_struct>,

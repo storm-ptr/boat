@@ -5,18 +5,24 @@ platform: x64
 skip_tags: true
 
 environment:
-  MSSQL_HOST: (local)\\SQL2019
   OSGEO4W_ROOT: C:\OSGeo4W
   PGPASSWORD: Password12!
+  WX_ROOT: C:\wxWidgets
 
 install:
-  - call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
   - mkdir %OSGEO4W_ROOT%
-  - ps: Invoke-WebRequest -Uri http://download.osgeo.org/osgeo4w/setup.exe -OutFile $env:OSGEO4W_ROOT\setup.exe
-  - call %OSGEO4W_ROOT%\setup.exe -q -k -r -A -s http://download.osgeo.org/osgeo4w/v2 -P curl-devel,libmysql-devel,libpq-devel,libspatialite-devel,sqlite3-devel -R %OSGEO4W_ROOT% > nul
+  - ps: Invoke-WebRequest -Uri http://download.osgeo.org/osgeo4w/v2/osgeo4w-setup.exe -OutFile $env:OSGEO4W_ROOT\osgeo4w-setup.exe
+  - call %OSGEO4W_ROOT%\osgeo4w-setup.exe -q -k -r -A -s http://download.osgeo.org/osgeo4w/v2 -P curl-devel,libmysql-devel,libpq-devel,libspatialite-devel,sqlite3-devel -R %OSGEO4W_ROOT% > nul
   - SET INCLUDE=%APPVEYOR_BUILD_FOLDER%\include;C:\Libraries\boost_1_89_0;%OSGEO4W_ROOT%\include;%INCLUDE%
   - SET LIB=%OSGEO4W_ROOT%\lib;%LIB%
-  - SET PATH=%OSGEO4W_ROOT%\bin;%PATH%
+  - call %OSGEO4W_ROOT%\bin\o4w_env.bat
+  - call C:\Qt\6.9\msvc2022_64\bin\qtenv2.bat
+  - call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+  - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v3.3.1/wxWidgets-3.3.1.zip
+  - call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-3.3.1.zip -o%WX_ROOT% > nul
+  - SET WXWIN=%WX_ROOT%
+  - cd %WX_ROOT%\build\msw
+  - nmake -f makefile.vc BUILD=release > nul
   - net start MSSQL$SQL2019
   - ps: Start-Service MySQL80
   - curl -L -O -S -s http://download.osgeo.org/postgis/windows/pg16/postgis-bundle-pg16-3.5.3x64.zip
@@ -30,4 +36,9 @@ build_script:
 
 test_script:
   - cd %APPVEYOR_BUILD_FOLDER%\test
-  - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=%PGPASSWORD% /DBOAT_TEST_MSSQL_HOST=%MSSQL_HOST% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRESQL_HOST=localhost&& nmake -f .\windows.makefile test
+  - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=%PGPASSWORD% /DBOAT_TEST_MSSQL_HOST=(local)\\SQL2019 /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRESQL_HOST=localhost&& nmake -f .\windows.makefile test
+  - cd %APPVEYOR_BUILD_FOLDER%\test\gui\qt
+  - qmake "DEFINES+='BOAT_TEST_PASSWORD=%PGPASSWORD%' 'BOAT_TEST_MSSQL_HOST=(local)\\\\SQL2019' 'BOAT_TEST_MYSQL_HOST=localhost' 'BOAT_TEST_POSTGRESQL_HOST=localhost'"
+  - nmake test
+  - cd %APPVEYOR_BUILD_FOLDER%\test\gui\wx
+  - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=%PGPASSWORD% /DBOAT_TEST_MSSQL_HOST=(local)\\SQL2019 /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRESQL_HOST=localhost&& nmake -f .\windows.makefile test

@@ -15,7 +15,7 @@ struct object_struct {
     std::optional<double> sample;
 };
 
-inline auto object_table()
+inline boat::sql::table get_object_table()
 {
     auto ret = boat::sql::get_table<object_struct>();
     ret.index_keys = {
@@ -27,28 +27,24 @@ inline auto object_table()
     return ret;
 }
 
-inline auto objects()
+inline std::vector<object_struct> get_objects()
 {
-    return std::vector<object_struct>{
-        {{.id = 1,
-          .time{
-              boat::pfr::get<std::chrono::utc_seconds>("1961-04-12 06:07:00")},
-          .geom = boost::geometry::from_wkt<
-              boat::geometry::geographic::variant>(
-              "GEOMETRYCOLLECTION(POINT (20 40),LINESTRING (40 40, 20 45, 45 "
-              "30))"),
-          .commander{
-              boat::as_chars(u8"\u042e\u0440\u0438\u0439\u0020"
-                             u8"\u0413\u0430\u0433\u0430\u0440\u0438\u043d")}},
-         {.id = 2,
-          .time{
-              boat::pfr::get<std::chrono::utc_seconds>("1969-07-16 13:32:00")},
-          .geom =
-              boost::geometry::from_wkt<boat::geometry::geographic::variant>(
-                  "POLYGON((20 35,10 30,10 10,30 5,45 20,20 35),"
-                  "(30 20,20 15,20 25,30 20))"),
-          .commander{"Neil Armstrong"},
-          .sample = 21.55}}};
+    return {
+        {.id = 1,
+         .time{boat::pfr::get<std::chrono::utc_seconds>("1961-04-12 06:07:00")},
+         .geom = boost::geometry::from_wkt<boat::geometry::geographic::variant>(
+             "GEOMETRYCOLLECTION(POINT (20 40),"
+             "LINESTRING (40 40, 20 45, 45 30))"),
+         .commander{
+             boat::as_chars(u8"\u042e\u0440\u0438\u0439\u0020"
+                            u8"\u0413\u0430\u0433\u0430\u0440\u0438\u043d")}},
+        {.id = 2,
+         .time{boat::pfr::get<std::chrono::utc_seconds>("1969-07-16 13:32:00")},
+         .geom = boost::geometry::from_wkt<boat::geometry::geographic::variant>(
+             "POLYGON((20 35,10 30,10 10,30 5,45 20,20 35),"
+             "(30 20,20 15,20 25,30 20))"),
+         .commander{"Neil Armstrong"},
+         .sample = 21.55}};
 }
 
 #endif  // BOAT_TEST_DATA_HPP

@@ -27,12 +27,14 @@ inline std::generator<std::shared_ptr<boat::gui::datasets::dataset>> datasets()
     };
 
     auto cache = std::make_shared<gui::caches::lru>(10'000);
-    auto tbl = object_table();
-    auto objs = objects();
+    auto draft = get_object_table();
+    auto objs = get_objects();
     for (auto cmd : commands()) {
         cmd->set_autocommit(false);
-        cmd->exec({"drop table if exists ", db::id{tbl.table_name}});
-        sql::insert(*cmd, sql::create(*cmd, tbl), pfr::to_rowset(objs));
+        cmd->exec({"drop table if exists ", db::id{draft.table_name}});
+        auto tbl = sql::create(*cmd, draft);
+        auto rows = pfr::to_rowset(objs);
+        sql::insert(*cmd, tbl, rows);
         co_yield std::make_shared<gui::datasets::sql>(
             [cmd = std::move(cmd)] { return std::make_unique<ref>(cmd.get()); },
             cache);

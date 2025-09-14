@@ -78,8 +78,8 @@ struct hex {
     {
         using char_type = std::decay_t<decltype(out)>::char_type;
         auto os = std::basic_ostringstream<char_type>{};
-        os.setf(out.uppercase);
-        os << std::hex << std::setfill<char_type>('0');
+        os.imbue(std::locale::classic());
+        os << std::uppercase << std::hex << std::setfill<char_type>('0');
         for (auto byte : in.bytes)
             os << std::setw(2) << static_cast<unsigned>(byte);
         return out << os.view();  //< output once

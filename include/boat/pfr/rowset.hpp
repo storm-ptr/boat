@@ -21,12 +21,12 @@ struct rowset {
 template <class T>
 constexpr auto view = std::views::transform([](range_of<variant> auto&& r) {
     T ret;
-    auto it = std::begin(r);
+    auto it = std::ranges::begin(r);
     if constexpr (requires { read(*it, ret); })
         read(*it++, ret);
     else
         boost::pfr::for_each_field(ret, [&](auto& v) { read(*it++, v); });
-    check(it == std::end(r), "out of fields");
+    check(it == std::ranges::end(r), "out of fields");
     return ret;
 });
 
@@ -35,7 +35,7 @@ rowset to_rowset(std::ranges::input_range auto&& r)
     auto ret = rowset{
         boost::pfr::names_as_array<std::ranges::range_value_t<decltype(r)>>() |
         std::ranges::to<decltype(rowset::columns)>()};
-    for (auto& item : r) {
+    for (auto&& item : r) {
         auto& row = ret.rows.emplace_back();
         auto vis = [&](auto& v) { write(row.emplace_back(), v); };
         boost::pfr::for_each_field(item, vis);
