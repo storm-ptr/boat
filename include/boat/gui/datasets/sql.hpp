@@ -52,7 +52,7 @@ public:
         });
         auto& col = lyr.at(2);
         auto it = std::ranges::find(tbl.columns, col, &column::column_name);
-        check(it != tbl.columns.end(), col.data());
+        check(it != tbl.columns.end(), col);
         auto tf = bgs::transformation<>(bgs::epsg{4326}, bgs::epsg{it->epsg});
         auto fwd = geometry::transform(geometry::forward(tf));
         auto voids = bgi::rtree<geometry::geographic::box, bgi::rstar<4>>{};

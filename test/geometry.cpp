@@ -148,9 +148,9 @@ BOOST_AUTO_TEST_CASE(geometry_map)
     auto num_points = 100;
     auto pj = srs::projection<>{srs::epsg{3857}};
     auto globe = cartesian::box{};
-    BOOST_CHECK(pj.forward(geographic::point{-180., -85.}, globe.min_corner()));
-    BOOST_CHECK(pj.forward(geographic::point{180., 85.}, globe.max_corner()));
-    auto pred = [](auto const& ll) { return std::fabs(ll.y()) < 85.; };
+    BOOST_CHECK(pj.forward(geographic::point(-180, -85), globe.min_corner()));
+    BOOST_CHECK(pj.forward(geographic::point(180, 85), globe.max_corner()));
+    constexpr auto pred = [](auto const& ll) { return std::fabs(ll.y()) < 85; };
     for (auto ll : random() | std::views::filter(pred) | std::views::take(10)) {
         auto xy = cartesian::point{};
         BOOST_CHECK(pj.forward(ll, xy));

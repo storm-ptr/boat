@@ -23,19 +23,16 @@ struct uri {
     {
         static auto const regex = std::regex{
             R"(^(\w+):\/\/(([^:@]*)(:([^@]*))?\@)?([^/?#]+)?(\/([^?#]*))?(\?([^#]*))?(\#(.*))?$)"};
-        static auto const adapt = [](auto const& val) {
-            return std::string_view{val.first, val.second};
-        };
         auto match = std::cmatch{};
         return std::regex_match(
                    str.data(), str.data() + str.size(), match, regex)
-                   ? uri{.scheme = adapt(match[1]),
-                         .user = adapt(match[3]),
-                         .password = adapt(match[5]),
-                         .host_spec = adapt(match[6]),
-                         .path = adapt(match[8]),
-                         .query = adapt(match[10]),
-                         .fragment = adapt(match[12])}
+                   ? uri{.scheme{match[1].first, match[1].second},
+                         .user{match[3].first, match[3].second},
+                         .password{match[5].first, match[5].second},
+                         .host_spec{match[6].first, match[6].second},
+                         .path{match[8].first, match[8].second},
+                         .query{match[10].first, match[10].second},
+                         .fragment{match[12].first, match[12].second}}
                    : throw std::runtime_error("uri::parse");
     }
 };
