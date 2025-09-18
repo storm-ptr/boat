@@ -3,9 +3,11 @@
 #ifndef BOAT_SLIPPY_GEOMETRY_HPP
 #define BOAT_SLIPPY_GEOMETRY_HPP
 
-#include <boat/geometry/map.hpp>
+#include <boat/geometry/model.hpp>
 #include <boat/slippy/detail/utility.hpp>
+#include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
 #include <queue>
 #include <set>
 

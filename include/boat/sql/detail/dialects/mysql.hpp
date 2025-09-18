@@ -25,18 +25,18 @@ struct mysql : dialect {
     {
         auto q = db::query{};
         q << "\n with l (table_schema, table_name, column_name, srid) as ("
-          << "\n   select table_schema, table_name, column_name, srs_id"
-          << "\n   from information_schema.st_geometry_columns"
+          << "\n  select table_schema, table_name, column_name, srs_id"
+          << "\n  from information_schema.st_geometry_columns"
           << "\n ), r (srid, epsg) as ("
-          << "\n   select srs_id, organization_coordsys_id"
-          << "\n   from information_schema.st_spatial_reference_systems"
-          << "\n   where organization = 'EPSG'"
+          << "\n  select srs_id, organization_coordsys_id"
+          << "\n  from information_schema.st_spatial_reference_systems"
+          << "\n  where organization = 'EPSG'"
           << "\n )"
           << "\n select column_name"
-          << "\n      , data_type"
-          << "\n      , character_maximum_length"
-          << "\n      , srid"
-          << "\n      , epsg"
+          << "\n , data_type"
+          << "\n , coalesce(character_maximum_length, datetime_precision)"
+          << "\n , srid"
+          << "\n , epsg"
           << "\n from information_schema.columns c"
           << "\n left join l using (table_schema, table_name, column_name)"
           << "\n left join r using (srid)"
@@ -50,13 +50,13 @@ struct mysql : dialect {
     {
         auto q = db::query{};
         q << "\n select null index_schema"
-          << "\n      , index_name"
-          << "\n      , column_name"
-          << "\n      , (collation = 'D') is_descending_key"
-          << "\n      , (expression is not null) is_partial"
-          << "\n      , (index_name = 'PRIMARY') is_primary_key"
-          << "\n      , (not non_unique) is_unique"
-          << "\n      , seq_in_index ordinal"
+          << "\n , index_name"
+          << "\n , column_name"
+          << "\n , (collation = 'D') is_descending_key"
+          << "\n , (expression is not null) is_partial"
+          << "\n , (index_name = 'PRIMARY') is_primary_key"
+          << "\n , (not non_unique) is_unique"
+          << "\n , seq_in_index ordinal"
           << "\n from information_schema.statistics"
           << "\n where table_schema = " << pfr::variant(schema_name)
           << "\n and table_name = " << pfr::variant(table_name);
@@ -105,7 +105,7 @@ struct mysql : dialect {
               << col.type_name;
             if (col.srid > 0)
                 q << " not null srid " << to_chars(col.srid);
-            else if (col.length > 0)
+            else if (col.length > 0 && !col.type_name.contains(" "))
                 q << "(" << to_chars(col.length) << ")";
         }
         return q << "\n );" << create_indices{tbl};

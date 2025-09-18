@@ -23,9 +23,9 @@ public:
 
     type migrate(std::string_view dbms) const override
     {
-        return {dbms.contains("mysql")                  ? "datetime"
-                : dbms.contains("microsoft sql server") ? "datetime2"
-                                                        : "timestamp"};
+        return {dbms.contains("mysql")                  ? type{"datetime", 6}
+                : dbms.contains("microsoft sql server") ? type{"datetime2"}
+                                                        : type{"timestamp"}};
     }
 
     void select(db::query& qry) const override
@@ -48,7 +48,7 @@ public:
     {
         if (tbl_->dbms_name.contains("mysql"))
             qry << "str_to_date(" << std::move(var)
-                << ", get_format(datetime, 'ISO'))";
+                << ", '%Y-%m-%d %H:%i:%s.%f')";
         else if (tbl_->dbms_name.contains("sqlite"))
             qry << std::move(var);
         else

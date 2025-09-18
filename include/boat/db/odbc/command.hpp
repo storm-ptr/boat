@@ -10,8 +10,8 @@
 namespace boat::db::odbc {
 
 class command : public db::command {
-    handle_env env_;
-    handle_dbc dbc_;
+    env_ptr env_;
+    dbc_ptr dbc_;
 
 public:
     explicit command(std::string_view connection)

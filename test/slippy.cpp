@@ -1,5 +1,6 @@
 // Andrew Naplavkov
 
+#include <boat/geometry/map.hpp>
 #include <boat/slippy/geometry.hpp>
 #include <boost/geometry/srs/epsg.hpp>
 #include <boost/test/unit_test.hpp>

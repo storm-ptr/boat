@@ -27,10 +27,10 @@ void check(bool success, auto* ptr)
         throw std::runtime_error(ptr ? error(ptr) : "libmysql");
 }
 
-void check(bool success, auto& hdl)
-    requires requires { check(success, hdl.get()); }
+void check(bool success, auto& ptr)
+    requires requires { check(success, ptr.get()); }
 {
-    check(success, hdl.get());
+    check(success, ptr.get());
 }
 
 inline MYSQL_BIND to_bind(pfr::variant const& var)

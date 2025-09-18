@@ -15,34 +15,34 @@ namespace boat::db::odbc {
 
 template <SQLSMALLINT type>
 struct deleter {
-    void operator()(SQLHANDLE hdl) const
+    void operator()(SQLHANDLE h) const
     {
         if constexpr (SQL_HANDLE_DBC == type)
-            SQLDisconnect(hdl);
+            SQLDisconnect(h);
         if constexpr (SQL_HANDLE_STMT == type)
-            SQLFreeStmt(hdl, SQL_CLOSE);
-        SQLFreeHandle(type, hdl);
+            SQLFreeStmt(h, SQL_CLOSE);
+        SQLFreeHandle(type, h);
     }
 };
 
 template <SQLSMALLINT type>
-using handle = std::unique_ptr<void, deleter<type>>;
+using unique_ptr = std::unique_ptr<void, deleter<type>>;
 
-using handle_env = handle<SQL_HANDLE_ENV>;
-using handle_dbc = handle<SQL_HANDLE_DBC>;
-using handle_stmt = handle<SQL_HANDLE_STMT>;
+using env_ptr = unique_ptr<SQL_HANDLE_ENV>;
+using dbc_ptr = unique_ptr<SQL_HANDLE_DBC>;
+using stmt_ptr = unique_ptr<SQL_HANDLE_STMT>;
 
 template <SQLSMALLINT type>
-void check(SQLRETURN rc, handle<type> const& hdl)
+void check(SQLRETURN rc, unique_ptr<type> const& ptr)
 {
     auto os = std::basic_ostringstream<SQLWCHAR>{};
-    if (hdl && (SQL_ERROR == rc || SQL_SUCCESS_WITH_INFO == rc)) {
+    if (ptr && (SQL_ERROR == rc || SQL_SUCCESS_WITH_INFO == rc)) {
         auto row = SQLSMALLINT{};
         auto state = std::array<SQLWCHAR, 6>{};
         auto code = SQLINTEGER{};
         auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
         while (SQL_SUCCEEDED(SQLGetDiagRecW(type,
-                                            hdl.get(),
+                                            ptr.get(),
                                             ++row,
                                             state.data(),
                                             &code,
@@ -58,27 +58,27 @@ void check(SQLRETURN rc, handle<type> const& hdl)
 }
 
 template <SQLSMALLINT type_out, SQLSMALLINT type_in>
-auto alloc(handle<type_in> const& hdl)
+auto alloc(unique_ptr<type_in> const& ptr)
 {
     SQLHANDLE out;
-    check(SQLAllocHandle(type_out, hdl.get(), &out), hdl);
-    return handle<type_out>{out};
+    check(SQLAllocHandle(type_out, ptr.get(), &out), ptr);
+    return unique_ptr<type_out>{out};
 }
 
-inline std::string info(handle_dbc const& hdl, SQLUSMALLINT key)
+inline std::string info(dbc_ptr const& dbc, SQLUSMALLINT key)
 {
     auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
     auto sz = SQLSMALLINT(buf.size());
-    check(SQLGetInfoW(hdl.get(), key, buf.data(), sz, 0), hdl);
+    check(SQLGetInfoW(dbc.get(), key, buf.data(), sz, 0), dbc);
     return std::basic_string_view{buf.data()} | unicode::string<char>;
 }
 
-inline std::string name(handle_stmt const& hdl, SQLUSMALLINT col)
+inline std::string name(stmt_ptr const& stmt, SQLUSMALLINT col)
 {
     auto key = SQL_DESC_NAME;
     auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
     auto sz = SQLSMALLINT(buf.size());
-    check(SQLColAttributeW(hdl.get(), col, key, buf.data(), sz, 0, 0), hdl);
+    check(SQLColAttributeW(stmt.get(), col, key, buf.data(), sz, 0, 0), stmt);
     return std::basic_string_view{buf.data()} | unicode::string<char>;
 }
 

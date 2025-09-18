@@ -3,6 +3,7 @@
 #ifndef BOAT_SLIPPY_UTILITY_HPP
 #define BOAT_SLIPPY_UTILITY_HPP
 
+#include <boat/detail/utility.hpp>
 #include <boat/slippy/tile.hpp>
 #include <climits>
 

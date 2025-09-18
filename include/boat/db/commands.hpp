@@ -55,7 +55,7 @@ inline std::unique_ptr<command> create(std::string_view url)
             os << "port=" << adr.port << ';';
         if (!parsed.path.empty())
             os << "database=" << parsed.path << ';';
-        auto replace_sep = [](char c) { return c == '&' ? ';' : c; };
+        constexpr auto replace_sep = [](char c) { return c == '&' ? ';' : c; };
         for (char c : parsed.query | std::views::transform(replace_sep))
             os << c;
         return std::make_unique<odbc::command>(std::move(os).str().data());

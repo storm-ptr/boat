@@ -17,9 +17,9 @@ struct sqlite : dialect {
     db::query layers() const override
     {
         return {"\n select null table_schema",
-                "\n      , m.name table_name",
-                "\n      , (select c.name from pragma_table_info(m.name) c",
-                "\n         where f_geometry_column like c.name) column_name",
+                "\n , m.name table_name",
+                "\n , (select c.name from pragma_table_info(m.name) c",
+                "\n    where f_geometry_column like c.name) column_name",
                 "\n from geometry_columns, sqlite_master m",
                 "\n where f_table_name like m.name"};
     }
@@ -29,16 +29,16 @@ struct sqlite : dialect {
     {
         auto q = db::query{};
         q << "\n select c.*"
-          << "\n      , (select auth_srid from spatial_ref_sys r"
-          << "\n         where auth_name = 'epsg' and c.srid = r.srid) epsg"
+          << "\n , (select auth_srid from spatial_ref_sys r"
+          << "\n    where auth_name = 'epsg' and c.srid = r.srid) epsg"
           << "\n from ("
-          << "\n   select name"
-          << "\n        , type"
-          << "\n        , null length"
-          << "\n        , (select srid from geometry_columns"
-          << "\n           where f_table_name like " << pfr::variant(table_name)
-          << "\n           and f_geometry_column like name) srid"
-          << "\n   from pragma_table_info(" << pfr::variant(table_name) << ")"
+          << "\n  select name"
+          << "\n  , type"
+          << "\n  , null length"
+          << "\n  , (select srid from geometry_columns"
+          << "\n     where f_table_name like " << pfr::variant(table_name)
+          << "\n     and f_geometry_column like name) srid"
+          << "\n  from pragma_table_info(" << pfr::variant(table_name) << ")"
           << "\n ) c";
         return q;
     }
@@ -48,16 +48,15 @@ struct sqlite : dialect {
     {
         auto q = db::query{};
         q << "\n select null index_schema"
-          << "\n      , 'idx_' || f_table_name || '_' || f_geometry_column"
-          << "\n        index_name"
-          << "\n      , name column_name"
-          << "\n      , 0 is_descending_key"
-          << "\n      , 0 is_partial"
-          << "\n      , 0 is_primary_key"
-          << "\n      , 0 is_unique"
-          << "\n      , 1 ordinal"
+          << "\n , 'idx_'||f_table_name||'_'||f_geometry_column index_name"
+          << "\n , name column_name"
+          << "\n , 0 is_descending_key"
+          << "\n , 0 is_partial"
+          << "\n , 0 is_primary_key"
+          << "\n , 0 is_unique"
+          << "\n , 1 ordinal"
           << "\n from geometry_columns"
-          << "\n    , pragma_table_info(" << pfr::variant(table_name) << ")"
+          << "\n , pragma_table_info(" << pfr::variant(table_name) << ")"
           << "\n where f_table_name like " << pfr::variant(table_name)
           << "\n and f_geometry_column like name"
           << "\n and spatial_index_enabled"
@@ -66,16 +65,10 @@ struct sqlite : dialect {
           << "\n from pragma_table_info(" << pfr::variant(table_name) << ")"
           << "\n where pk > 0"
           << "\n union"
-          << "\n select null"
-          << "\n      , i.name"
-          << "\n      , c.name"
-          << "\n      , c.desc"
-          << "\n      , i.partial"
-          << "\n      , 0"
-          << "\n      , i." << db::id{"unique"}  //
-          << "\n      , c.seqno + 1"
+          << "\n select null, i.name, c.name, c.desc, i.partial, 0"
+          << "\n , i." << db::id{"unique"} << ", c.seqno + 1"
           << "\n from pragma_index_list(" << pfr::variant(table_name) << ") i"
-          << "\n    , pragma_index_xinfo(i.name) c"
+          << "\n , pragma_index_xinfo(i.name) c"
           << "\n where key and origin <> 'pk'";
         return q;
     }
@@ -99,11 +92,11 @@ struct sqlite : dialect {
         q << "\n select " << select_list{tbl, req.select_list}  //
           << "\n from " << db::id{tbl.table_name}
           << "\n where rowid in (select pkid from " << db::id{key->index_name}
-          << "\n   where xmax >= " << pfr::variant(req.xmin)
-          << "\n   and xmin <= " << pfr::variant(req.xmax)
-          << "\n   and ymax >= " << pfr::variant(req.ymin)
-          << "\n   and ymin <= " << pfr::variant(req.ymax)  //
-          << "\n   limit " << to_chars(req.limit) << ");";
+          << "\n  where xmax >= " << pfr::variant(req.xmin)
+          << "\n  and xmin <= " << pfr::variant(req.xmax)
+          << "\n  and ymax >= " << pfr::variant(req.ymin)
+          << "\n  and ymin <= " << pfr::variant(req.ymax)  //
+          << "\n  limit " << to_chars(req.limit) << ");";
         return q;
     }
 

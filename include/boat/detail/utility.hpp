@@ -81,7 +81,8 @@ constexpr bool mixed(std::endian e)
     return std::endian::big != e && std::endian::little != e;
 }
 
-inline void check(bool success, char const* what)
+void check(bool success, auto&& what)
+    requires requires { std::runtime_error(what); }
 {
     if (!success)
         throw std::runtime_error(what);
