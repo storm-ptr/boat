@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <boat/geometry/transform.hpp>
+#include <boat/geometry/wkb.hpp>
 #include <boat/gui/feature.hpp>
 #include <boost/geometry/srs/epsg.hpp>
 #include <execution>
@@ -54,44 +55,45 @@ void draw(feature const& feat,
     auto wnd = paint.window();
     auto tf = boost::geometry::srs::transformation<>(
         boost::geometry::srs::epsg{feat.epsg}, srs);
-    auto fwd =
-        geometry::transform(geometry::forward(tf),
-                            geometry::forward(mbr, wnd.width(), wnd.height()));
+    auto fwd = geometry::transformer(
+        geometry::forwarder(tf),
+        geometry::forwarder(mbr, wnd.width(), wnd.height()));
+    auto shape = geometry::geographic::variant{};
+    blob_view{feat.shape} >> shape;
     if (feat.raster.empty()) {
-        if (auto pj = fwd(feat.shape))
+        if (auto pj = fwd(shape))
             detail::draw(*pj, paint);
         return;
     }
-    auto in_mbr = geometry::envelope(feat.shape);
-    auto out_mbr = fwd(in_mbr)
-                       .transform(detail::adapt)
-                       .transform(&QRectF::toAlignedRect)
-                       .transform(std::bind_front(&QRect::intersected, wnd));
-    if (!out_mbr || out_mbr->isEmpty())
+    auto mbr1 = geometry::envelope(shape);
+    auto mbr2 = fwd(mbr1)
+                    .transform(detail::adapt)
+                    .transform(&QRectF::toAlignedRect)
+                    .transform(std::bind_front(&QRect::intersected, wnd));
+    auto img1 = QImage{};
+    if (!mbr2 || mbr2->isEmpty() ||
+        !img1.loadFromData(reinterpret_cast<uchar const*>(feat.raster.data()),
+                           static_cast<int>(feat.raster.size())))
         return;
-    auto in = QImage{};
-    if (!in.loadFromData(reinterpret_cast<uchar const*>(feat.raster.data()),
-                         static_cast<int>(feat.raster.size())))
-        return;
-    auto out = QImage{out_mbr->size(), QImage::Format_ARGB32_Premultiplied};
-    auto inv =
-        geometry::transform(geometry::inverse(mbr, wnd.width(), wnd.height()),
-                            geometry::inverse(tf),
-                            geometry::forward(in_mbr, in.width(), in.height()));
-    auto ys = std::views::iota(0, out.height());
+    auto img2 = QImage{mbr2->size(), QImage::Format_ARGB32_Premultiplied};
+    auto inv = geometry::transformer(
+        geometry::inverter(mbr, wnd.width(), wnd.height()),
+        geometry::inverter(tf),
+        geometry::forwarder(mbr1, img1.width(), img1.height()));
+    auto ys = std::views::iota(0, img2.height());
     std::for_each(std::execution::par, ys.begin(), ys.end(), [&](int y) {
-        int dx = out_mbr->left(), dy = out_mbr->top();
-        auto rgb = reinterpret_cast<QRgb*>(out.scanLine(y));
-        for (int x{}; x < out.width(); ++x)
+        int dx = mbr2->left(), dy = mbr2->top();
+        auto rgb = reinterpret_cast<QRgb*>(img2.scanLine(y));
+        for (int x{}; x < img2.width(); ++x)
             rgb[x] = inv(geometry::geographic::point(x + dx, y + dy))
                          .and_then([&](auto&& p) {
                              auto q = QPoint(p.x(), p.y());
-                             return in.valid(q) ? std::optional{in.pixel(q)}
-                                                : std::nullopt;
+                             return img1.valid(q) ? std::optional{img1.pixel(q)}
+                                                  : std::nullopt;
                          })
                          .value_or(Qt::transparent);
     });
-    paint.drawImage(out_mbr->topLeft(), out);
+    paint.drawImage(mbr2->topLeft(), img2);
 }
 
 }  // namespace boat::gui::qt

@@ -5,7 +5,6 @@
 
 #include <boat/db/commands.hpp>
 #include <boat/geometry/transform.hpp>
-#include <boat/geometry/wkb.hpp>
 #include <boat/gui/datasets/dataset.hpp>
 #include <boat/sql/api.hpp>
 
@@ -54,7 +53,7 @@ public:
         auto it = std::ranges::find(tbl.columns, col, &column::column_name);
         check(it != tbl.columns.end(), col);
         auto tf = bgs::transformation<>(bgs::epsg{4326}, bgs::epsg{it->epsg});
-        auto fwd = geometry::transform(geometry::forward(tf));
+        auto fwd = geometry::transformer(geometry::forwarder(tf));
         auto voids = bgi::rtree<geometry::geographic::box, bgi::rstar<4>>{};
         auto processed = std::unordered_set<pfr::variant>{};
         for (auto& lvl : grid | std::views::reverse) {
@@ -81,8 +80,7 @@ public:
                 auto& var = rows.value();
                 if (!processed.insert(var).second)
                     continue;
-                co_yield {
-                    {}, pfr::get<geometry::geographic::variant>(var), it->epsg};
+                co_yield {{}, std::get<blob>(var), it->epsg};
             }
         }
     }

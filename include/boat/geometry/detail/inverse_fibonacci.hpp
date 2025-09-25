@@ -30,7 +30,7 @@ T inverse_fibonacci(geographic::point const& point, size_t num_points)
     auto b = boost::qvm::mat{{{2 * pi * (frac((f0 + 1) * inv_phi) - inv_phi),
                                2 * pi * (frac((f1 + 1) * inv_phi) - inv_phi)},
                               {-2 * f0 * inv_size, -2 * f1 * inv_size}}};
-    auto c = inverse(b) *
+    auto c = boost::qvm::inverse(b) *
              boost::qvm::vec{{azimuthal, std::cos(polar) - 1 + inv_size}};
     X(c) = std::floor(X(c));
     Y(c) = std::floor(Y(c));

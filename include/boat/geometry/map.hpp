@@ -3,38 +3,36 @@
 #ifndef BOAT_GEOMETRY_MAP_HPP
 #define BOAT_GEOMETRY_MAP_HPP
 
-#include <boat/geometry/detail/distribution.hpp>
-#include <boost/accumulators/accumulators.hpp>
-#include <boost/accumulators/statistics/mean.hpp>
-#include <boost/accumulators/statistics/stats.hpp>
+#include <boat/geometry/transform.hpp>
 
 namespace boat::geometry {
 
-double scale(projection auto const& pj,
-             geographic::point const& ll_center,
-             double resolution)
+inline std::optional<cartesian::box> forward(projection auto const& pj,
+                                             geographic::point const& center,
+                                             double resolution,
+                                             int width,
+                                             int height)
 {
-    namespace ba = boost::accumulators;
-    auto dist = ba::accumulator_set<double, ba::stats<ba::tag::mean>>{};
-    if (auto xy_center = cartesian::point{}; pj.forward(ll_center, xy_center))
-        for (auto ll : buffer(resolution, 4)(ll_center).outer())
-            if (auto xy = cartesian::point{}; pj.forward(ll, xy))
-                dist(boost::geometry::distance(xy_center, xy));
-    return ba::mean(dist);
-}
-
-inline cartesian::box envelope(cartesian::point const& xy_center,
-                               double scale,
-                               int width,
-                               int height)
-{
-    auto ret =
+    auto fwd = transformer(forwarder(pj));
+    auto xy = fwd(center);
+    if (!xy)
+        return std::nullopt;
+    auto c = cartesian::point{xy->x(), xy->y()};
+    auto scale = 0.;
+    for (auto ll : buffer(resolution, 4)(center).outer())
+        if (xy = fwd(ll))
+            scale = std::max<>(scale,
+                               boost::geometry::distance(
+                                   c, cartesian::point{xy->x(), xy->y()}));
+    if (!scale)
+        return std::nullopt;
+    auto mbr =
         cartesian::box{{-width / 2., -height / 2.}, {width / 2., height / 2.}};
-    boost::geometry::multiply_value(ret.min_corner(), scale);
-    boost::geometry::multiply_value(ret.max_corner(), scale);
-    boost::geometry::add_point(ret.min_corner(), xy_center);
-    boost::geometry::add_point(ret.max_corner(), xy_center);
-    return ret;
+    boost::geometry::multiply_value(mbr.min_corner(), scale);
+    boost::geometry::multiply_value(mbr.max_corner(), scale);
+    boost::geometry::add_point(mbr.min_corner(), c);
+    boost::geometry::add_point(mbr.max_corner(), c);
+    return std::optional{std::move(mbr)};
 }
 
 geographic::grid inverse(projection auto const& pj,

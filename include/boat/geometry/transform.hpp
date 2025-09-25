@@ -39,7 +39,7 @@ bool transform(Geom1 const& geom1, Geom2& geom2, Strategy const& strategy)
         }}(geom1, geom2);
 }
 
-auto transform(auto const&... strategies)
+auto transformer(auto const&... strategies)
 {
     return [=]<ogc99_or_box Geom>(Geom geom) {
         Geom tmp;
@@ -50,27 +50,27 @@ auto transform(auto const&... strategies)
 }
 
 template <projection_or_transformation T>
-auto forward(T const& tf)
+auto forwarder(T const& tf)
 {
     return boost::geometry::strategy::transform::srs_forward_transformer<T>{tf};
 }
 
 template <projection_or_transformation T>
-auto inverse(T const& tf)
+auto inverter(T const& tf)
 {
     return boost::geometry::strategy::transform::srs_inverse_transformer<T>{tf};
 }
 
-auto forward(box auto const& mbr, int width, int height)
+auto forwarder(box auto const& mbr, int width, int height)
 {
     return boost::geometry::strategy::transform::
         map_transformer<double, 2, 2, true, false>{mbr, width, height};
 }
 
-auto inverse(box auto const& mbr, int width, int height)
+auto inverter(box auto const& mbr, int width, int height)
 {
     return boost::geometry::strategy::transform::
-        inverse_transformer<double, 2, 2>{forward(mbr, width, height)};
+        inverse_transformer<double, 2, 2>{forwarder(mbr, width, height)};
 }
 
 }  // namespace boat::geometry

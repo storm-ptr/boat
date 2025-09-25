@@ -21,10 +21,9 @@ struct context {
 inline std::generator<context> contexts()
 {
     using namespace std::string_literals;
-    for (auto [width, height] : {std::pair{1280, 720}, {1920, 1080}})
-        for (auto resolution : {500., 10'000.})
-            for (auto& ll : boat::geometry::geographic::multi_point{
-                     {25., 25.}, {-179., 68.}})
+    for (auto ll : {boat::geometry::geographic::point{25., 25.}, {-179., 68.}})
+        for (auto [width, height] : {std::pair{1280, 720}, {1920, 1080}})
+            for (auto resolution : {500., 10'000.})
                 for (
                     auto& txt : {
                         // clang-format off
@@ -36,18 +35,16 @@ boat::concat("+proj=ortho +a=6370997 +b=6370997 +lat_0=", ll.y(), " +lon_0=", ll
                     }) {
                     auto srs = boost::geometry::srs::proj4{txt};
                     auto pj = boost::geometry::srs::projection<>{srs};
-                    auto xy = boat::geometry::cartesian::point{};
-                    boat::check(pj.forward(ll, xy), "contexts");
-                    auto scale = boat::geometry::scale(pj, ll, resolution);
-                    auto mbr =
-                        boat::geometry::envelope(xy, scale, width, height);
+                    auto mbr = boat::geometry::forward(
+                        pj, ll, resolution, width, height);
+                    BOOST_CHECK(mbr);
                     auto num_points = (width * height) / (96 * 96);
                     co_yield {width,
                               height,
                               resolution,
                               srs,
-                              mbr,
-                              boat::geometry::inverse(pj, mbr, num_points)};
+                              *mbr,
+                              boat::geometry::inverse(pj, *mbr, num_points)};
                 }
 }
 

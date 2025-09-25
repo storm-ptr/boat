@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE(draw)
         paint.setPen(QPen(Qt::darkCyan, 5));
         paint.setBrush(Qt::cyan);
         for (auto& ds : dss) {
-            auto lyr = ds->layers().back();
+            auto lyr = ds->layers().front();
             for (auto feat : ds->features(lyr, ctx.grid, ctx.resolution))
                 boat::gui::qt::draw(feat, ctx.srs, ctx.mbr, paint);
         }

@@ -3,6 +3,7 @@
 #ifndef BOAT_GUI_DATASETS_DATASETS_HPP
 #define BOAT_GUI_DATASETS_DATASETS_HPP
 
+#include <boat/detail/uri.hpp>
 #include <boat/gui/caches/cache.hpp>
 #if __has_include(<curl/curl.h>)
 #include <boat/gui/datasets/slippy.hpp>
@@ -17,8 +18,20 @@ inline std::shared_ptr<dataset> create(
 {
     if (url.starts_with("slippy"))
 #if __has_include(<curl/curl.h>)
-        return std::make_shared<slippy>(std::string{uri::parse(url).user},
-                                        cache);
+    {
+        auto parsed = uri::parse(url);
+        auto os = std::ostringstream{};
+        os.imbue(std::locale::classic());
+        if (parsed.scheme == "slippys")
+            os << "https://";
+        else
+            os << "http://";
+        os << parsed.host_spec << '/' << parsed.path;
+        if (!parsed.query.empty())
+            os << '?' << parsed.query;
+        return std::make_shared<slippy>(
+            std::string(parsed.user), std::move(os).str(), cache);
+    }
 #else
         throw std::runtime_error("no curl");
 #endif

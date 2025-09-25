@@ -1,7 +1,7 @@
 // Andrew Naplavkov
 
+#include <boat/detail/slippy.hpp>
 #include <boat/geometry/map.hpp>
-#include <boat/slippy/geometry.hpp>
 #include <boost/geometry/srs/epsg.hpp>
 #include <boost/test/unit_test.hpp>
 
@@ -15,20 +15,18 @@ BOOST_AUTO_TEST_CASE(slippy)
 
     auto pj = boost::geometry::srs::projection<
         boost::geometry::srs::static_epsg<3857>>{};
-    auto xy = boat::geometry::cartesian::point{};
-    BOOST_CHECK(pj.forward(ll, xy));
     auto resolution = 611.5;
-    auto scale = boat::geometry::scale(pj, ll, resolution);
     auto width = 720;
     auto height = 480;
-    auto mbr = boat::geometry::envelope(xy, scale, width, height);
+    auto mbr = boat::geometry::forward(pj, ll, resolution, width, height);
+    BOOST_CHECK(mbr);
     auto num_points = width * height / (128 * 128);
-    auto grid = boat::geometry::inverse(pj, mbr, num_points);
+    auto grid = boat::geometry::inverse(pj, *mbr, num_points);
     auto tiles = boat::slippy::to_tiles(grid, resolution);
 
     auto z = 8;
     auto xmin = INT_MAX, xmax = INT_MIN, ymin = INT_MAX, ymax = INT_MIN;
-    for (auto xy : boost::geometry::box_view{mbr} | std::views::take(4)) {
+    for (auto xy : boost::geometry::box_view{*mbr} | std::views::take(4)) {
         BOOST_CHECK(pj.inverse(xy, ll));
         t = boat::slippy::to_tile(ll, z);
         xmin = std::min<>(xmin, t.x);

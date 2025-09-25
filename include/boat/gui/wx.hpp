@@ -7,6 +7,7 @@
 #include <wx/mstream.h>
 #include <wx/wx.h>
 #include <boat/geometry/transform.hpp>
+#include <boat/geometry/wkb.hpp>
 #include <boat/gui/feature.hpp>
 #include <boost/geometry/srs/epsg.hpp>
 #include <execution>
@@ -57,49 +58,49 @@ void draw(feature const& feat,
     w = std::ceil(w), h = std::ceil(h);
     auto tf = boost::geometry::srs::transformation<>(
         boost::geometry::srs::epsg{feat.epsg}, srs);
-    auto fwd = geometry::transform(geometry::forward(tf),
-                                   geometry::forward(mbr, w, h));
+    auto fwd = geometry::transformer(geometry::forwarder(tf),
+                                     geometry::forwarder(mbr, w, h));
+    auto shape = geometry::geographic::variant{};
+    blob_view{feat.shape} >> shape;
     if (feat.raster.empty()) {
-        if (auto pj = fwd(feat.shape))
+        if (auto pj = fwd(shape))
             detail::draw(*pj, gc);
         return;
     }
-    auto in_mbr = geometry::envelope(feat.shape);
-    auto out_mbr = fwd(in_mbr).transform([=](auto&& g) {
+    auto mbr1 = geometry::envelope(shape);
+    auto mbr2 = fwd(mbr1).transform([=](auto&& g) {
         auto a = g.min_corner(), b = g.max_corner();
         auto x = std::floor(a.x()), y = std::floor(a.y());
         return wxRect2DDouble{0., 0., w, h}.CreateIntersection(
             {x, y, std::ceil(b.x()) - x, std::ceil(b.y()) - y});
     });
-    if (!out_mbr || out_mbr->IsEmpty())
+    auto img1 = wxImage{};
+    auto is = wxMemoryInputStream{feat.raster.data(), feat.raster.size()};
+    if (!mbr2 || mbr2->IsEmpty() || !img1.LoadFile(is))
         return;
-    auto in = wxImage{};
-    auto in_mem = wxMemoryInputStream{feat.raster.data(), feat.raster.size()};
-    if (!in.LoadFile(in_mem))
-        return;
-    auto out = wxImage{out_mbr->GetSize()};
-    out.InitAlpha();
-    auto inv = geometry::transform(
-        geometry::inverse(mbr, w, h),
-        geometry::inverse(tf),
-        geometry::forward(in_mbr, in.GetWidth(), in.GetHeight()));
-    auto in_rgb = reinterpret_cast<wxImage::RGBValue*>(in.GetData());
-    auto ys = std::views::iota(0, out.GetHeight());
+    auto img2 = wxImage{mbr2->GetSize()};
+    img2.InitAlpha();
+    auto inv = geometry::transformer(
+        geometry::inverter(mbr, w, h),
+        geometry::inverter(tf),
+        geometry::forwarder(mbr1, img1.GetWidth(), img1.GetHeight()));
+    auto rgb1 = reinterpret_cast<wxImage::RGBValue*>(img1.GetData());
+    auto ys = std::views::iota(0, img2.GetHeight());
     std::for_each(std::execution::par, ys.begin(), ys.end(), [&](int y) {
-        int d = y * out.GetWidth(), dx = out_mbr->m_x, dy = out_mbr->m_y;
-        auto out_alpha = out.GetAlpha() + d;
-        auto out_rgb = reinterpret_cast<wxImage::RGBValue*>(out.GetData()) + d;
-        for (int x{}; x < out.GetWidth(); ++x) {
+        int d = y * img2.GetWidth(), dx = mbr2->m_x, dy = mbr2->m_y;
+        auto rgb2 = reinterpret_cast<wxImage::RGBValue*>(img2.GetData()) + d;
+        auto alpha2 = img2.GetAlpha() + d;
+        for (int x{}; x < img2.GetWidth(); ++x) {
             auto p =
                 inv(geometry::geographic::point(x + dx, y + dy))
                     .transform([](auto&& p) { return wxPoint(p.x(), p.y()); });
-            if (!p || !wxRect{in.GetSize()}.Contains(*p))
-                out_alpha[x] = wxIMAGE_ALPHA_TRANSPARENT;
+            if (p && wxRect{img1.GetSize()}.Contains(*p))
+                rgb2[x] = rgb1[p->y * img1.GetWidth() + p->x];
             else
-                out_rgb[x] = in_rgb[p->y * in.GetWidth() + p->x];
+                alpha2[x] = wxIMAGE_ALPHA_TRANSPARENT;
         }
     });
-    gc.DrawBitmap(gc.CreateBitmapFromImage(out), *out_mbr);
+    gc.DrawBitmap(gc.CreateBitmapFromImage(img2), *mbr2);
 }
 
 }  // namespace boat::gui::wx

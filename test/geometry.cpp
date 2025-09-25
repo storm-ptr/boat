@@ -34,11 +34,11 @@ void check(std::string const& wkt)
     auto pj = srs::projection<srs::static_epsg<3857>>{};
     auto ll = from_wkt<Geom1>(wkt);
     auto xy = Geom2{};
-    BOOST_CHECK(transform(ll, xy, forward(pj)));
+    BOOST_CHECK(transform(ll, xy, forwarder(pj)));
     BOOST_CHECK_NE(wkt, to_wkt(xy));
     auto wkb = boat::blob{} << xy;
     boat::blob_view{wkb} >> xy;
-    BOOST_CHECK(transform(xy, ll, inverse(pj)));
+    BOOST_CHECK(transform(xy, ll, inverter(pj)));
     BOOST_CHECK_EQUAL(wkt, to_wkt(ll));
     auto mbr = envelope(xy);
     BOOST_CHECK(covered(xy, mbr));
@@ -152,12 +152,11 @@ BOOST_AUTO_TEST_CASE(geometry_map)
     BOOST_CHECK(pj.forward(geographic::point(180, 85), globe.max_corner()));
     constexpr auto pred = [](auto const& ll) { return std::fabs(ll.y()) < 85; };
     for (auto ll : random() | std::views::filter(pred) | std::views::take(10)) {
-        auto xy = cartesian::point{};
-        BOOST_CHECK(pj.forward(ll, xy));
         for (auto res : {1, 10, 100, 1000}) {
-            auto mbr = envelope(xy, scale(pj, ll, res), 1920, 1080);
+            auto mbr = forward(pj, ll, res, 1920, 1080);
+            BOOST_CHECK(mbr);
             auto in = cartesian::box{};
-            BOOST_CHECK(intersection(mbr, globe, in));
+            BOOST_CHECK(intersection(*mbr, globe, in));
             auto grid = inverse(pj, in, num_points);
             auto& lls = grid.begin()->second;
             BOOST_CHECK_LE(lls.size(), num_points);

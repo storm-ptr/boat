@@ -39,7 +39,10 @@ inline std::generator<std::shared_ptr<boat::gui::datasets::dataset>> datasets()
             [cmd = std::move(cmd)] { return std::make_unique<ref>(cmd.get()); },
             cache);
     }
-    co_yield std::make_shared<gui::datasets::slippy>("algol", cache);
+    co_yield std::make_shared<gui::datasets::slippy>(
+        "useragent",
+        "http://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        cache);
 }
 
 #endif  // BOAT_TEST_GUI_DATASETS_HPP
