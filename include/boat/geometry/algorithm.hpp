@@ -3,23 +3,9 @@
 #ifndef BOAT_GEOMETRY_ALGORITHM_HPP
 #define BOAT_GEOMETRY_ALGORITHM_HPP
 
-#include <boat/detail/numbers.hpp>
 #include <boat/geometry/detail/utility.hpp>
 
 namespace boat::geometry {
-
-inline geographic::point add_meters(geographic::point const& p,
-                                    double eastward,
-                                    double northward)
-{
-    constexpr auto meter = numbers::rad / numbers::earth::mean_radius;
-    auto dy = northward * meter;
-    auto [y, mir] = mirrored_clamp(p.y() + dy, -90., 90.);
-    auto denom = std::cos(p.y() * numbers::deg);
-    auto dx = (denom ? eastward * meter / denom : 0.);
-    auto x = circular_clamp(p.x() + dx + (mir ? 180. : 0.), -180., 180.);
-    return {x, y};
-}
 
 inline auto buffer(double distance, size_t num_points)
 {

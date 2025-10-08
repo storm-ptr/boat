@@ -1,43 +1,16 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_GEOMETRY_DISTRIBUTION_HPP
-#define BOAT_GEOMETRY_DISTRIBUTION_HPP
+#ifndef BOAT_GEOMETRY_FIBONACCI_HPP
+#define BOAT_GEOMETRY_FIBONACCI_HPP
 
 #include <boat/geometry/algorithm.hpp>
 #include <boat/geometry/detail/inverse_fibonacci.hpp>
 #include <boat/geometry/detail/priority_point.hpp>
 #include <generator>
 #include <queue>
-#include <random>
 #include <unordered_set>
 
 namespace boat::geometry {
-
-inline std::generator<geographic::point> random()
-{
-    auto gen = std::mt19937{std::random_device()()};
-    auto dist = std::uniform_real_distribution<double>{0, 1};
-    for (;;) {
-        auto azimuthal = 2 * numbers::pi * dist(gen);
-        auto polar = std::acos(1 - 2 * dist(gen));
-        co_yield {azimuthal * numbers::rad - 180, polar * numbers::rad - 90};
-    }
-}
-
-template <box T>
-std::generator<typename as<T>::point> box_interpolate(T mbr, size_t num_points)
-{
-    for (auto tuple : boost::geometry::box_view{mbr} | std::views::pairwise) {
-        auto a = std::get<0>(tuple), b = std::get<1>(tuple);
-        co_yield a;
-        co_yield std::ranges::elements_of(
-            std::views::iota(0u, num_points) |
-            std::views::transform([=](auto i) -> as<T>::point {
-                auto t = (i + 1.) / (num_points + 1.);
-                return {std::lerp(a.x(), b.x(), t), std::lerp(a.y(), b.y(), t)};
-            }));
-    }
-}
 
 template <box T>
 auto box_fibonacci(T const& mbr, size_t num_points)
@@ -45,7 +18,7 @@ auto box_fibonacci(T const& mbr, size_t num_points)
     auto a = mbr.min_corner(), b = mbr.max_corner();
     return std::views::iota(0u, num_points) |
            std::views::transform([=](auto i) -> as<T>::point {
-               return {std::lerp(a.x(), b.x(), frac(i * numbers::inv_phi)),
+               return {std::lerp(a.x(), b.x(), fraction(i * numbers::inv_phi)),
                        std::lerp(a.y(), b.y(), (i + .5) / num_points)};
            });
 }
@@ -55,9 +28,10 @@ struct geographic_fibonacci {
 
     geographic::point operator[](size_t i) const
     {
-        auto azimuthal = 2 * numbers::pi * frac(i * numbers::inv_phi);
+        auto azimuthal = 2 * numbers::pi * fraction(i * numbers::inv_phi);
         auto polar = std::acos(1 - 2 * (i + .5) / num_points);
-        return {azimuthal * numbers::rad - 180, polar * numbers::rad - 90};
+        return {azimuthal * numbers::radian - 180,
+                polar * numbers::radian - 90};
     }
 
     size_t nearest(geographic::point const& p) const
@@ -90,6 +64,11 @@ struct geographic_fibonacci {
     }
 };
 
+constexpr auto geographic_fibonacci_levels =
+    std::views::iota(0uz) | std::views::transform(pow4) |
+    std::views::take_while(normal) |
+    std::views::transform([](auto n) { return geographic_fibonacci(n); });
+
 }  // namespace boat::geometry
 
-#endif  // BOAT_GEOMETRY_DISTRIBUTION_HPP
+#endif  // BOAT_GEOMETRY_FIBONACCI_HPP

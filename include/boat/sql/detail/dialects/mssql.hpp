@@ -137,8 +137,7 @@ struct mssql : dialect {
     {
         auto q = db::query{};
         q << "\n create table " << id{tbl};
-        auto sep = "\n ( ";
-        for (auto& col : tbl.columns) {
+        for (auto sep = "\n ( "; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
               << col.type_name;
             if (col.length > 0 && !col.type_name.contains(" "))

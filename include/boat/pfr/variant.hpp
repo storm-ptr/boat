@@ -5,7 +5,6 @@
 
 #include <boat/blob.hpp>
 #include <cstdint>
-#include <variant>
 
 namespace boat::pfr {
 

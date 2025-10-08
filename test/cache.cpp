@@ -3,7 +3,7 @@
 #include <boat/gui/caches/lru.hpp>
 #include <boost/test/unit_test.hpp>
 
-BOOST_AUTO_TEST_CASE(caches_lru)
+BOOST_AUTO_TEST_CASE(cache)
 {
     auto lru = boat::gui::caches::lru{2u};
     lru.put(1, 1);                                         //< {1:1}

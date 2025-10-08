@@ -6,7 +6,6 @@
 #include <boat/detail/utility.hpp>
 #include <boat/geometry/vocabulary.hpp>
 #include <boost/geometry/srs/transformation.hpp>
-#include <cmath>
 
 namespace boat::geometry {
 
@@ -33,6 +32,9 @@ concept linestring = std::same_as<tag<T>, boost::geometry::linestring_tag>;
 
 template <class T>
 concept multi = std::derived_from<tag<T>, boost::geometry::multi_tag>;
+
+template <class T>
+concept multi_point = std::same_as<tag<T>, boost::geometry::multi_point_tag>;
 
 template <class T>
 concept tagged = has_tag<T>::value;
@@ -67,47 +69,21 @@ template <class T>
 concept srs_spec =
     std::constructible_from<boost::geometry::srs::projection<>, T>;
 
-template <class... Ts>
-void variant_emplace(std::variant<Ts...>& var, size_t i)
-{
-    check(i < sizeof...(Ts), "variant_emplace");
-    static std::variant<Ts...> const vars[] = {Ts{}...};
-    var = vars[i];
-}
-
-template <specialized<std::variant> V, class T, size_t I = 0>
-constexpr size_t variant_index()
-{
-    if constexpr (std::same_as<std::variant_alternative_t<I, V>, T>)
-        return I;
-    else
-        return variant_index<V, T, I + 1>();
-}
-
 template <class T>
 constexpr size_t variant_index_v = variant_index<typename as<T>::variant, T>();
 
-auto frac(std::floating_point auto v)
+auto add_value(point auto p, double d)
 {
-    return std::modf(v, &v);
+    boost::geometry::add_value(p, d);
+    return p;
 }
 
-template <arithmetic T>
-T circular_clamp(T v, T lo, T hi)
-{
-    if constexpr (std::integral<T>)
-        v = (v - lo) % (hi - lo);
-    else
-        v = std::fmod(v - lo, hi - lo);
-    return v + (v < 0 ? hi : lo);
-}
-
-template <arithmetic T>
-std::pair<T, bool> mirrored_clamp(T v, T lo, T hi)
-{
-    v = circular_clamp(v, lo, 2 * hi - lo);
-    return {v > hi ? 2 * hi - v : v, v > hi};
-}
+template <point T>
+constexpr auto cast = []<point U>(U const& p) {
+    T ret;
+    boost::geometry::assign_point(ret, p);
+    return ret;
+};
 
 }  // namespace boat::geometry
 

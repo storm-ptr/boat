@@ -38,9 +38,10 @@ public:
         });
     }
 
-    std::generator<feature> features(qualified_name layer,
-                                     geometry::geographic::grid grid,
-                                     double) override
+    std::generator<feature> features(  //
+        qualified_name layer,
+        geometry::geographic::grid grid,
+        double) override
     {
         using namespace boat::sql;
         namespace bgi = boost::geometry::index;

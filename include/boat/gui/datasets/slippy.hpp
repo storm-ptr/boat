@@ -5,7 +5,6 @@
 
 #include <boat/detail/curl.hpp>
 #include <boat/geometry/slippy.hpp>
-#include <boat/geometry/wkb.hpp>
 #include <boat/gui/datasets/dataset.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -24,15 +23,16 @@ public:
     {
     }
 
-    std::vector<qualified_name> layers() override { return {{"slippy"}}; }
+    std::vector<qualified_name> layers() override { return {{"raster"}}; }
 
-    std::generator<feature> features(qualified_name,
-                                     geometry::geographic::grid grid,
-                                     double resolution) override
+    std::generator<feature> features(  //
+        qualified_name,
+        geometry::geographic::grid grid,
+        double resolution) override
     {
         auto tiles = std::unordered_map<std::string, geometry::tile>{};
         auto queue = curl{usr_};
-        for (auto t : geometry::slippy::coverage(grid, resolution)) {
+        for (auto t : geometry::slippy::covers(grid, resolution)) {
             auto url = url_;
             url = boost::replace_first_copy(url, "{x}", to_chars(t.x));
             url = boost::replace_first_copy(url, "{y}", to_chars(t.y));
@@ -41,7 +41,7 @@ public:
             if (img.has_value())
                 co_yield feature{std::in_place_type<raster>,
                                  std::any_cast<blob>(std::move(img)),
-                                 geometry::slippy::to_matrix(t),
+                                 geometry::slippy::affine(t),
                                  geometry::slippy::epsg};
             else {
                 tiles.insert({url, t});
@@ -54,7 +54,7 @@ public:
                 cache_->put(url, img);
             co_yield feature{std::in_place_type<raster>,
                              std::move(img),
-                             geometry::slippy::to_matrix(tiles.at(url)),
+                             geometry::slippy::affine(tiles.at(url)),
                              geometry::slippy::epsg};
         }
     }

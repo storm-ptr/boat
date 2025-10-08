@@ -7,8 +7,10 @@ QMAKE_CXXFLAGS += -EHsc -bigobj
 INCLUDEPATH += ../../../include
 LIBS += \
   -L$$(LIB)\
+  -lgdal_i\
   -llibcurl_imp\
   -llibmysql\
+  -llibpng16\
   -llibpq\
   -lodbc32\
   -lspatialite_i\

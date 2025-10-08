@@ -5,14 +5,13 @@
 
 #include <algorithm>
 #include <bit>
-#include <charconv>
+#include <cmath>
 #include <cstddef>
-#include <limits>
-#include <locale>
 #include <ranges>
 #include <span>
 #include <sstream>
 #include <stdexcept>
+#include <variant>
 
 namespace boat {
 
@@ -26,7 +25,7 @@ template <template <class...> class Tpl, class... Ts>
 void specialization_test(Tpl<Ts...> const&);
 
 template <class T, template <class...> class Tpl>
-concept specialized = requires(T val) { specialization_test<Tpl>(val); };
+concept specialized = requires(T v) { specialization_test<Tpl>(v); };
 
 template <class T>
 concept ostream = specialized<T, std::basic_ostream>;
@@ -42,67 +41,65 @@ struct overloaded : Ts... {
     using Ts::operator()...;
 };
 
-auto as_bytes(auto* ptr)
-{
+constexpr auto as_bytes = [](auto* ptr) {
     return reinterpret_cast<std::byte const*>(ptr);
-}
+};
 
-auto as_chars(auto* ptr)
-{
+constexpr auto as_chars = [](auto* ptr) {
     return reinterpret_cast<char const*>(ptr);
-}
+};
 
-auto single_span(arithmetic auto& val)
-{
-    return std::span{&val, 1};
-}
+constexpr auto single_span = [](arithmetic auto& v) {
+    return std::span{&v, 1};
+};
 
-auto byteswap(std::floating_point auto val)
-{
-    std::ranges::reverse(std::as_writable_bytes(single_span(val)));
-    return val;
-}
+constexpr auto byteswap = overloaded{
+    [](std::integral auto v) { return std::byteswap(v); },
+    [](std::floating_point auto v) {
+        std::ranges::reverse(std::as_writable_bytes(single_span(v)));
+        return v;
+    },
+};
 
-using std::byteswap;
+constexpr auto fraction = [](std::floating_point auto v) {
+    return std::modf(v, &v);
+};
 
-constexpr bool mixed(std::endian e)
-{
+constexpr auto mixed = [](std::endian e) {
     return std::endian::big != e && std::endian::little != e;
-}
+};
 
-void check(bool success, auto&& what)
+constexpr auto normal = [](std::integral auto v) { return !!v; };
+
+void check(bool success, auto const& what)
     requires requires { std::runtime_error(what); }
 {
     if (!success)
         throw std::runtime_error(what);
 }
 
-template <class T = char>
-std::basic_string<T> concat(auto&&... vals)
+constexpr auto pow2 = []<std::integral T>(T exp) {
+    check(exp >= 0, "pow2");
+    return static_cast<T>(1uz << exp);
+};
+
+constexpr auto pow4 = [](std::integral auto exp) { return pow2(2 * exp); };
+
+template <class... Ts>
+void variant_emplace(std::variant<Ts...>& var, size_t index)
 {
-    auto os = std::basic_ostringstream<T>{};
-    os.imbue(std::locale::classic());
-    ((os << vals), ...);
-    return std::move(os).str();
+    check(index < sizeof...(Ts), "variant_emplace");
+    static std::variant<Ts...> const vars[] = {Ts{}...};
+    var = vars[index];
 }
 
-template <arithmetic T>
-T from_chars(char const* str, size_t len)
+template <specialized<std::variant> V, class T, size_t I = 0>
+constexpr size_t variant_index()
 {
-    T ret;
-    auto [end, ec] = std::from_chars(str, str + len, ret);
-    check(ec == std::errc{} && end == str + len, "from_chars");
-    return ret;
-}
-
-template <std::integral T>
-std::string to_chars(T val)
-{
-    auto ret = std::string(std::numeric_limits<T>::digits10 + 2, 0);
-    auto [end, ec] = std::to_chars(ret.data(), ret.data() + ret.size(), val);
-    check(ec == std::errc{}, "to_chars");
-    ret.resize(end - ret.data());
-    return ret;
+    if constexpr (std::same_as<std::variant_alternative_t<I, V>, T>)
+        return I;
+    else
+        return variant_index<V, T, I + 1>();
 }
 
 }  // namespace boat

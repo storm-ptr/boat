@@ -2,7 +2,7 @@ CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX -D_UNICODE -DwxDEBUG_LEVEL=0 -
 EXECUTABLE=run_me.exe
 INCLUDE=..\..\..\include\;$(WXWIN)\include;$(WXWIN)\include\msvc;$(INCLUDE)
 LIB=$(WXWIN)\lib\vc_x64_lib;$(LIB)
-LIBS=libcurl_imp.lib libmysql.lib libpq.lib odbc32.lib spatialite_i.lib sqlite3_i.lib
+LIBS=gdal_i.lib libcurl_imp.lib libmysql.lib libpng16.lib libpq.lib odbc32.lib spatialite_i.lib sqlite3_i.lib
 OBJECTS=$(SOURCES:.cpp=.obj)
 SOURCES=*.cpp
 

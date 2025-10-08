@@ -22,8 +22,7 @@ class reader {
                   SQLLEN len)
     {
         check(SQLGetData(stmt.get(), col, type, ptr, len, &ind_), stmt);
-        if (ind_ == SQL_NO_TOTAL)
-            throw std::runtime_error{concat(name(stmt, col), " SQL_NO_TOTAL")};
+        boat::check(ind_ != SQL_NO_TOTAL, "SQL_NO_TOTAL");
         return SQL_NULL_DATA != ind_;
     }
 
@@ -31,8 +30,9 @@ class reader {
     pfr::variant get(stmt_ptr const& stmt, SQLUSMALLINT col)
     {
         T v;
-        return get_data(stmt, col, type, &v, sizeof v) ? pfr::variant{v}
-                                                       : pfr::variant{};
+        if (!get_data(stmt, col, type, &v, sizeof v))
+            return {};
+        return v;
     }
 
     pfr::variant get_text(stmt_ptr const& stmt, SQLUSMALLINT col)

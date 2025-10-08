@@ -4,6 +4,7 @@
 #define BOAT_DB_LIBMYSQL_UTILITY_HPP
 
 #include <mysql.h>
+#include <boat/detail/charconv.hpp>
 #include <boat/pfr/variant.hpp>
 
 namespace boat::db::libmysql {

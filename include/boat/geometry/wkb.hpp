@@ -6,6 +6,7 @@
 #include <array>
 #include <boat/blob.hpp>
 #include <boat/geometry/detail/utility.hpp>
+#include <cstdint>
 
 namespace boat {
 namespace geometry::detail {

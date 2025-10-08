@@ -4,6 +4,7 @@
 #define BOAT_DB_LIBPQ_GET_VALUE_HPP
 
 #include <boat/db/libpq/detail/utility.hpp>
+#include <boat/detail/charconv.hpp>
 #include <boat/pfr/variant.hpp>
 
 namespace boat::db::libpq {

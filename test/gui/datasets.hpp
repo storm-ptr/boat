@@ -43,6 +43,8 @@ inline std::generator<std::shared_ptr<boat::gui::datasets::dataset>> datasets()
         "useragent",
         "http://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         cache);
+    co_yield std::make_shared<gui::datasets::gdal>(
+        "/vsicurl/https://download.osgeo.org/gdal/data/gtiff/utm.tif", cache);
 }
 
 #endif  // BOAT_TEST_GUI_DATASETS_HPP

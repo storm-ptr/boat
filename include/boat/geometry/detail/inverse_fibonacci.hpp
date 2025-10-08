@@ -17,8 +17,8 @@ T inverse_fibonacci(geographic::point const& point, size_t num_points)
 {
     if (num_points <= 4)
         return std::views::iota(0u, num_points) | std::ranges::to<T>();
-    auto azimuthal = (point.x() + 180) * numbers::deg;
-    auto polar = (point.y() + 90) * numbers::deg;
+    auto azimuthal = (point.x() + 180) * numbers::degree;
+    auto polar = (point.y() + 90) * numbers::degree;
     auto k = .5 * numbers::inv_ln_phi *
              std::log(numbers::sqrt_5 * numbers::pi * num_points *
                       std::pow(std::sin(polar), 2));
@@ -29,9 +29,9 @@ T inverse_fibonacci(geographic::point const& point, size_t num_points)
     auto inv_size = 1. / num_points;
     auto b = boost::qvm::mat{
         {{2 * numbers::pi *
-              (frac((f0 + 1) * numbers::inv_phi) - numbers::inv_phi),
+              (fraction((f0 + 1) * numbers::inv_phi) - numbers::inv_phi),
           2 * numbers::pi *
-              (frac((f1 + 1) * numbers::inv_phi) - numbers::inv_phi)},
+              (fraction((f1 + 1) * numbers::inv_phi) - numbers::inv_phi)},
          {-2 * f0 * inv_size, -2 * f1 * inv_size}}};
     auto c = boost::qvm::inverse(b) *
              boost::qvm::vec{{azimuthal, std::cos(polar) - 1 + inv_size}};

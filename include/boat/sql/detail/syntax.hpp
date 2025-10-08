@@ -25,8 +25,7 @@ struct index_spec {
 
     friend db::query& operator<<(db::query& out, index_spec const& in)
     {
-        auto sep = "(";
-        for (auto& key : in.idx)
+        for (auto sep = "("; auto& key : in.idx)
             out << std::exchange(sep, ", ") << db::id{key.column_name}
                 << (key.descending ? " desc" : "");
         return out << ")";
@@ -62,8 +61,7 @@ struct select_list {
 
     void print(db::query& out, range_of<column> auto&& cols) const
     {
-        auto sep = "";
-        for (auto const& col : cols) {
+        for (auto sep = ""; auto const& col : cols) {
             out << std::exchange(sep, ", ");
             adaptors::create(tbl, col)->select(out);
         }
@@ -88,8 +86,7 @@ struct order_by {
 
     void print(db::query& out, auto&& keys) const
     {
-        auto sep = "\n order by ";
-        for (auto& key : keys)
+        for (auto sep = "\n order by "; auto& key : keys)
             out << std::exchange(sep, ", ") << db::id{tbl.table_name} << "."
                 << db::id{key.column_name} << (key.descending ? " desc" : "");
     }

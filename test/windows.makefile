@@ -1,7 +1,7 @@
-CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX $(CXXFLAGS)
+CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX -MP -D_CRT_SECURE_NO_WARNINGS $(CXXFLAGS)
 EXECUTABLE=run_me.exe
 INCLUDE=..\include\;$(INCLUDE)
-LIBS=libmysql.lib libpq.lib odbc32.lib spatialite_i.lib sqlite3_i.lib
+LIBS=gdal_i.lib libmysql.lib libpng16.lib libpq.lib odbc32.lib spatialite_i.lib sqlite3_i.lib
 OBJECTS=$(SOURCES:.cpp=.obj)
 SOURCES=*.cpp
 
@@ -17,4 +17,4 @@ test: all
 	$(EXECUTABLE) --log_level=unit_scope
 
 reset:
-	del *.obj $(EXECUTABLE)
+	del *.obj $(EXECUTABLE) *.tif

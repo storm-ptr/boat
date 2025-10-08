@@ -6,8 +6,11 @@
 #include <boat/db/commands.hpp>
 #include <boat/detail/unicode.hpp>
 #include <boat/detail/uri.hpp>
+#include <boat/gdal/make_image.hpp>
+#include <boat/gdal/raster.hpp>
 #include <boat/geometry/raster.hpp>
 #include <boat/geometry/slippy.hpp>
+#include <boat/geometry/tile.hpp>
 #include <boat/geometry/wkb.hpp>
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/datasets/datasets.hpp>

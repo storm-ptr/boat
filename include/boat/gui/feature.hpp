@@ -5,7 +5,6 @@
 
 #include <boat/blob.hpp>
 #include <boat/geometry/vocabulary.hpp>
-#include <variant>
 
 namespace boat::gui {
 

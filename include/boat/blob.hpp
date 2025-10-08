@@ -8,6 +8,7 @@
 #include <cstring>
 #include <iomanip>
 #include <ios>
+#include <locale>
 
 namespace boat {
 

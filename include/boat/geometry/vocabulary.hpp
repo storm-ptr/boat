@@ -12,9 +12,9 @@ namespace boat::geometry {
 
 namespace model = boost::geometry::model;
 
-template <class CoordinateSystem>
+template <class CoordSys>
 struct d2 {
-    using point = model::d2::point_xy<double, CoordinateSystem>;
+    using point = model::d2::point_xy<double, CoordSys>;
     using linestring = model::linestring<point>;
     using polygon = model::polygon<point, false, true>;
     using multi_point = model::multi_point<point>;
@@ -45,11 +45,9 @@ using geographic = d2<boost::geometry::cs::geographic<boost::geometry::degree>>;
 using matrix = boost::qvm::mat<double, 3, 3>;
 
 struct tile {
-    int x;
-    int y;
-    int z;
-
-    friend bool operator==(tile const&, tile const&) = default;
+    int z, y, x;
+    static constexpr int size = 256;
+    friend auto operator<=>(tile const&, tile const&) = default;
 };
 
 }  // namespace boat::geometry

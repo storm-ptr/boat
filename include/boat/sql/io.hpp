@@ -14,27 +14,23 @@ auto& operator<<(ostream auto& out, table const& in)
         in.schema_name.empty() ? in.table_name
                                : concat(in.schema_name, ".", in.table_name),
         in.dbms_name,
-        "length",
-        "srid",
     }};
-    for (auto& col : in.columns)
+    for (auto& col : in.columns) {
+        auto suf = col.srid > 0 ? col.srid : col.length > 0 ? col.length : -1;
         rs.rows.push_back({
             col.column_name,
-            col.type_name,
-            col.length > 0 ? pfr::variant{col.length} : pfr::variant{},
-            col.srid > 0 ? pfr::variant{col.srid} : pfr::variant{},
+            suf > 0 ? concat(col.type_name, ":", suf) : col.type_name,
         });
+    }
     for (auto idx : in.indices()) {
         auto key = std::ranges::begin(idx);
         auto spatial = any_geo(in.columns, key->column_name);
-        rs.columns.push_back(concat(key->partial   ? "partial"
-                                    : key->primary ? "primary"
-                                    : spatial      ? "spatial"
-                                    : key->unique  ? "unique"
-                                                   : "index",
-                                    "(",
-                                    std::ranges::size(idx),
-                                    ")"));
+        rs.columns.push_back(concat(key->partial   ? "part:"
+                                    : key->primary ? "pk:"
+                                    : spatial      ? "spat:"
+                                    : key->unique  ? "uniq:"
+                                                   : "idx:",
+                                    std::ranges::size(idx)));
         for (auto [col, row] : std::views::zip(in.columns, rs.rows)) {
             key = std::ranges::find(
                 idx, col.column_name, &index_key::column_name);

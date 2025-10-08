@@ -3,6 +3,8 @@
 #ifndef BOAT_PFR_ADAPTED_TIME_POINT_HPP
 #define BOAT_PFR_ADAPTED_TIME_POINT_HPP
 
+#include <boat/detail/algorithm.hpp>
+#include <boat/detail/charconv.hpp>
 #include <boat/pfr/variant.hpp>
 #include <chrono>
 #include <regex>
@@ -21,21 +23,19 @@ void read(variant const& in, std::chrono::time_point<Clock, Duration>& out)
     static auto const regex = std::regex{
         R"(^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(\.(\d+))?$)"};
     auto& str = std::get<std::string>(in);
-    auto match = std::cmatch{};
-    check(std::regex_match(str.data(), str.data() + str.size(), match, regex),
-          str);
+    auto m = std::cmatch{};
+    check(std::regex_match(str.data(), str.data() + str.size(), m, regex), str);
     auto ymd = sc::year_month_day(
-        sc::year(from_chars<int>(match[1].first, match[1].length())),
-        sc::month(from_chars<int>(match[2].first, match[2].length())),
-        sc::day(from_chars<int>(match[3].first, match[3].length())));
-    auto h = from_chars<int>(match[4].first, match[4].length());
-    auto min = from_chars<int>(match[5].first, match[5].length());
-    auto s = from_chars<int>(match[6].first, match[6].length());
+        sc::year(from_chars<int>(m[1].first, m[1].length())),
+        sc::month(from_chars<int>(m[2].first, m[2].length())),
+        sc::day(from_chars<int>(m[3].first, m[3].length())));
+    auto h = from_chars<int>(m[4].first, m[4].length());
+    auto min = from_chars<int>(m[5].first, m[5].length());
+    auto s = from_chars<int>(m[6].first, m[6].length());
     auto us = static_cast<int>(
-        (match[8].length()
-             ? from_chars<int>(match[8].first, match[8].length()) /
-                   std::pow(10, match[8].length())
-             : 0) *
+        (m[8].length() ? from_chars<int>(m[8].first, m[8].length()) /
+                             ipow(10u, m[8].length())
+                       : 0) *
         sc::microseconds::period::den / sc::microseconds::period::num);
     check(ymd.ok() && h < 24 && min < 60 && s < 60, str.data());
     out = sc::time_point_cast<Duration>(

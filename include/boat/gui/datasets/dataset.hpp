@@ -15,9 +15,10 @@ struct dataset {
 
     virtual std::vector<qualified_name> layers() = 0;
 
-    virtual std::generator<feature> features(qualified_name layer,
-                                             geometry::geographic::grid,
-                                             double resolution) = 0;
+    virtual std::generator<feature> features(  //
+        qualified_name layer,
+        geometry::geographic::grid,
+        double resolution) = 0;
 };
 
 }  // namespace boat::gui::datasets
