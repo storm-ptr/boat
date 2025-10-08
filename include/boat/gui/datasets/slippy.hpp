@@ -42,7 +42,8 @@ public:
         };
         auto tiles = std::unordered_map<std::string, tile>{};
         auto queue = curl{usr_};
-        for (auto t : to_tiles(grid, resolution)) {
+        for (auto t : to_tiles(grid | std::views::values | std::views::join,
+                               resolution)) {
             auto url = url_;
             url = boost::replace_first_copy(url, "{x}", to_chars(t.x));
             url = boost::replace_first_copy(url, "{y}", to_chars(t.y));

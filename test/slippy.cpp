@@ -2,7 +2,6 @@
 
 #include <boat/detail/slippy.hpp>
 #include <boat/geometry/map.hpp>
-#include <boost/geometry/srs/epsg.hpp>
 #include <boost/test/unit_test.hpp>
 
 BOOST_AUTO_TEST_CASE(slippy)
@@ -13,16 +12,17 @@ BOOST_AUTO_TEST_CASE(slippy)
     BOOST_CHECK_EQUAL(t.y, 103'246);
     BOOST_CHECK(boost::geometry::within(ll, envelope(t)));
 
-    auto pj = boost::geometry::srs::projection<
-        boost::geometry::srs::static_epsg<3857>>{};
+    auto cs = boost::geometry::srs::epsg{3857};
+    auto pj = boost::geometry::srs::projection<>{cs};
     auto resolution = 611.5;
     auto width = 720;
     auto height = 480;
-    auto mbr = boat::geometry::forward(pj, ll, resolution, width, height);
+    auto mbr = boat::geometry::forward(cs, ll, resolution, width, height);
     BOOST_CHECK(mbr);
     auto num_points = width * height / (128 * 128);
-    auto grid = boat::geometry::inverse(pj, *mbr, num_points);
-    auto tiles = boat::slippy::to_tiles(grid, resolution);
+    auto grid = boat::geometry::inverse(cs, *mbr, num_points);
+    auto tiles = boat::slippy::to_tiles(
+        grid | std::views::values | std::views::join, resolution);
 
     auto z = 8;
     auto xmin = INT_MAX, xmax = INT_MIN, ymin = INT_MAX, ymax = INT_MIN;

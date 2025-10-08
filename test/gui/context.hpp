@@ -6,7 +6,7 @@
 #include <boat/geometry/map.hpp>
 #include <generator>
 
-constexpr auto transparent_ratio = .205;
+constexpr auto transparent_ratio = .2336;
 constexpr auto transparent_tolerance = .01;
 
 struct context {
@@ -30,13 +30,13 @@ inline std::generator<context> contexts()
 
 boat::concat("+proj=ortho +a=6370997 +b=6370997 +lat_0=", ll.y(), " +lon_0=", ll.x(), " +x_0=0 +y_0=0 +units=m +no_defs"),
 "+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +units=m +no_defs +k=1 +nadgrids=@null +wktext +type=crs"s,
+"+proj=longlat +datum=WGS84 +no_defs +type=crs"s,
 
                         // clang-format on
                     }) {
                     auto srs = boost::geometry::srs::proj4{txt};
-                    auto pj = boost::geometry::srs::projection<>{srs};
                     auto mbr = boat::geometry::forward(
-                        pj, ll, resolution, width, height);
+                        srs, ll, resolution, width, height);
                     BOOST_CHECK(mbr);
                     auto num_points = (width * height) / (96 * 96);
                     co_yield {width,
@@ -44,7 +44,7 @@ boat::concat("+proj=ortho +a=6370997 +b=6370997 +lat_0=", ll.y(), " +lon_0=", ll
                               resolution,
                               srs,
                               *mbr,
-                              boat::geometry::inverse(pj, *mbr, num_points)};
+                              boat::geometry::inverse(srs, *mbr, num_points)};
                 }
 }
 

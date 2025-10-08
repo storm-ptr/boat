@@ -4,16 +4,23 @@
 #define BOAT_GEOMETRY_MAP_HPP
 
 #include <boat/geometry/transform.hpp>
+#include <boost/geometry/srs/epsg.hpp>
 
 namespace boat::geometry {
 
-inline std::optional<cartesian::box> forward(projection auto const& pj,
-                                             geographic::point const& center,
-                                             double resolution,
-                                             int width,
-                                             int height)
+auto stable_projection(srs auto const& coord_sys)
 {
-    auto fwd = transformer(forwarder(pj));
+    return boost::geometry::srs::transformation<>(
+        boost::geometry::srs::epsg{4326}, coord_sys);
+}
+
+std::optional<cartesian::box> forward(srs auto const& coord_sys,
+                                      geographic::point const& center,
+                                      double resolution,
+                                      int width,
+                                      int height)
+{
+    auto fwd = transformer(forwarder(stable_projection(coord_sys)));
     auto xy = fwd(center);
     if (!xy)
         return std::nullopt;
@@ -35,24 +42,27 @@ inline std::optional<cartesian::box> forward(projection auto const& pj,
     return std::optional{std::move(mbr)};
 }
 
-geographic::grid inverse(projection auto const& pj,
+geographic::grid inverse(srs auto const& coord_sys,
                          cartesian::box const& mbr,
                          size_t num_points)
 {
+    auto inv = transformer(inverter(stable_projection(coord_sys)));
     auto lls = geographic::multi_point{};
     for (auto xy : box_fibonacci(mbr, num_points))
-        if (!pj.inverse(xy, lls.emplace_back()))
-            lls.pop_back();
-    auto accept = [&](geographic::point const& ll) {
-        auto xy = cartesian::point{};
-        return pj.forward(ll, xy) && boost::geometry::within(xy, mbr);
+        if (auto ll = inv(geographic::point{xy.x(), xy.y()}))
+            lls.push_back(*ll);
+    auto fwd = transformer(forwarder(stable_projection(coord_sys)));
+    auto within = [&](geographic::point const& ll) {
+        auto xy = fwd(ll);
+        return xy &&
+               boost::geometry::within(cartesian::point{xy->x(), xy->y()}, mbr);
     };
     auto ret = geographic::grid{};
     for (auto z : std::views::iota(0)) {
         auto fib = geographic_fibonacci{static_cast<size_t>(std::pow(2, z))};
         auto indices = std::unordered_set<size_t>{};
         for (auto& ll : lls)
-            for (auto i : fib.nearests(ll, accept)) {
+            for (auto i : fib.nearests(ll, within)) {
                 if (!indices.insert(i).second)
                     break;
                 if (indices.size() > lls.size())

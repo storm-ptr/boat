@@ -44,7 +44,6 @@ public:
     {
         using namespace boat::sql;
         namespace bgi = boost::geometry::index;
-        namespace bgs = boost::geometry::srs;
         auto cmd = cmd_();
         auto tbl = get_or_invoke(cache_.get(), std::tuple{key_, lyr}, [&] {
             return get_table(*cmd, lyr.at(0), lyr.at(1));
@@ -52,8 +51,8 @@ public:
         auto& col = lyr.at(2);
         auto it = std::ranges::find(tbl.columns, col, &column::column_name);
         check(it != tbl.columns.end(), col);
-        auto tf = bgs::transformation<>(bgs::epsg{4326}, bgs::epsg{it->epsg});
-        auto fwd = geometry::transformer(geometry::forwarder(tf));
+        auto fwd = geometry::transformer(geometry::forwarder(
+            geometry::stable_projection(boost::geometry::srs::epsg{it->epsg})));
         auto voids = bgi::rtree<geometry::geographic::box, bgi::rstar<4>>{};
         auto processed = std::unordered_set<pfr::variant>{};
         for (auto& lvl : grid | std::views::reverse) {

@@ -90,19 +90,20 @@ inline geometry::geographic::box envelope(tile const& t)
             {tilex2lon(t.x + 1, t.z), tiley2lat(t.y, t.z)}};
 }
 
-inline std::unordered_set<tile> to_tiles(geometry::geographic::grid const& grid,
-                                         double resolution)
+inline std::unordered_set<tile> to_tiles(
+    range_of<geometry::geographic::point> auto&& grid,
+    double resolution)
 {
     static constexpr auto d = {-1, 0, 1};
     auto ret = std::unordered_set<tile>{};
     auto lat_num = 0., lat_denom = 0.;
-    for (auto& ll : grid | std::views::values | std::views::join)
+    for (auto& ll : grid)
         lat_num += ll.y(), lat_denom += 1;
     if (!lat_denom)
         return ret;
     auto step = resolution * 256;
     auto z = zoom(step, lat_num / lat_denom);
-    for (auto& ll : grid | std::views::values | std::views::join) {
+    for (auto& ll : grid) {
         auto processed = std::unordered_set{{to_tile(ll, z)}};
         auto queue = std::queue{std::from_range, processed};
         while (!queue.empty()) {

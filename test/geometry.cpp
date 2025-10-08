@@ -6,7 +6,6 @@
 #include <boost/algorithm/hex.hpp>
 #include <boost/fusion/algorithm.hpp>
 #include <boost/fusion/container.hpp>
-#include <boost/geometry/srs/epsg.hpp>
 #include <boost/test/unit_test.hpp>
 #include <random>
 #include "utility.hpp"
@@ -146,18 +145,19 @@ BOOST_AUTO_TEST_CASE(geometry_fibonacci_vs_rtree)
 BOOST_AUTO_TEST_CASE(geometry_map)
 {
     auto num_points = 100;
-    auto pj = srs::projection<>{srs::epsg{3857}};
+    auto cs = srs::epsg{3857};
+    auto pj = srs::projection<>{cs};
     auto globe = cartesian::box{};
     BOOST_CHECK(pj.forward(geographic::point(-180, -85), globe.min_corner()));
     BOOST_CHECK(pj.forward(geographic::point(180, 85), globe.max_corner()));
     constexpr auto pred = [](auto const& ll) { return std::fabs(ll.y()) < 85; };
     for (auto ll : random() | std::views::filter(pred) | std::views::take(10)) {
         for (auto res : {1, 10, 100, 1000}) {
-            auto mbr = forward(pj, ll, res, 1920, 1080);
+            auto mbr = forward(cs, ll, res, 1920, 1080);
             BOOST_CHECK(mbr);
             auto in = cartesian::box{};
             BOOST_CHECK(intersection(*mbr, globe, in));
-            auto grid = inverse(pj, in, num_points);
+            auto grid = inverse(cs, in, num_points);
             auto& lls = grid.begin()->second;
             BOOST_CHECK_LE(lls.size(), num_points);
             BOOST_CHECK_GE(lls.size() + 1, num_points / 2);
