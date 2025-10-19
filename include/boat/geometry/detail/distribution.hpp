@@ -12,17 +12,16 @@
 
 namespace boat::geometry {
 
-template <box B>
-auto box_interpolate(B const& mbr, size_t num_points)
+template <box T>
+as<T>::multi_point box_interpolate(T const& mbr, size_t num_points)
 {
-    using point_t = d2<coord_sys<B>>::point;
-    auto ret = boost::geometry::model::multi_point<point_t>{};
+    auto ret = typename as<T>::multi_point{};
     for (auto tuple : boost::geometry::box_view{mbr} | std::views::pairwise) {
         auto a = std::get<0>(tuple), b = std::get<1>(tuple);
         ret.push_back(a);
         ret.append_range(
             std::views::iota(0u, num_points) |
-            std::views::transform([=](auto i) -> point_t {
+            std::views::transform([=](auto i) -> as<T>::point {
                 auto t = (i + 1.) / (num_points + 1.);
                 return {std::lerp(a.x(), b.x(), t), std::lerp(a.y(), b.y(), t)};
             }));
@@ -30,12 +29,12 @@ auto box_interpolate(B const& mbr, size_t num_points)
     return ret;
 }
 
-template <box B>
-auto box_fibonacci(B const& mbr, size_t num_points)
+template <box T>
+auto box_fibonacci(T const& mbr, size_t num_points)
 {
     auto a = mbr.min_corner(), b = mbr.max_corner();
     return std::views::iota(0u, num_points) |
-           std::views::transform([=](auto i) -> d2<coord_sys<B>>::point {
+           std::views::transform([=](auto i) -> as<T>::point {
                return {std::lerp(a.x(), b.x(), frac(i * inv_phi)),
                        std::lerp(a.y(), b.y(), (i + .5) / num_points)};
            });

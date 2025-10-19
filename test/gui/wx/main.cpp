@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(draw)
             auto gc = make_graphics_context(tmp);
             auto lyr = ds->layers().front();
             for (auto feat : ds->features(lyr, ctx.grid, ctx.resolution))
-                boat::gui::wx::draw(feat, ctx.srs, ctx.mbr, *gc);
+                boat::gui::wx::draw(feat, *gc, ctx.affine, ctx.srs);
             gc.reset();
             compose_darken(img, tmp);
         }

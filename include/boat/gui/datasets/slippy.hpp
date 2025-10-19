@@ -9,7 +9,6 @@
 #include <boat/geometry/wkb.hpp>
 #include <boat/gui/datasets/dataset.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/geometry/srs/epsg.hpp>
 
 namespace boat::gui::datasets {
 
@@ -34,11 +33,11 @@ public:
     {
         using namespace boat::slippy;
         constexpr auto epsg = 3857;
-        static auto const fwd = geometry::transformer(
-            geometry::forwarder(boost::geometry::srs::projection<
-                                boost::geometry::srs::static_epsg<epsg>>{}));
-        constexpr auto shape = [](tile const& t) {
-            return blob{} << *fwd(geometry::to_polygon(envelope(t)));
+        static auto const fwd = geometry::transform(
+            geometry::srs_forward(boost::geometry::srs::projection<
+                                  boost::geometry::srs::static_epsg<epsg>>{}));
+        constexpr auto affine = [](tile const& t) {
+            return geometry::affine(*fwd(envelope(t)), num_pixels, num_pixels);
         };
         auto tiles = std::unordered_map<std::string, tile>{};
         auto queue = curl{usr_};
@@ -50,7 +49,10 @@ public:
             url = boost::replace_first_copy(url, "{z}", to_chars(t.z));
             auto img = cache_ ? cache_->get(url) : std::any{};
             if (img.has_value())
-                co_yield {std::any_cast<blob>(std::move(img)), shape(t), epsg};
+                co_yield feature{std::in_place_type<raster>,
+                                 std::any_cast<blob>(std::move(img)),
+                                 affine(t),
+                                 epsg};
             else {
                 tiles.insert({url, t});
                 queue.push(url);
@@ -60,7 +62,10 @@ public:
             auto [url, img] = queue.pop();
             if (cache_)
                 cache_->put(url, img);
-            co_yield {std::move(img), shape(tiles.at(url)), epsg};
+            co_yield feature{std::in_place_type<raster>,
+                             std::move(img),
+                             affine(tiles.at(url)),
+                             epsg};
         }
     }
 };

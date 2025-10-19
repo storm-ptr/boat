@@ -4,23 +4,16 @@
 #define BOAT_GEOMETRY_MAP_HPP
 
 #include <boat/geometry/transform.hpp>
-#include <boost/geometry/srs/epsg.hpp>
 
 namespace boat::geometry {
 
-auto stable_projection(srs auto const& coord_sys)
-{
-    return boost::geometry::srs::transformation<>(
-        boost::geometry::srs::epsg{4326}, coord_sys);
-}
-
-std::optional<cartesian::box> forward(srs auto const& coord_sys,
+std::optional<cartesian::box> forward(srs_params auto const& srs,
                                       geographic::point const& center,
                                       double resolution,
                                       int width,
                                       int height)
 {
-    auto fwd = transformer(forwarder(stable_projection(coord_sys)));
+    auto fwd = transform(srs_forward(stable_projection(srs)));
     auto xy = fwd(center);
     if (!xy)
         return std::nullopt;
@@ -39,19 +32,20 @@ std::optional<cartesian::box> forward(srs auto const& coord_sys,
     boost::geometry::multiply_value(mbr.max_corner(), scale);
     boost::geometry::add_point(mbr.min_corner(), c);
     boost::geometry::add_point(mbr.max_corner(), c);
-    return std::optional{std::move(mbr)};
+    return std::move(mbr);
 }
 
-geographic::grid inverse(srs auto const& coord_sys,
+geographic::grid inverse(srs_params auto const& srs,
                          cartesian::box const& mbr,
                          size_t num_points)
 {
-    auto inv = transformer(inverter(stable_projection(coord_sys)));
+    auto pj = stable_projection(srs);
+    auto inv = transform(srs_inverse(pj));
     auto lls = geographic::multi_point{};
     for (auto xy : box_fibonacci(mbr, num_points))
         if (auto ll = inv(geographic::point{xy.x(), xy.y()}))
             lls.push_back(*ll);
-    auto fwd = transformer(forwarder(stable_projection(coord_sys)));
+    auto fwd = transform(srs_forward(pj));
     auto within = [&](geographic::point const& ll) {
         auto xy = fwd(ll);
         return xy &&
@@ -74,6 +68,14 @@ geographic::grid inverse(srs auto const& coord_sys,
             lvl[i] = fib[j];
     }
     return ret;
+}
+
+boost::qvm::mat<double, 3, 3> affine(box auto const& mbr, int width, int height)
+{
+    return boost::qvm::inverse(
+        boost::geometry::strategy::transform::
+            map_transformer<double, 2, 2, true, false>{mbr, width, height}
+                .matrix());
 }
 
 }  // namespace boat::geometry

@@ -83,7 +83,7 @@ struct sqlite : dialect {
         return q;
     }
 
-    db::query select(table const& tbl, box const& req) const override
+    db::query select(table const& tbl, overlap const& req) const override
     {
         auto col = find_or_geo(tbl.columns, req.spatial_column);
         auto key = std::ranges::find(

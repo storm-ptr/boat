@@ -14,10 +14,8 @@ constexpr auto root_geoid_area =
     2 * boost::math::double_constants::root_pi * 6'371'008.7714;
 
 template <class T>
-using coord_sys = boost::geometry::coordinate_system<T>::type;
-
-template <class T>
-using variant_from = d2<coord_sys<T>>::variant;
+using as = d2<typename boost::geometry::coordinate_system<T>::type,
+              typename boost::geometry::coordinate_type<T>::type>;
 
 template <class T>
 using tag = boost::geometry::tag<T>::type;
@@ -41,7 +39,8 @@ template <class T>
 concept multi = std::derived_from<tag<T>, boost::geometry::multi_tag>;
 
 template <class T>
-concept ogc99 = has_tag<T>::value && std::convertible_to<T, variant_from<T>>;
+concept ogc99 =
+    has_tag<T>::value && std::convertible_to<T, typename as<T>::variant>;
 
 template <class T>
 concept ogc99_or_box = ogc99<T> || box<T>;
@@ -62,14 +61,13 @@ template <class T>
 concept curve = single<T> && point<std::ranges::range_value_t<T>>;
 
 template <class T>
-concept srs = std::constructible_from<boost::geometry::srs::projection<>, T>;
-
-template <class T>
-concept projection = specialized<T, boost::geometry::srs::projection>;
-
-template <class T>
 concept projection_or_transformation =
-    projection<T> || specialized<T, boost::geometry::srs::transformation>;
+    specialized<T, boost::geometry::srs::projection> ||
+    specialized<T, boost::geometry::srs::transformation>;
+
+template <class T>
+concept srs_params =
+    std::constructible_from<boost::geometry::srs::projection<>, T>;
 
 template <class... Ts>
 void variant_emplace(std::variant<Ts...>& var, size_t i)
@@ -89,7 +87,7 @@ constexpr size_t variant_index()
 }
 
 template <class T>
-constexpr size_t variant_index_v = variant_index<variant_from<T>, T>();
+constexpr size_t variant_index_v = variant_index<typename as<T>::variant, T>();
 
 auto frac(std::floating_point auto val)
 {

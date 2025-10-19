@@ -53,7 +53,7 @@ inline table get_table(db::command& cmd,
 
 template <class T>
 pfr::rowset select(db::command& cmd, table const& tbl, T const& req)
-    requires(std::same_as<T, page> || std::same_as<T, box>)
+    requires requires(dialects::dialect* dial) { dial->select(tbl, req); }
 {
     return cmd.exec(dialects::find(cmd.dbms()).select(tbl, req));
 }

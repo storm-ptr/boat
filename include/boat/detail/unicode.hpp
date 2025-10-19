@@ -57,14 +57,14 @@ static auto const lower = view<wchar_t> | std::views::transform(std::towlower);
 
 static auto const upper = view<wchar_t> | std::views::transform(std::towupper);
 
-template <std::ranges::input_range R>
+template <std::ranges::input_range T>
 struct manip {
-    R r;
+    T range;
 
     friend auto& operator<<(ostream auto& out, manip const& in)
     {
         using char_type = std::decay_t<decltype(out)>::char_type;
-        for (auto c : view<char_type>(in.r))
+        for (auto c : view<char_type>(in.range))
             out << c;
         return out;
     }

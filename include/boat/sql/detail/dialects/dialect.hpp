@@ -23,7 +23,7 @@ struct dialect {
 
     virtual db::query select(table const&, page const&) const = 0;
 
-    virtual db::query select(table const&, box const&) const = 0;
+    virtual db::query select(table const&, overlap const&) const = 0;
 
     virtual db::query schema() const = 0;
 

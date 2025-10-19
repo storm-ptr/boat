@@ -6,10 +6,8 @@
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
-#include <boat/geometry/transform.hpp>
-#include <boat/geometry/wkb.hpp>
+#include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/feature.hpp>
-#include <boost/geometry/srs/epsg.hpp>
 #include <execution>
 
 namespace boat::gui::qt {
@@ -31,55 +29,44 @@ constexpr auto adapt = overloaded{
         return ret;
     }};
 
-void draw(geometry::ogc99 auto const& geom, QPainter& paint)
+void draw(shape const& feat,
+          QPainter& art,
+          boost::qvm::mat<double, 3, 3> const& affine,
+          geometry::srs_params auto const& srs)
 {
+    auto var = forward(epsg(feat.epsg), srs, affine)(variant(feat.wkb));
+    if (!var)
+        return;
     overloaded{
-        [&](geometry::point auto& g) { paint.drawPoint(adapt(g)); },
-        [&](geometry::linestring auto& g) { paint.drawPolyline(adapt(g)); },
-        [&](geometry::polygon auto& g) { paint.drawPath(adapt(g)); },
+        [&](geometry::point auto& g) { art.drawPoint(adapt(g)); },
+        [&](geometry::linestring auto& g) { art.drawPolyline(adapt(g)); },
+        [&](geometry::polygon auto& g) { art.drawPath(adapt(g)); },
         [](this auto&& self, geometry::multi auto& g) -> void {
             std::ranges::for_each(g, self);
         },
         [](this auto&& self, geometry::dynamic auto& g) -> void {
             std::visit(self, g);
-        }}(geom);
+        }}(*var);
 }
 
-}  // namespace detail
-
-void draw(feature const& feat,
-          geometry::srs auto const& srs,
-          geometry::box auto const& mbr,
-          QPainter& paint)
+void draw(raster const& feat,
+          QPainter& art,
+          boost::qvm::mat<double, 3, 3> const& affine,
+          geometry::srs_params auto const& srs)
 {
-    auto wnd = paint.window();
-    auto tf = boost::geometry::srs::transformation<>(
-        boost::geometry::srs::epsg{feat.epsg}, srs);
-    auto fwd = geometry::transformer(
-        geometry::forwarder(tf),
-        geometry::forwarder(mbr, wnd.width(), wnd.height()));
-    auto shape = geometry::geographic::variant{};
-    blob_view{feat.shape} >> shape;
-    if (feat.raster.empty()) {
-        if (auto pj = fwd(shape))
-            detail::draw(*pj, paint);
-        return;
-    }
-    auto mbr1 = geometry::envelope(shape);
-    auto mbr2 = fwd(mbr1)
-                    .transform(detail::adapt)
-                    .transform(&QRectF::toAlignedRect)
-                    .transform(std::bind_front(&QRect::intersected, wnd));
     auto img1 = QImage{};
-    if (!mbr2 || mbr2->isEmpty() ||
-        !img1.loadFromData(reinterpret_cast<uchar const*>(feat.raster.data()),
-                           static_cast<int>(feat.raster.size())))
+    if (!img1.loadFromData(reinterpret_cast<uchar const*>(feat.image.data()),
+                           static_cast<int>(feat.image.size())))
+        return;
+    auto [fwd, inv] = bidirectional(feat.affine, epsg(feat.epsg), srs, affine);
+    auto mbr2 =
+        fwd(box(img1.width(), img1.height()))
+            .transform(adapt)
+            .transform(&QRectF::toAlignedRect)
+            .transform(std::bind_front(&QRect::intersected, art.window()));
+    if (!mbr2 || mbr2->isEmpty())
         return;
     auto img2 = QImage{mbr2->size(), QImage::Format_ARGB32_Premultiplied};
-    auto inv = geometry::transformer(
-        geometry::inverter(mbr, wnd.width(), wnd.height()),
-        geometry::inverter(tf),
-        geometry::forwarder(mbr1, img1.width(), img1.height()));
     auto ys = std::views::iota(0, img2.height());
     std::for_each(std::execution::par, ys.begin(), ys.end(), [&](int y) {
         int dx = mbr2->left(), dy = mbr2->top();
@@ -93,7 +80,17 @@ void draw(feature const& feat,
                          })
                          .value_or(Qt::transparent);
     });
-    paint.drawImage(mbr2->topLeft(), img2);
+    art.drawImage(mbr2->topLeft(), img2);
+}
+
+}  // namespace detail
+
+void draw(feature const& feat,
+          QPainter& art,
+          boost::qvm::mat<double, 3, 3> const& affine,
+          geometry::srs_params auto const& srs)
+{
+    std::visit([&](auto const& v) { detail::draw(v, art, affine, srs); }, feat);
 }
 
 }  // namespace boat::gui::qt

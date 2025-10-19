@@ -42,8 +42,8 @@ concept specialized = requires(T val) { specialization_test<Tpl>(val); };
 template <class T>
 concept ostream = specialized<T, std::basic_ostream>;
 
-template <class R, class T>
-concept range_of = std::same_as<std::ranges::range_value_t<R>, T>;
+template <class R, class V>
+concept range_of = std::same_as<std::ranges::range_value_t<R>, V>;
 
 template <class T, auto del>
 using unique_ptr = std::unique_ptr<T, decltype([](T* ptr) { del(ptr); })>;
@@ -88,10 +88,10 @@ void check(bool success, auto&& what)
         throw std::runtime_error(what);
 }
 
-template <class CharT = char>
-std::basic_string<CharT> concat(auto&&... vals)
+template <class T = char>
+std::basic_string<T> concat(auto&&... vals)
 {
-    auto os = std::basic_ostringstream<CharT>{};
+    auto os = std::basic_ostringstream<T>{};
     os.imbue(std::locale::classic());
     ((os << vals), ...);
     return std::move(os).str();

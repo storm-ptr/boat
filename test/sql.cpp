@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_CASE(sql_api)
         sql::page{.select_list = boost::pfr::names_as_array<object_struct>() |
                                  std::ranges::to<std::vector<std::string>>(),
                   .limit = int(std::ranges::size(objs))};
-    auto box = sql::box{
+    auto overlap = sql::overlap{
         .select_list = {std::string(boost::pfr::get_name<0, object_struct>())},
         .xmin = 9,
         .ymin = 9,
@@ -35,6 +35,6 @@ BOOST_AUTO_TEST_CASE(sql_api)
             sql::select(*cmd, tbl, page) | pfr::view<object_struct>,
             BOAT_LIFT(boost::pfr::eq_fields)));
         BOOST_CHECK(std::ranges::equal(
-            std::array{2}, sql::select(*cmd, tbl, box) | pfr::view<int>));
+            std::array{2}, sql::select(*cmd, tbl, overlap) | pfr::view<int>));
     }
 }

@@ -16,5 +16,5 @@ $(EXECUTABLE): $(OBJECTS)
 test: all
 	$(EXECUTABLE) --log_level=unit_scope
 
-rollback:
+reset:
 	del *.obj $(EXECUTABLE)

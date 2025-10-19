@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(draw)
         for (auto& ds : dss) {
             auto lyr = ds->layers().front();
             for (auto feat : ds->features(lyr, ctx.grid, ctx.resolution))
-                boat::gui::qt::draw(feat, ctx.srs, ctx.mbr, paint);
+                boat::gui::qt::draw(feat, paint, ctx.affine, ctx.srs);
         }
         auto path = boat::concat(std::setfill('0'), std::setw(2), i, ".png");
         img.save(path.data());

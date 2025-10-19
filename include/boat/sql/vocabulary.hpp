@@ -62,7 +62,7 @@ struct page {
     int limit;
 };
 
-struct box {
+struct overlap {
     std::vector<std::string> select_list;
     std::string spatial_column;
     double xmin;

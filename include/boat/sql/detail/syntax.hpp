@@ -4,9 +4,7 @@
 #define BOAT_SQL_SYNTAX_HPP
 
 #include <boat/db/query.hpp>
-#include <boat/geometry/algorithm.hpp>
 #include <boat/sql/detail/adaptors/adaptors.hpp>
-#include <boat/sql/detail/utility.hpp>
 
 namespace boat::sql {
 
@@ -21,9 +19,9 @@ struct id {
     }
 };
 
-template <range_of<index_key> R>
+template <range_of<index_key> T>
 struct index_spec {
-    R const& idx;
+    T const& idx;
 
     friend db::query& operator<<(db::query& out, index_spec const& in)
     {
@@ -118,8 +116,13 @@ struct polygon {
 
     friend db::query& operator<<(db::query& out, polygon const& in)
     {
-        auto var = pfr::to_variant(geometry::to_polygon(
-            geometry::cartesian::box{{in.xmin, in.ymin}, {in.xmax, in.ymax}}));
+        auto var = pfr::to_variant(geometry::cartesian::polygon{{
+            {in.xmin, in.ymin},
+            {in.xmax, in.ymin},
+            {in.xmax, in.ymax},
+            {in.xmin, in.ymax},
+            {in.xmin, in.ymin},
+        }});
         adaptors::create(in.tbl, in.col)->insert(out, std::move(var));
         return out;
     }

@@ -51,7 +51,7 @@ public:
         auto& col = lyr.at(2);
         auto it = std::ranges::find(tbl.columns, col, &column::column_name);
         check(it != tbl.columns.end(), col);
-        auto fwd = geometry::transformer(geometry::forwarder(
+        auto fwd = geometry::transform(geometry::srs_forward(
             geometry::stable_projection(boost::geometry::srs::epsg{it->epsg})));
         auto voids = bgi::rtree<geometry::geographic::box, bgi::rstar<4>>{};
         auto processed = std::unordered_set<pfr::variant>{};
@@ -69,7 +69,8 @@ public:
                 auto a = b2->min_corner(), b = b2->max_corner();
                 auto key = std::tuple{key_, lyr, a.x(), a.y(), b.x(), b.y()};
                 auto rows = get_or_invoke(cache_.get(), key, [&] {
-                    auto req = box{{col}, col, a.x(), a.y(), b.x(), b.y(), 1};
+                    auto req =
+                        overlap{{col}, col, a.x(), a.y(), b.x(), b.y(), 1};
                     return select(*cmd, tbl, req);
                 });
                 if (rows.empty()) {
@@ -79,7 +80,8 @@ public:
                 auto& var = rows.value();
                 if (!processed.insert(var).second)
                     continue;
-                co_yield {{}, std::get<blob>(var), it->epsg};
+                co_yield feature{
+                    std::in_place_type<shape>, std::get<blob>(var), it->epsg};
             }
         }
     }

@@ -13,10 +13,10 @@ LIBS += \
   -lodbc32\
   -lspatialite_i\
   -lsqlite3_i
-TARGET = run_me.exe
-rollback.commands = del /q *.png & rmdir /s /q debug release
-rollback.depends = distclean
-test.commands = release\run_me.exe --log_level=unit_scope
+TARGET = run_me
+reset.commands = del /q *.png & rmdir /s /q debug release
+reset.depends = distclean
+test.commands = release\run_me --log_level=unit_scope
 test.depends = release
-QMAKE_EXTRA_TARGETS += rollback test
+QMAKE_EXTRA_TARGETS += reset test
 }

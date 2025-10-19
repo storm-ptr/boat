@@ -33,11 +33,11 @@ void check(std::string const& wkt)
     auto pj = srs::projection<srs::static_epsg<3857>>{};
     auto ll = from_wkt<Geom1>(wkt);
     auto xy = Geom2{};
-    BOOST_CHECK(transform(ll, xy, forwarder(pj)));
+    BOOST_CHECK(transform(ll, xy, srs_forward(pj)));
     BOOST_CHECK_NE(wkt, to_wkt(xy));
     auto wkb = boat::blob{} << xy;
     boat::blob_view{wkb} >> xy;
-    BOOST_CHECK(transform(xy, ll, inverter(pj)));
+    BOOST_CHECK(transform(xy, ll, srs_inverse(pj)));
     BOOST_CHECK_EQUAL(wkt, to_wkt(ll));
     auto mbr = envelope(xy);
     BOOST_CHECK(covered(xy, mbr));

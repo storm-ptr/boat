@@ -31,6 +31,8 @@ struct std::hash<boat::slippy::tile> {
 
 namespace boat::slippy {
 
+constexpr auto num_pixels = 256;
+
 static auto const steps = std::views::iota(0, 20) |
                           std::views::transform([](int z) {
                               return 2 * pi * 6'378'137 / std::pow(2, z);
@@ -86,11 +88,13 @@ inline tile corrected(tile const& t)
 
 inline geometry::geographic::box envelope(tile const& t)
 {
-    return {{tilex2lon(t.x, t.z), tiley2lat(t.y + 1, t.z)},
-            {tilex2lon(t.x + 1, t.z), tiley2lat(t.y, t.z)}};
+    auto x1 = tilex2lon(t.x, t.z), x2 = tilex2lon(t.x + 1, t.z);
+    auto y1 = tiley2lat(t.y + 1, t.z), y2 = tiley2lat(t.y, t.z);
+    return {{std::nexttoward(x1, x2), std::nexttoward(y1, y2)},
+            {std::nexttoward(x2, x1), std::nexttoward(y2, y1)}};
 }
 
-inline std::unordered_set<tile> to_tiles(
+std::unordered_set<tile> to_tiles(
     range_of<geometry::geographic::point> auto&& grid,
     double resolution)
 {
@@ -101,7 +105,7 @@ inline std::unordered_set<tile> to_tiles(
         lat_num += ll.y(), lat_denom += 1;
     if (!lat_denom)
         return ret;
-    auto step = resolution * 256;
+    auto step = resolution * num_pixels;
     auto z = zoom(step, lat_num / lat_denom);
     for (auto& ll : grid) {
         auto processed = std::unordered_set{{to_tile(ll, z)}};
@@ -114,12 +118,12 @@ inline std::unordered_set<tile> to_tiles(
                 auto t = corrected({top.x + dx, top.y + dy, top.z});
                 if (!processed.insert(t).second)
                     continue;
-                auto c = boost::geometry::return_centroid<
-                    geometry::geographic::point>(envelope(t));
-                auto lim = std::max<>(step, steps[t.z] * step_factor(c.y()));
-                if (boost::geometry::distance(ll, c) > lim)
-                    continue;
-                queue.push(t);
+                for (auto c : boost::geometry::box_view(envelope(t)))
+                    if (boost::geometry::distance(ll, c) <
+                        2 * std::max<>(step, steps[t.z] * step_factor(c.y()))) {
+                        queue.push(t);
+                        break;
+                    }
             }
         }
     }
