@@ -53,17 +53,23 @@ struct overloaded : Ts... {
     using Ts::operator()...;
 };
 
-constexpr auto as_bytes(auto* ptr)
+auto as_bytes(auto* ptr)
 {
     return reinterpret_cast<std::byte const*>(ptr);
 }
 
-constexpr auto as_chars(auto* ptr)
+auto as_chars(auto* ptr)
 {
     return reinterpret_cast<char const*>(ptr);
 }
 
-constexpr auto single_span(arithmetic auto& val)
+template <std::totally_ordered T>
+bool between(T const& val, T const& lo, T const& hi)
+{
+    return lo <= val && val <= hi;
+}
+
+auto single_span(arithmetic auto& val)
 {
     return std::span{&val, 1};
 }

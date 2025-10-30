@@ -88,10 +88,11 @@ inline tile corrected(tile const& t)
 
 inline geometry::geographic::box envelope(tile const& t)
 {
-    auto x1 = tilex2lon(t.x, t.z), x2 = tilex2lon(t.x + 1, t.z);
-    auto y1 = tiley2lat(t.y + 1, t.z), y2 = tiley2lat(t.y, t.z);
-    return {{std::nexttoward(x1, x2), std::nexttoward(y1, y2)},
-            {std::nexttoward(x2, x1), std::nexttoward(y2, y1)}};
+    auto x1 = tilex2lon(t.x, t.z);
+    auto x2 = tilex2lon(t.x + 1, t.z);
+    auto y1 = tiley2lat(t.y + 1, t.z);
+    auto y2 = tiley2lat(t.y, t.z);
+    return {{x1, y1}, {std::nexttoward(x2, x1), std::nexttoward(y2, y1)}};
 }
 
 std::unordered_set<tile> to_tiles(
