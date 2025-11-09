@@ -45,9 +45,9 @@ public:
             ret.columns.resize(sqlite3_column_count(stmt));
             for (int i{}; i < ret.columns.size(); ++i)
                 ret.columns[i] = sqlite3_column_name(stmt, i);
-            int rc = sqlite3_step(stmt);
-            for (; SQLITE_DONE != rc; rc = sqlite3_step(stmt)) {
-                check(rc, dbc_);
+            int ec = sqlite3_step(stmt);
+            for (; SQLITE_DONE != ec; ec = sqlite3_step(stmt)) {
+                check(ec, dbc_);
                 auto& row = ret.rows.emplace_back(ret.columns.size());
                 for (int i{}; i < ret.columns.size(); ++i)
                     row[i] = column_value(stmt, i);

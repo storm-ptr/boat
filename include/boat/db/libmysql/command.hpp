@@ -45,8 +45,8 @@ public:
                       std::ranges::to<std::vector>();
         if (params.empty()) {
             check(!mysql_query(dbc_.get(), sql.data()), dbc_);
-            for (int rc = 0; rc >= 0; rc = mysql_next_result(dbc_.get())) {
-                check(!rc, dbc_);
+            for (int ec{}; ec >= 0; ec = mysql_next_result(dbc_.get())) {
+                check(!ec, dbc_);
                 ret = fetch(dbc_.get());
             }
         }
@@ -60,8 +60,8 @@ public:
                   stmt);
             check(!mysql_stmt_bind_param(stmt.get(), params.data()), stmt);
             check(!mysql_stmt_execute(stmt.get()), stmt);
-            for (int rc = 0; rc >= 0; rc = mysql_stmt_next_result(stmt.get())) {
-                check(!rc, stmt);
+            for (int ec{}; ec >= 0; ec = mysql_stmt_next_result(stmt.get())) {
+                check(!ec, stmt);
                 ret = fetch(stmt.get());
             }
         }

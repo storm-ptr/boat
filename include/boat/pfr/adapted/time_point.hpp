@@ -55,7 +55,7 @@ void write(variant& out, std::chrono::time_point<Clock, Duration> in)
     auto d = sc::floor<sc::days>(epoch);
     auto ymd = sc::year_month_day(sc::sys_days(d));
     auto y = static_cast<int>(ymd.year());
-    check(between(y, 0, 9999), "year out of range");
+    check(0 <= y && y <= 9999, "out of years");
     auto h = sc::floor<sc::hours>(epoch);
     auto min = sc::floor<sc::minutes>(epoch);
     auto us = sc::floor<sc::microseconds>(epoch);

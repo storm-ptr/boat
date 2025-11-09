@@ -4,18 +4,14 @@
 #define BOAT_GEOMETRY_UTILITY_HPP
 
 #include <boat/detail/utility.hpp>
-#include <boat/geometry/model.hpp>
+#include <boat/geometry/vocabulary.hpp>
 #include <boost/geometry/srs/transformation.hpp>
 #include <cmath>
 
 namespace boat::geometry {
 
-constexpr auto root_geoid_area =
-    2 * boost::math::double_constants::root_pi * 6'371'008.7714;
-
 template <class T>
-using as = d2<typename boost::geometry::coordinate_system<T>::type,
-              typename boost::geometry::coordinate_type<T>::type>;
+using as = d2<typename boost::geometry::coordinate_system<T>::type>;
 
 template <class T>
 using tag = boost::geometry::tag<T>::type;
@@ -39,11 +35,10 @@ template <class T>
 concept multi = std::derived_from<tag<T>, boost::geometry::multi_tag>;
 
 template <class T>
-concept ogc99 =
-    has_tag<T>::value && std::convertible_to<T, typename as<T>::variant>;
+concept tagged = has_tag<T>::value;
 
 template <class T>
-concept ogc99_or_box = ogc99<T> || box<T>;
+concept ogc99 = tagged<T> && std::convertible_to<T, typename as<T>::variant>;
 
 template <class T>
 concept point = std::same_as<tag<T>, boost::geometry::point_tag>;
@@ -52,7 +47,10 @@ template <class T>
 concept polygon = std::same_as<tag<T>, boost::geometry::polygon_tag>;
 
 template <class T, class U>
-concept same_tag = std::same_as<tag<T>, tag<U>>;
+concept same_tag = tagged<T> && std::same_as<tag<T>, tag<U>>;
+
+template <class T>
+concept segment = std::same_as<tag<T>, boost::geometry::segment_tag>;
 
 template <class T>
 concept single = std::derived_from<tag<T>, boost::geometry::single_tag>;
@@ -66,7 +64,7 @@ concept projection_or_transformation =
     specialized<T, boost::geometry::srs::transformation>;
 
 template <class T>
-concept srs_params =
+concept srs_spec =
     std::constructible_from<boost::geometry::srs::projection<>, T>;
 
 template <class... Ts>
@@ -77,7 +75,7 @@ void variant_emplace(std::variant<Ts...>& var, size_t i)
     var = vars[i];
 }
 
-template <class V, class T, size_t I = 0>
+template <specialized<std::variant> V, class T, size_t I = 0>
 constexpr size_t variant_index()
 {
     if constexpr (std::same_as<std::variant_alternative_t<I, V>, T>)
@@ -89,9 +87,26 @@ constexpr size_t variant_index()
 template <class T>
 constexpr size_t variant_index_v = variant_index<typename as<T>::variant, T>();
 
-auto frac(std::floating_point auto val)
+auto frac(std::floating_point auto v)
 {
-    return std::modf(val, &val);
+    return std::modf(v, &v);
+}
+
+template <arithmetic T>
+T circular_clamp(T v, T lo, T hi)
+{
+    if constexpr (std::integral<T>)
+        v = (v - lo) % (hi - lo);
+    else
+        v = std::fmod(v - lo, hi - lo);
+    return v + (v < 0 ? hi : lo);
+}
+
+template <arithmetic T>
+std::pair<T, bool> mirrored_clamp(T v, T lo, T hi)
+{
+    v = circular_clamp(v, lo, 2 * hi - lo);
+    return {v > hi ? 2 * hi - v : v, v > hi};
 }
 
 }  // namespace boat::geometry

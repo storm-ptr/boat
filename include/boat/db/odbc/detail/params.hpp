@@ -66,12 +66,13 @@ inline std::unique_ptr<param> create(pfr::variant const& var)
     using integer = scalar<int64_t, SQL_C_SBIGINT, SQL_BIGINT>;
     using real = scalar<double, SQL_C_DOUBLE, SQL_DOUBLE>;
     auto ret = std::unique_ptr<param>{};
-    auto vis =
-        overloaded{[](pfr::null) { throw std::runtime_error{"null param"}; },
-                   [&](int64_t v) { ret = std::make_unique<integer>(v); },
-                   [&](double v) { ret = std::make_unique<real>(v); },
-                   [&](std::string_view v) { ret = std::make_unique<text>(v); },
-                   [&](blob_view v) { ret = std::make_unique<binary>(v); }};
+    auto vis = overloaded{
+        [](pfr::null) { throw std::runtime_error{"null param"}; },
+        [&](int64_t v) { ret = std::make_unique<integer>(v); },
+        [&](double v) { ret = std::make_unique<real>(v); },
+        [&](std::string_view v) { ret = std::make_unique<text>(v); },
+        [&](blob_view v) { ret = std::make_unique<binary>(v); },
+    };
     std::visit(vis, var);
     return ret;
 }

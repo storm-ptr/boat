@@ -31,36 +31,37 @@ constexpr auto adapt = overloaded{
 
 void draw(shape const& feat,
           QPainter& art,
-          boost::qvm::mat<double, 3, 3> const& affine,
-          geometry::srs_params auto const& srs)
+          geometry::matrix const& affine,
+          geometry::srs_spec auto const& srs)
 {
-    auto var = forward(epsg(feat.epsg), srs, affine)(variant(feat.wkb));
+    auto var = forward(epsg(feat.epsg), affine, srs)(variant(feat.wkb));
     if (!var)
         return;
     overloaded{
         [&](geometry::point auto& g) { art.drawPoint(adapt(g)); },
         [&](geometry::linestring auto& g) { art.drawPolyline(adapt(g)); },
         [&](geometry::polygon auto& g) { art.drawPath(adapt(g)); },
-        [](this auto&& self, geometry::multi auto& g) -> void {
+        [](this auto&& self, geometry::multi auto& g) {
             std::ranges::for_each(g, self);
         },
-        [](this auto&& self, geometry::dynamic auto& g) -> void {
+        [](this auto&& self, geometry::dynamic auto& g) {
             std::visit(self, g);
         }}(*var);
 }
 
 void draw(raster const& feat,
           QPainter& art,
-          boost::qvm::mat<double, 3, 3> const& affine,
-          geometry::srs_params auto const& srs)
+          geometry::matrix const& affine,
+          geometry::srs_spec auto const& srs)
 {
     auto img1 = QImage{};
     if (!img1.loadFromData(reinterpret_cast<uchar const*>(feat.image.data()),
                            static_cast<int>(feat.image.size())))
         return;
-    auto [fwd, inv] = bidirectional(feat.affine, epsg(feat.epsg), srs, affine);
+    auto [fwd, inv] = bidirectional(feat.affine, epsg(feat.epsg), affine, srs);
     auto mbr2 =
-        fwd(box(img1.width(), img1.height()))
+        fwd(multi_point(img1.width(), img1.height()))
+            .transform(geometry::minmax)
             .transform(adapt)
             .transform(&QRectF::toAlignedRect)
             .transform(std::bind_front(&QRect::intersected, art.window()));
@@ -87,8 +88,8 @@ void draw(raster const& feat,
 
 void draw(feature const& feat,
           QPainter& art,
-          boost::qvm::mat<double, 3, 3> const& affine,
-          geometry::srs_params auto const& srs)
+          geometry::matrix const& affine,
+          geometry::srs_spec auto const& srs)
 {
     std::visit([&](auto const& v) { detail::draw(v, art, affine, srs); }, feat);
 }

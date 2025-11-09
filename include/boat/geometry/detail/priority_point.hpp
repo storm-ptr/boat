@@ -3,28 +3,27 @@
 #ifndef BOAT_GEOMETRY_PRIORITY_POINT_HPP
 #define BOAT_GEOMETRY_PRIORITY_POINT_HPP
 
-#include <boat/geometry/model.hpp>
+#include <boat/geometry/vocabulary.hpp>
 
 namespace boat::geometry {
 
 struct priority_point {
     geographic::point point;
     double priority;
-    size_t value;
+    size_t index;
 
     priority_point(geographic::point const& point,
                    geographic::point const& max,
-                   size_t value)
+                   size_t index)
         : point{point}
         , priority{-boost::geometry::comparable_distance(point, max)}
-        , value{value}
+        , index{index}
     {
     }
 
-    friend auto operator<=>(priority_point const& lhs,
-                            priority_point const& rhs)
+    friend bool operator<(priority_point const& lhs, priority_point const& rhs)
     {
-        return lhs.priority <=> rhs.priority;
+        return lhs.priority < rhs.priority;
     }
 };
 

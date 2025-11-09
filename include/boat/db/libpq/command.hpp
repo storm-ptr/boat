@@ -44,8 +44,8 @@ public:
                                          lengths.data(),
                                          formats.data(),
                                          text_fmt)};
-        auto rc = PQresultStatus(res.get());
-        check(rc == PGRES_COMMAND_OK || rc == PGRES_TUPLES_OK, dbc_);
+        auto ec = PQresultStatus(res.get());
+        check(ec == PGRES_COMMAND_OK || ec == PGRES_TUPLES_OK, dbc_);
         ret.columns.resize(res ? PQnfields(res.get()) : 0);
         ret.rows.resize(res ? PQntuples(res.get()) : 0);
         for (int col{}; col < ret.columns.size(); ++col)

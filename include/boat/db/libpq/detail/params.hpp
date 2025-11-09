@@ -53,12 +53,13 @@ inline std::unique_ptr<param> create(pfr::variant const& var)
     using text = array<std::string_view, text_oid, text_fmt>;
     using binary = array<blob_view, bytea_oid, binary_fmt>;
     auto ret = std::unique_ptr<param>{};
-    auto vis =
-        overloaded{[](pfr::null) { throw std::runtime_error{"null param"}; },
-                   [&](int64_t v) { ret = std::make_unique<integer>(v); },
-                   [&](double v) { ret = std::make_unique<real>(v); },
-                   [&](std::string_view v) { ret = std::make_unique<text>(v); },
-                   [&](blob_view v) { ret = std::make_unique<binary>(v); }};
+    auto vis = overloaded{
+        [](pfr::null) { throw std::runtime_error{"null param"}; },
+        [&](int64_t v) { ret = std::make_unique<integer>(v); },
+        [&](double v) { ret = std::make_unique<real>(v); },
+        [&](std::string_view v) { ret = std::make_unique<text>(v); },
+        [&](blob_view v) { ret = std::make_unique<binary>(v); },
+    };
     std::visit(vis, var);
     return ret;
 }

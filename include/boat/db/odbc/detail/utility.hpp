@@ -33,10 +33,10 @@ using dbc_ptr = unique_ptr<SQL_HANDLE_DBC>;
 using stmt_ptr = unique_ptr<SQL_HANDLE_STMT>;
 
 template <SQLSMALLINT type>
-void check(SQLRETURN rc, unique_ptr<type> const& ptr)
+void check(SQLRETURN ec, unique_ptr<type> const& ptr)
 {
     auto os = std::basic_ostringstream<SQLWCHAR>{};
-    if (ptr && (SQL_ERROR == rc || SQL_SUCCESS_WITH_INFO == rc)) {
+    if (ptr && (SQL_ERROR == ec || SQL_SUCCESS_WITH_INFO == ec)) {
         auto row = SQLSMALLINT{};
         auto state = std::array<SQLWCHAR, 6>{};
         auto code = SQLINTEGER{};
@@ -51,7 +51,7 @@ void check(SQLRETURN rc, unique_ptr<type> const& ptr)
                                             0)))
             os << std::basic_string_view{buf.data()};
     }
-    if (SQL_SUCCEEDED(rc))
+    if (SQL_SUCCEEDED(ec))
         return;
     auto msg = os.view() | unicode::string<char>;
     throw std::runtime_error{msg.empty() ? "odbc" : msg};

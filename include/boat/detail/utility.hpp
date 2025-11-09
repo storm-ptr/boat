@@ -5,33 +5,22 @@
 
 #include <algorithm>
 #include <bit>
-#include <boost/math/constants/constants.hpp>
 #include <charconv>
-#include <concepts>
 #include <cstddef>
 #include <limits>
 #include <locale>
-#include <memory>
-#include <numbers>
 #include <ranges>
 #include <span>
 #include <sstream>
 #include <stdexcept>
-#include <type_traits>
 
 namespace boat {
-
-using boost::math::double_constants::degree;
-using boost::math::double_constants::radian;
-using std::numbers::phi;
-using std::numbers::pi;
-constexpr auto inv_phi = phi - 1;
 
 template <class T>
 concept arithmetic = std::is_arithmetic_v<T>;
 
-template <class Lhs, class Rhs>
-concept same_size = sizeof(Lhs) == sizeof(Rhs);
+template <class T, class U>
+concept same_size = sizeof(T) == sizeof(U);
 
 template <template <class...> class Tpl, class... Ts>
 void specialization_test(Tpl<Ts...> const&);
@@ -42,8 +31,8 @@ concept specialized = requires(T val) { specialization_test<Tpl>(val); };
 template <class T>
 concept ostream = specialized<T, std::basic_ostream>;
 
-template <class R, class V>
-concept range_of = std::same_as<std::ranges::range_value_t<R>, V>;
+template <class T, class U>
+concept range_of = std::same_as<std::ranges::range_value_t<T>, U>;
 
 template <class T, auto del>
 using unique_ptr = std::unique_ptr<T, decltype([](T* ptr) { del(ptr); })>;
@@ -61,12 +50,6 @@ auto as_bytes(auto* ptr)
 auto as_chars(auto* ptr)
 {
     return reinterpret_cast<char const*>(ptr);
-}
-
-template <std::totally_ordered T>
-bool between(T const& val, T const& lo, T const& hi)
-{
-    return lo <= val && val <= hi;
 }
 
 auto single_span(arithmetic auto& val)

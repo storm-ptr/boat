@@ -4,14 +4,14 @@
 #define BOAT_GUI_FEATURE_HPP
 
 #include <boat/blob.hpp>
-#include <boost/qvm/mat.hpp>
+#include <boat/geometry/vocabulary.hpp>
 #include <variant>
 
 namespace boat::gui {
 
 struct raster {
     blob image;
-    boost::qvm::mat<double, 3, 3> affine;
+    geometry::matrix affine;
     int epsg;
 };
 

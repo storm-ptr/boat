@@ -56,9 +56,9 @@ public:
                                    bnd->indicator()),
                   stmt);
         }
-        auto rc = SQLExecute(stmt.get());
-        for (; SQL_NO_DATA != rc; rc = SQLMoreResults(stmt.get())) {
-            check(rc, stmt);
+        auto ec = SQLExecute(stmt.get());
+        for (; SQL_NO_DATA != ec; ec = SQLMoreResults(stmt.get())) {
+            check(ec, stmt);
             ret = {};
             SQLSMALLINT num_cols;
             check(SQLNumResultCols(stmt.get(), &num_cols), stmt);
@@ -66,9 +66,9 @@ public:
                 for (int i{}; i < num_cols; ++i)
                     ret.columns.push_back(name(stmt, i + 1));
                 auto rdr = reader{};
-                rc = SQLFetch(stmt.get());
-                for (; SQL_NO_DATA != rc; rc = SQLFetch(stmt.get())) {
-                    check(rc, stmt);
+                ec = SQLFetch(stmt.get());
+                for (; SQL_NO_DATA != ec; ec = SQLFetch(stmt.get())) {
+                    check(ec, stmt);
                     auto& row = ret.rows.emplace_back(num_cols);
                     for (int i{}; i < num_cols; ++i)
                         row[i] = rdr.get_data(stmt, i + 1);

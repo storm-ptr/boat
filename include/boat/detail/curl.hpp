@@ -15,8 +15,8 @@ public:
 
     explicit curl(std::string useragent) : useragent_{std::move(useragent)}
     {
-        static auto const rc = curl_global_init(CURL_GLOBAL_ALL);
-        check(rc);
+        static auto const ec = curl_global_init(CURL_GLOBAL_ALL);
+        check(ec);
         multi_.reset(curl_multi_init());
         boat::check(!!multi_, "curl_multi_init");
     }
@@ -74,16 +74,16 @@ private:
     unique_ptr<CURLM, curl_multi_cleanup> multi_;
     std::unordered_map<CURL*, std::pair<easy_ptr, value_ptr>> jobs_;
 
-    static void check(CURLcode rc)
+    static void check(CURLcode ec)
     {
-        if (CURLE_OK != rc)
-            throw std::runtime_error(curl_easy_strerror(rc));
+        if (CURLE_OK != ec)
+            throw std::runtime_error(curl_easy_strerror(ec));
     }
 
-    static void check(CURLMcode rc)
+    static void check(CURLMcode ec)
     {
-        if (CURLM_OK != rc)
-            throw std::runtime_error(curl_multi_strerror(rc));
+        if (CURLM_OK != ec)
+            throw std::runtime_error(curl_multi_strerror(ec));
     }
 
     static size_t callback(void* ptr, size_t size, size_t nmemb, blob* buf)

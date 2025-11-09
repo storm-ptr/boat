@@ -52,13 +52,13 @@ public:
         auto it = std::ranges::find(tbl.columns, col, &column::column_name);
         check(it != tbl.columns.end(), col);
         auto fwd = geometry::transform(geometry::srs_forward(
-            geometry::stable_projection(boost::geometry::srs::epsg{it->epsg})));
+            geometry::transformation(boost::geometry::srs::epsg{it->epsg})));
         auto voids = bgi::rtree<geometry::geographic::box, bgi::rstar<4>>{};
         auto processed = std::unordered_set<pfr::variant>{};
         for (auto& lvl : grid | std::views::reverse) {
             auto buf = geometry::buffer(lvl.first / 2, 4);
             for (auto& p1 : lvl.second) {
-                auto b1 = geometry::envelope(buf(p1));
+                auto b1 = geometry::minmax(buf(p1));
                 if (!boost::geometry::within(p1, b1))
                     continue;
                 if (bgi::qbegin(voids, bgi::contains(b1)) != bgi::qend(voids))

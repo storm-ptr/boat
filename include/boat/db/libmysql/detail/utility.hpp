@@ -8,17 +8,16 @@
 
 namespace boat::db::libmysql {
 
-constexpr auto binary_charset = 63u;
-
 struct buffer {
     std::string str;
     bool null;
     unsigned long len;
 };
 
-constexpr auto error =
-    overloaded{[](MYSQL* dbc) { return mysql_error(dbc); },
-               [](MYSQL_STMT* stmt) { return mysql_stmt_error(stmt); }};
+constexpr auto error = overloaded{
+    [](MYSQL* dbc) { return mysql_error(dbc); },
+    [](MYSQL_STMT* stmt) { return mysql_stmt_error(stmt); },
+};
 
 void check(bool success, auto* ptr)
     requires requires { error(ptr); }
@@ -36,26 +35,27 @@ void check(bool success, auto& ptr)
 inline MYSQL_BIND to_bind(pfr::variant const& var)
 {
     auto ret = MYSQL_BIND{};
-    auto vis =
-        overloaded{[&](pfr::null const&) { ret.buffer_type = MYSQL_TYPE_NULL; },
-                   [&](int64_t const& v) {
-                       ret.buffer_type = MYSQL_TYPE_LONGLONG;
-                       ret.buffer = const_cast<int64_t*>(&v);
-                   },
-                   [&](double const& v) {
-                       ret.buffer_type = MYSQL_TYPE_DOUBLE;
-                       ret.buffer = const_cast<double*>(&v);
-                   },
-                   [&](std::string const& v) {
-                       ret.buffer_type = MYSQL_TYPE_STRING;
-                       ret.buffer = const_cast<char*>(v.data());
-                       ret.buffer_length = static_cast<unsigned long>(v.size());
-                   },
-                   [&](blob const& v) {
-                       ret.buffer_type = MYSQL_TYPE_BLOB;
-                       ret.buffer = const_cast<std::byte*>(v.data());
-                       ret.buffer_length = static_cast<unsigned long>(v.size());
-                   }};
+    auto vis = overloaded{
+        [&](pfr::null const&) { ret.buffer_type = MYSQL_TYPE_NULL; },
+        [&](int64_t const& v) {
+            ret.buffer_type = MYSQL_TYPE_LONGLONG;
+            ret.buffer = const_cast<int64_t*>(&v);
+        },
+        [&](double const& v) {
+            ret.buffer_type = MYSQL_TYPE_DOUBLE;
+            ret.buffer = const_cast<double*>(&v);
+        },
+        [&](std::string const& v) {
+            ret.buffer_type = MYSQL_TYPE_STRING;
+            ret.buffer = const_cast<char*>(v.data());
+            ret.buffer_length = static_cast<unsigned long>(v.size());
+        },
+        [&](blob const& v) {
+            ret.buffer_type = MYSQL_TYPE_BLOB;
+            ret.buffer = const_cast<std::byte*>(v.data());
+            ret.buffer_length = static_cast<unsigned long>(v.size());
+        },
+    };
     std::visit(vis, var);
     return ret;
 }
@@ -84,7 +84,7 @@ inline pfr::variant get_value(MYSQL_FIELD& fld,
         case MYSQL_TYPE_LONG_BLOB:
         case MYSQL_TYPE_MEDIUM_BLOB:
         case MYSQL_TYPE_TINY_BLOB:
-            if (binary_charset == fld.charsetnr)
+            if (63u == fld.charsetnr)
                 return pfr::variant{
                     std::in_place_type<blob>, as_bytes(ptr), len};
             [[fallthrough]];

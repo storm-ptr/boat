@@ -4,11 +4,10 @@
 
 #include <boat/blob.hpp>
 #include <boat/db/commands.hpp>
-#include <boat/detail/slippy.hpp>
 #include <boat/detail/unicode.hpp>
 #include <boat/detail/uri.hpp>
-#include <boat/geometry/map.hpp>
-#include <boat/geometry/transform.hpp>
+#include <boat/geometry/raster.hpp>
+#include <boat/geometry/slippy.hpp>
 #include <boat/geometry/wkb.hpp>
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/datasets/datasets.hpp>

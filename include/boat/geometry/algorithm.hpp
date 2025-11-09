@@ -3,13 +3,27 @@
 #ifndef BOAT_GEOMETRY_ALGORITHM_HPP
 #define BOAT_GEOMETRY_ALGORITHM_HPP
 
+#include <boat/detail/numbers.hpp>
 #include <boat/geometry/detail/utility.hpp>
 
 namespace boat::geometry {
 
+inline geographic::point add_meters(geographic::point const& p,
+                                    double eastward,
+                                    double northward)
+{
+    constexpr auto meter = numbers::rad / numbers::earth::mean_radius;
+    auto dy = northward * meter;
+    auto [y, mir] = mirrored_clamp(p.y() + dy, -90., 90.);
+    auto denom = std::cos(p.y() * numbers::deg);
+    auto dx = (denom ? eastward * meter / denom : 0.);
+    auto x = circular_clamp(p.x() + dx + (mir ? 180. : 0.), -180., 180.);
+    return {x, y};
+}
+
 inline auto buffer(double distance, size_t num_points)
 {
-    return [=]<ogc99 T>(T const& geom) {
+    return [=]<tagged T>(T const& geom) {
         namespace strategy = boost::geometry::strategy::buffer;
         using strategy_point_circle = std::conditional_t<
             std::same_as<typename boost::geometry::cs_tag<T>::type,
@@ -31,18 +45,16 @@ inline auto buffer(double distance, size_t num_points)
     };
 }
 
-template <ogc99 T>
-as<T>::box envelope(T const& geom)
-{
+constexpr auto minmax = []<tagged T>(T const& geom) -> as<T>::box {
     double xmin = INFINITY;
-    double xmax = -INFINITY;
     double ymin = INFINITY;
+    double xmax = -INFINITY;
     double ymax = -INFINITY;
     overloaded{[&](single auto& g) {
                    boost::geometry::for_each_point(g, [&](point auto& p) {
                        xmin = std::min<>(xmin, p.x());
-                       xmax = std::max<>(xmax, p.x());
                        ymin = std::min<>(ymin, p.y());
+                       xmax = std::max<>(xmax, p.x());
                        ymax = std::max<>(ymax, p.y());
                    });
                },
@@ -53,7 +65,7 @@ as<T>::box envelope(T const& geom)
                    std::visit(self, g);
                }}(geom);
     return {{xmin, ymin}, {xmax, ymax}};
-}
+};
 
 }  // namespace boat::geometry
 

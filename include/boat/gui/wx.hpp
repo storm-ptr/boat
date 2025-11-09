@@ -23,10 +23,10 @@ wxGraphicsPath& insert(wxGraphicsPath& out, geometry::curve auto const& in)
 
 void draw(shape const& feat,
           wxGraphicsContext& art,
-          boost::qvm::mat<double, 3, 3> const& affine,
-          geometry::srs_params auto const& srs)
+          geometry::matrix const& affine,
+          geometry::srs_spec auto const& srs)
 {
-    auto var = forward(epsg(feat.epsg), srs, affine)(variant(feat.wkb));
+    auto var = forward(epsg(feat.epsg), affine, srs)(variant(feat.wkb));
     if (!var)
         return;
     overloaded{
@@ -42,34 +42,37 @@ void draw(shape const& feat,
                 insert(path, item).CloseSubpath();
             art.DrawPath(path);
         },
-        [](this auto&& self, geometry::multi auto& g) -> void {
+        [](this auto&& self, geometry::multi auto& g) {
             std::ranges::for_each(g, self);
         },
-        [](this auto&& self, geometry::dynamic auto& g) -> void {
+        [](this auto&& self, geometry::dynamic auto& g) {
             std::visit(self, g);
         }}(*var);
 }
 
 void draw(raster const& feat,
           wxGraphicsContext& art,
-          boost::qvm::mat<double, 3, 3> const& affine,
-          geometry::srs_params auto const& srs)
+          geometry::matrix const& affine,
+          geometry::srs_spec auto const& srs)
 {
     auto img1 = wxImage{};
     auto is = wxMemoryInputStream{feat.image.data(), feat.image.size()};
-    if (!img1.LoadFile(is))
+    if (auto _ = wxLogNull{}; !img1.LoadFile(is))
         return;
-    auto [fwd, inv] = bidirectional(feat.affine, epsg(feat.epsg), srs, affine);
+    auto [fwd, inv] = bidirectional(feat.affine, epsg(feat.epsg), affine, srs);
     auto mbr1 = wxRect{img1.GetSize()};
-    auto mbr2 = fwd(box(mbr1.width, mbr1.height)).transform([&](auto&& g) {
-        wxDouble w, h;
-        art.GetSize(&w, &h);
-        w = std::ceil(w), h = std::ceil(h);
-        auto a = g.min_corner(), b = g.max_corner();
-        auto x = std::floor(a.x()), y = std::floor(a.y());
-        return wxRect2DDouble{0., 0., w, h}.CreateIntersection(
-            {x, y, std::ceil(b.x()) - x, std::ceil(b.y()) - y});
-    });
+    auto mbr2 =
+        fwd(multi_point(mbr1.width, mbr1.height))
+            .transform(geometry::minmax)
+            .transform([&](auto const& g) {
+                wxDouble width, height;
+                art.GetSize(&width, &height);
+                width = std::ceil(width), height = std::ceil(height);
+                auto a = g.min_corner(), b = g.max_corner();
+                auto x = std::floor(a.x()), y = std::floor(a.y());
+                return wxRect2DDouble{0., 0., width, height}.CreateIntersection(
+                    {x, y, std::ceil(b.x()) - x, std::ceil(b.y()) - y});
+            });
     if (!mbr2 || mbr2->IsEmpty())
         return;
     auto img2 = wxImage{mbr2->GetSize()};
@@ -97,8 +100,8 @@ void draw(raster const& feat,
 
 void draw(feature const& feat,
           wxGraphicsContext& art,
-          boost::qvm::mat<double, 3, 3> const& affine,
-          geometry::srs_params auto const& srs)
+          geometry::matrix const& affine,
+          geometry::srs_spec auto const& srs)
 {
     std::visit([&](auto const& v) { detail::draw(v, art, affine, srs); }, feat);
 }

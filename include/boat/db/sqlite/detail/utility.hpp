@@ -10,10 +10,10 @@
 
 namespace boat::db::sqlite {
 
-void check(int rc, auto& dbc)
+void check(int ec, auto& dbc)
     requires requires { sqlite3_errmsg(dbc.get()); }
 {
-    switch (rc) {
+    switch (ec) {
         case SQLITE_DONE:
         case SQLITE_OK:
         case SQLITE_ROW:
@@ -24,18 +24,19 @@ void check(int rc, auto& dbc)
 
 inline int bind_value(sqlite3_stmt* stmt, int i, pfr::variant const& var)
 {
-    auto vis =
-        overloaded{[=](pfr::null) { return sqlite3_bind_null(stmt, i); },
-                   [=](int64_t v) { return sqlite3_bind_int64(stmt, i, v); },
-                   [=](double v) { return sqlite3_bind_double(stmt, i, v); },
-                   [=](std::string_view v) {
-                       return sqlite3_bind_text(
-                           stmt, i, v.data(), int(v.size()), SQLITE_STATIC);
-                   },
-                   [=](blob_view v) {
-                       return sqlite3_bind_blob(
-                           stmt, i, v.data(), int(v.size()), SQLITE_STATIC);
-                   }};
+    auto vis = overloaded{
+        [=](pfr::null) { return sqlite3_bind_null(stmt, i); },
+        [=](int64_t v) { return sqlite3_bind_int64(stmt, i, v); },
+        [=](double v) { return sqlite3_bind_double(stmt, i, v); },
+        [=](std::string_view v) {
+            return sqlite3_bind_text(
+                stmt, i, v.data(), int(v.size()), SQLITE_STATIC);
+        },
+        [=](blob_view v) {
+            return sqlite3_bind_blob(
+                stmt, i, v.data(), int(v.size()), SQLITE_STATIC);
+        },
+    };
     return std::visit(vis, var);
 }
 
