@@ -43,13 +43,13 @@ public:
             for (int i{}; i < num_params && it != params.end(); ++i, ++it)
                 check(bind_value(stmt, i + 1, *it), dbc_);
             ret.columns.resize(sqlite3_column_count(stmt));
-            for (int i{}; i < ret.columns.size(); ++i)
+            for (int i{}; i < static_cast<int>(ret.columns.size()); ++i)
                 ret.columns[i] = sqlite3_column_name(stmt, i);
             int ec = sqlite3_step(stmt);
             for (; SQLITE_DONE != ec; ec = sqlite3_step(stmt)) {
                 check(ec, dbc_);
                 auto& row = ret.rows.emplace_back(ret.columns.size());
-                for (int i{}; i < ret.columns.size(); ++i)
+                for (int i{}; i < static_cast<int>(ret.columns.size()); ++i)
                     row[i] = column_value(stmt, i);
             }
         }

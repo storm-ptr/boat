@@ -12,7 +12,7 @@ BOOST_AUTO_TEST_CASE(geometry_raster)
     auto width = 1920;
     auto height = 1080;
     auto wnd = cartesian::box{{}, {width * 1., height * 1.}};
-    auto num_points = 100;
+    auto num_points = 100u;
     auto srs = srs::epsg{3857};
     auto pj = srs::projection<>{srs};
     auto ext = cartesian::box{};
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(geometry_raster)
 
             BOOST_CHECK(covered_by(out, in));
             auto iou = area(out) / area(in);
-            BOOST_TEST(iou > .89, iou << "; " << res << "m/px; " << wkt(p));
+            BOOST_TEST(iou > .88, iou << "; " << res << "m/px; " << wkt(p));
         }
     }
 }

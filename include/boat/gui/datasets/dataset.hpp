@@ -8,14 +8,14 @@
 
 namespace boat::gui::datasets {
 
-using layer = std::vector<std::string>;
+using qualified_name = std::vector<std::string>;
 
 struct dataset {
     virtual ~dataset() = default;
 
-    virtual std::vector<layer> layers() = 0;
+    virtual std::vector<qualified_name> layers() = 0;
 
-    virtual std::generator<feature> features(layer,
+    virtual std::generator<feature> features(qualified_name layer,
                                              geometry::geographic::grid,
                                              double resolution) = 0;
 };

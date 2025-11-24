@@ -6,8 +6,8 @@
 #include <boat/geometry/raster.hpp>
 #include <generator>
 
-constexpr auto transparent_ratio = .2274;
-constexpr auto transparent_tolerance = .01;
+constexpr auto transparent_ratio = .227;
+constexpr auto transparent_tolerance = .002;
 
 struct context {
     int width;

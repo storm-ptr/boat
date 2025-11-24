@@ -11,10 +11,11 @@ BOOST_AUTO_TEST_CASE(sql_api)
 {
     using namespace boat;
     auto objs = get_objects();
-    auto page =
-        sql::page{.select_list = boost::pfr::names_as_array<object_struct>() |
-                                 std::ranges::to<std::vector<std::string>>(),
-                  .limit = int(std::ranges::size(objs))};
+    auto page = sql::page{
+        .select_list = boost::pfr::names_as_array<object_struct>() |
+                       std::ranges::to<std::vector<std::string>>(),
+        .limit = static_cast<int>(std::ranges::size(objs)),
+    };
     auto overlap = sql::overlap{
         .select_list = {std::string(boost::pfr::get_name<0, object_struct>())},
         .xmin = 9,

@@ -17,10 +17,12 @@ auto format(ostream auto const& fmt, variant const& var)
     os.unsetf(os.flags());
     os.setf(fmt.flags());
     os.precision(fmt.precision());
-    auto vis = overloaded{[&](null) { os << ""; },
-                          [&](arithmetic auto v) { os << v; },
-                          [&](std::string_view v) { os << unicode::io(v); },
-                          [&](blob_view v) { os << v.size() << " bytes"; }};
+    auto vis = overloaded{
+        [&](null) { os << ""; },
+        [&](arithmetic auto v) { os << v; },
+        [&](std::string_view v) { os << unicode::io(v); },
+        [&](blob_view v) { os << v.size() << " bytes"; },
+    };
     std::visit(vis, var);
     return os.view() |
            std::views::transform([](auto c) { return iswspace(c) ? ' ' : c; }) |

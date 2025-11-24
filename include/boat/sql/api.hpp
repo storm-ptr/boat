@@ -52,10 +52,10 @@ inline table get_table(db::command& cmd,
 }
 
 template <class T>
-pfr::rowset select(db::command& cmd, table const& tbl, T const& req)
-    requires requires(dialects::dialect* dial) { dial->select(tbl, req); }
+pfr::rowset select(db::command& cmd, table const& tbl, T const& request)
+    requires requires(dialects::dialect* dial) { dial->select(tbl, request); }
 {
-    return cmd.exec(dialects::find(cmd.dbms()).select(tbl, req));
+    return cmd.exec(dialects::find(cmd.dbms()).select(tbl, request));
 }
 
 inline void insert(db::command& cmd, table const& tbl, pfr::rowset const& vals)

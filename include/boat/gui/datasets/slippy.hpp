@@ -24,9 +24,9 @@ public:
     {
     }
 
-    std::vector<layer> layers() override { return {{"slippy"}}; }
+    std::vector<qualified_name> layers() override { return {{"slippy"}}; }
 
-    std::generator<feature> features(layer,
+    std::generator<feature> features(qualified_name,
                                      geometry::geographic::grid grid,
                                      double resolution) override
     {

@@ -67,13 +67,12 @@ inline geographic::box minmax(tile const& t)
 
 inline matrix to_matrix(tile const& t)
 {
-    static auto const fwd =
-        transform(srs_forward(boost::geometry::srs::projection<
-                              boost::geometry::srs::static_epsg<epsg>>{}));
-    return boost::qvm::inverse(boost::geometry::strategy::transform::
-                                   map_transformer<double, 2, 2, true, false>{
-                                       *fwd(minmax(t)), num_pixels, num_pixels}
-                                       .matrix());
+    auto pj = boost::geometry::srs::projection<
+        boost::geometry::srs::static_epsg<epsg>>{};
+    auto mbr = *transform(srs_forward(pj))(minmax(t));
+    auto inv = boost::geometry::strategy::transform::
+        map_transformer<double, 2, 2, true, false>{mbr, num_pixels, num_pixels};
+    return boost::qvm::inverse(inv.matrix());
 }
 
 inline tile to_tile(geographic::point const& p, int z)

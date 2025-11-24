@@ -27,28 +27,28 @@ public:
     {
     }
 
-    std::vector<layer> layers() override
+    std::vector<qualified_name> layers() override
     {
         return get_or_invoke(cache_.get(), key_, [&] {
             return boat::sql::get_layers(*cmd_()) |
-                   std::views::transform([](auto& l) -> layer {
+                   std::views::transform([](auto& l) -> qualified_name {
                        return {l.schema_name, l.table_name, l.column_name};
                    }) |
                    std::ranges::to<std::vector>();
         });
     }
 
-    std::generator<feature> features(layer lyr,
+    std::generator<feature> features(qualified_name layer,
                                      geometry::geographic::grid grid,
                                      double) override
     {
         using namespace boat::sql;
         namespace bgi = boost::geometry::index;
         auto cmd = cmd_();
-        auto tbl = get_or_invoke(cache_.get(), std::tuple{key_, lyr}, [&] {
-            return get_table(*cmd, lyr.at(0), lyr.at(1));
+        auto tbl = get_or_invoke(cache_.get(), std::tuple{key_, layer}, [&] {
+            return get_table(*cmd, layer.at(0), layer.at(1));
         });
-        auto& col = lyr.at(2);
+        auto& col = layer.at(2);
         auto it = std::ranges::find(tbl.columns, col, &column::column_name);
         check(it != tbl.columns.end(), col);
         auto fwd = geometry::transform(geometry::srs_forward(
@@ -67,7 +67,7 @@ public:
                 if (!b2)
                     continue;
                 auto a = b2->min_corner(), b = b2->max_corner();
-                auto key = std::tuple{key_, lyr, a.x(), a.y(), b.x(), b.y()};
+                auto key = std::tuple{key_, layer, a.x(), a.y(), b.x(), b.y()};
                 auto rows = get_or_invoke(cache_.get(), key, [&] {
                     auto req =
                         overlap{{col}, col, a.x(), a.y(), b.x(), b.y(), 1};

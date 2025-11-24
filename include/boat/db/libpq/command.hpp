@@ -48,11 +48,11 @@ public:
         check(ec == PGRES_COMMAND_OK || ec == PGRES_TUPLES_OK, dbc_);
         ret.columns.resize(res ? PQnfields(res.get()) : 0);
         ret.rows.resize(res ? PQntuples(res.get()) : 0);
-        for (int col{}; col < ret.columns.size(); ++col)
+        for (int col{}; col < static_cast<int>(ret.columns.size()); ++col)
             ret.columns[col] = PQfname(res.get(), col);
-        for (int row{}; row < ret.rows.size(); ++row) {
+        for (int row{}; row < static_cast<int>(ret.rows.size()); ++row) {
             ret.rows[row].resize(ret.columns.size());
-            for (int col{}; col < ret.columns.size(); ++col)
+            for (int col{}; col < static_cast<int>(ret.columns.size()); ++col)
                 ret.rows[row][col] = get_value(res.get(), row, col);
         }
         return ret;

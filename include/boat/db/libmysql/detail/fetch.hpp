@@ -17,14 +17,14 @@ inline pfr::rowset fetch(MYSQL* dbc)
         return ret;
     ret.columns.resize(mysql_num_fields(res.get()));
     auto fields = mysql_fetch_fields(res.get());
-    for (int col = 0; col < ret.columns.size(); ++col)
+    for (size_t col = 0; col < ret.columns.size(); ++col)
         ret.columns[col] = fields[col].name;
-    ret.rows.resize(mysql_num_rows(res.get()));
-    for (int row = 0; row < ret.rows.size(); ++row) {
+    ret.rows.resize(static_cast<size_t>(mysql_num_rows(res.get())));
+    for (size_t row = 0; row < ret.rows.size(); ++row) {
         auto data = mysql_fetch_row(res.get());
         auto lengths = mysql_fetch_lengths(res.get());
         ret.rows[row].resize(ret.columns.size());
-        for (int col{}; col < ret.columns.size(); ++col)
+        for (size_t col{}; col < ret.columns.size(); ++col)
             ret.rows[row][col] =
                 get_value(fields[col], data[col], lengths[col]);
     }
@@ -47,7 +47,7 @@ inline pfr::rowset fetch(MYSQL_STMT* stmt)
     auto binds = std::vector<MYSQL_BIND>(ret.columns.size());
     auto bufs = std::vector<buffer>(ret.columns.size());
     auto fields = mysql_fetch_fields(res.get());
-    for (int col = 0; col < ret.columns.size(); ++col) {
+    for (size_t col = 0; col < ret.columns.size(); ++col) {
         ret.columns[col] = fields[col].name;
         bufs[col].str.resize(fields[col].max_length);
         binds[col].buffer = bufs[col].str.data();
@@ -57,11 +57,11 @@ inline pfr::rowset fetch(MYSQL_STMT* stmt)
         binds[col].length = &bufs[col].len;
     }
     check(!mysql_stmt_bind_result(stmt, binds.data()), stmt);
-    ret.rows.resize(mysql_stmt_num_rows(stmt));
-    for (int row = 0; row < ret.rows.size(); ++row) {
+    ret.rows.resize(static_cast<size_t>(mysql_stmt_num_rows(stmt)));
+    for (size_t row = 0; row < ret.rows.size(); ++row) {
         check(!mysql_stmt_fetch(stmt), stmt);
         ret.rows[row].resize(ret.columns.size());
-        for (int col{}; col < ret.columns.size(); ++col)
+        for (size_t col{}; col < ret.columns.size(); ++col)
             if (!bufs[col].null)
                 ret.rows[row][col] =
                     get_value(fields[col], bufs[col].str.data(), bufs[col].len);
