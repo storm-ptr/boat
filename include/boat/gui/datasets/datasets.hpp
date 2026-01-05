@@ -5,7 +5,7 @@
 
 #include <boat/detail/uri.hpp>
 #include <boat/gui/caches/cache.hpp>
-#if __has_include(<gdal.h>)
+#if __has_include(<gdal.h>) && __has_include(<png.h>) && __has_include(<zlib.h>)
 #include <boat/gui/datasets/gdal.hpp>
 #endif
 #if __has_include(<curl/curl.h>)
@@ -20,7 +20,7 @@ inline std::shared_ptr<dataset> create(
     std::shared_ptr<caches::cache> const& cache)
 {
     if (url.starts_with("gdal"))
-#if __has_include(<gdal.h>)
+#if __has_include(<gdal.h>) && __has_include(<png.h>) && __has_include(<zlib.h>)
     {
         auto parsed = uri::parse(url);
         auto os = std::ostringstream{};
@@ -37,7 +37,7 @@ inline std::shared_ptr<dataset> create(
         return std::make_shared<gdal>(std::move(os).str(), cache);
     }
 #else
-        throw std::runtime_error("no gdal");
+        throw std::runtime_error("no gdal/png/zlib");
 #endif
     if (url.starts_with("slippy"))
 #if __has_include(<curl/curl.h>)
