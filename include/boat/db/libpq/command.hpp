@@ -36,14 +36,15 @@ public:
         }
         auto res = unique_ptr<PGresult, PQclear>{
             binds.empty() ? PQexec(dbc_.get(), sql.data())
-                          : PQexecParams(dbc_.get(),
-                                         sql.data(),
-                                         int(binds.size()),
-                                         types.data(),
-                                         values.data(),
-                                         lengths.data(),
-                                         formats.data(),
-                                         text_fmt)};
+                          : PQexecParams(  //
+                                dbc_.get(),
+                                sql.data(),
+                                int(binds.size()),
+                                types.data(),
+                                values.data(),
+                                lengths.data(),
+                                formats.data(),
+                                text_fmt)};
         auto ec = PQresultStatus(res.get());
         check(ec == PGRES_COMMAND_OK || ec == PGRES_TUPLES_OK, dbc_);
         ret.columns.resize(res ? PQnfields(res.get()) : 0);

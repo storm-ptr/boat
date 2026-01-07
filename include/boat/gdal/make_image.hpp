@@ -13,10 +13,10 @@ using any_image = boost::gil::any_image<  //
     boost::gil::argb8_image_t,
     boost::gil::bgr8_image_t,
     boost::gil::bgra8_image_t,
-    boost::gil::cmyk8_planar_image_t,
+    boost::gil::cmyk8_image_t,
     boost::gil::gray8_image_t,
-    boost::gil::rgb8_planar_image_t,
-    boost::gil::rgba8_planar_image_t>;
+    boost::gil::rgb8_image_t,
+    boost::gil::rgba8_image_t>;
 
 any_image make_image(  //
     int width,
@@ -36,13 +36,13 @@ any_image make_image(  //
     if (eq({GCI_BlueBand, GCI_GreenBand, GCI_RedBand, GCI_AlphaBand}))
         return boost::gil::bgra8_image_t{width, height};
     if (eq({GCI_CyanBand, GCI_MagentaBand, GCI_YellowBand, GCI_BlackBand}))
-        return boost::gil::cmyk8_planar_image_t{width, height};
+        return boost::gil::cmyk8_image_t{width, height};
     if (eq({GCI_GrayIndex}))
         return boost::gil::gray8_image_t{width, height};
     if (eq({GCI_RedBand, GCI_GreenBand, GCI_BlueBand}))
-        return boost::gil::rgb8_planar_image_t{width, height};
+        return boost::gil::rgb8_image_t{width, height};
     if (eq({GCI_RedBand, GCI_GreenBand, GCI_BlueBand, GCI_AlphaBand}))
-        return boost::gil::rgba8_planar_image_t{width, height};
+        return boost::gil::rgba8_image_t{width, height};
     auto os = std::ostringstream{};
     os << "make_image: ";
     for (auto sep = ""; auto color : in)

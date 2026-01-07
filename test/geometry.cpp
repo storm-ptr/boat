@@ -148,7 +148,9 @@ BOOST_AUTO_TEST_CASE(geometry_raster)
 BOOST_AUTO_TEST_CASE(geometry_slippy)
 {
     auto p = geographic::point{139.7006793, 35.6590699};
-    auto t = slippy::detail::snap(p, 18);
+    auto t = slippy::detail::snap(  //
+        p,
+        18);  //< z
     BOOST_CHECK_EQUAL(t.x, 232'798);
     BOOST_CHECK_EQUAL(t.y, 103'246);
     BOOST_CHECK(covered_by(p, slippy::detail::envelope(t)));
@@ -157,7 +159,11 @@ BOOST_AUTO_TEST_CASE(geometry_slippy)
     tf.forward(geographic::segment{p, add_meters(p, 0, res)}, px);
     auto mat = affine(width, height, px);
     auto grid = geographic_interpolate(width, height, mat, srs, num_points);
-    auto tiles = slippy::covers(grid, res);
+    auto tiles = slippy::covers(  //
+        grid,
+        res,
+        512,  //< limit
+        22);  //< zmax
     auto z = tiles.begin()->z;
     auto inv = transform(mat_forward(mat), srs_inverse(tf));
     auto a = slippy::detail::snap(*inv(geographic::point()), z);

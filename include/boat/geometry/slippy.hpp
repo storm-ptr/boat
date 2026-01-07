@@ -18,7 +18,7 @@ inline int from_lon(double lon, int z)
 
 inline double to_lon(int x, int z)
 {
-    return static_cast<double>(x) / pow2(z) * 360 - 180;
+    return x * 1. / pow2(z) * 360 - 180;
 }
 
 inline int from_lat(double lat, int z)
@@ -29,7 +29,7 @@ inline int from_lat(double lat, int z)
 
 inline double to_lat(int y, int z)
 {
-    auto v = (1 - static_cast<double>(y) / pow2(z - 1)) * numbers::pi;
+    auto v = (1 - y * 1. / pow2(z - 1)) * numbers::pi;
     return std::atan(std::sinh(v)) * numbers::radian;
 }
 
@@ -50,11 +50,13 @@ inline geographic::box envelope(tile const& t)
 
 }  // namespace detail
 
-constexpr int epsg = 3857;
-constexpr int zmax = 19;
+constexpr auto epsg = 3857;
 
-inline auto covers(geographic::grid const& grid, double resolution)
-    -> std::unordered_set<tile>
+inline std::unordered_set<tile> covers(  //
+    geographic::grid const& grid,
+    double resolution,
+    int limit,
+    int zmax)
 {
     static constexpr auto d = {-1, 0, 1};
     auto lat_num = 0., lat_den = 0.;
@@ -75,6 +77,8 @@ inline auto covers(geographic::grid const& grid, double resolution)
             auto top = queue.front();
             queue.pop();
             ret.insert(top);
+            if (ret.size() >= limit)
+                return ret;
             for (auto [dx, dy] : std::views::cartesian_product(d, d)) {
                 auto [y, mir] = mirrored_clamp(top.y + dy, 0, n);
                 auto x = circular_clamp(top.x + dx + (mir ? n / 2 : 0), 0, n);

@@ -16,31 +16,32 @@ struct sqlite : dialect {
 
     db::query layers() const override
     {
-        return {"\n select null table_schema",
-                "\n , m.name table_name",
-                "\n , (select c.name from pragma_table_info(m.name) c",
-                "\n    where f_geometry_column like c.name) column_name",
-                "\n from geometry_columns, sqlite_master m",
-                "\n where f_table_name like m.name"};
+        return "\n select null table_schema"
+               "\n , m.name table_name"
+               "\n , (select c.name from pragma_table_info(m.name) c"
+               "\n    where f_geometry_column like c.name) column_name"
+               "\n from geometry_columns, sqlite_master m"
+               "\n where f_table_name like m.name";
     }
 
     db::query columns(std::string_view,
                       std::string_view table_name) const override
     {
-        auto q = db::query{};
-        q << "\n select c.*"
-          << "\n , (select auth_srid from spatial_ref_sys r"
-          << "\n    where auth_name = 'epsg' and c.srid = r.srid) epsg"
-          << "\n from ("
-          << "\n  select name"
-          << "\n  , type"
-          << "\n  , null length"
-          << "\n  , (select srid from geometry_columns"
-          << "\n     where f_table_name like " << pfr::variant(table_name)
-          << "\n     and f_geometry_column like name) srid"
-          << "\n  from pragma_table_info(" << pfr::variant(table_name) << ")"
-          << "\n ) c";
-        return q;
+        return {
+            "\n select c.*"
+            "\n , (select auth_srid from spatial_ref_sys r"
+            "\n    where auth_name = 'epsg' and c.srid = r.srid) epsg"
+            "\n from ("
+            "\n  select name"
+            "\n  , type"
+            "\n  , null length"
+            "\n  , (select srid from geometry_columns"
+            "\n     where f_table_name like ",
+            pfr::variant(table_name),
+            "\n     and f_geometry_column like name) srid"
+            "\n  from pragma_table_info(",
+            pfr::variant(table_name),
+            ")) c"};
     }
 
     db::query index_keys(std::string_view,
@@ -104,9 +105,10 @@ struct sqlite : dialect {
 
     db::query srid(int epsg) const override
     {
-        return {"\n select srid from spatial_ref_sys",
-                "\n where auth_name like 'epsg' and auth_srid = ",
-                to_chars(epsg)};
+        return {
+            "\n select srid from spatial_ref_sys"
+            "\n where auth_name like 'epsg' and auth_srid = ",
+            to_chars(epsg)};
     }
 
     db::query create(table const& tbl) const override
@@ -130,7 +132,7 @@ struct sqlite : dialect {
         for (auto idx : tbl.indices() | std::views::filter(constructible) |
                             std::views::filter(std::not_fn(primary))) {
             auto key = std::ranges::begin(idx);
-            if (!any_geo(tbl.columns, key->column_name))
+            if (!has_geo(tbl.columns, key->column_name))
                 q << "\n create " << (key->unique ? "unique " : "") << "index "
                   << concat("_", tbl.table_name, "_", ++i) << " on "
                   << db::id{tbl.table_name} << " " << index_spec{idx} << ";";

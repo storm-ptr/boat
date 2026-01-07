@@ -30,19 +30,23 @@ public:
         geometry::geographic::grid grid,
         double resolution) override
     {
+        constexpr auto limit = 512;
+        constexpr auto zmax = 19;
         auto tiles = std::unordered_map<std::string, geometry::tile>{};
         auto queue = curl{usr_};
-        for (auto t : geometry::slippy::covers(grid, resolution)) {
+        for (auto t : geometry::slippy::covers(grid, resolution, limit, zmax)) {
             auto url = url_;
             url = boost::replace_first_copy(url, "{x}", to_chars(t.x));
             url = boost::replace_first_copy(url, "{y}", to_chars(t.y));
             url = boost::replace_first_copy(url, "{z}", to_chars(t.z));
             auto img = cache_ ? cache_->get(url) : std::any{};
             if (img.has_value())
-                co_yield feature{std::in_place_type<raster>,
-                                 std::any_cast<blob>(std::move(img)),
-                                 geometry::slippy::affine(t),
-                                 geometry::slippy::epsg};
+                co_yield feature{
+                    std::in_place_type<raster>,
+                    std::any_cast<blob>(std::move(img)),
+                    geometry::slippy::affine(t),
+                    geometry::slippy::epsg,
+                };
             else {
                 tiles.insert({url, t});
                 queue.push(url);
@@ -52,10 +56,12 @@ public:
             auto [url, img] = queue.pop();
             if (cache_)
                 cache_->put(url, img);
-            co_yield feature{std::in_place_type<raster>,
-                             std::move(img),
-                             geometry::slippy::affine(tiles.at(url)),
-                             geometry::slippy::epsg};
+            co_yield feature{
+                std::in_place_type<raster>,
+                std::move(img),
+                geometry::slippy::affine(tiles.at(url)),
+                geometry::slippy::epsg,
+            };
         }
     }
 };

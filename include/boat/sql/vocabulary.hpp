@@ -58,7 +58,7 @@ struct order_key {
 struct page {
     std::vector<std::string> select_list;
     std::vector<order_key> order_by;
-    int64_t offset;
+    size_t offset;
     int limit;
 };
 

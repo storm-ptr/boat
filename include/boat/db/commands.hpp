@@ -36,7 +36,7 @@ inline std::unique_ptr<command> create(std::string_view url)
             std::string{parsed.path}.data());
     }
 #else
-        throw std::runtime_error("no libmysql");
+        throw std::runtime_error("compiled without libmysql");
 #endif
     if (url.starts_with("odbc"))
 #if __has_include(<sql.h>)
@@ -44,7 +44,6 @@ inline std::unique_ptr<command> create(std::string_view url)
         auto parsed = uri::parse(url);
         auto adr = socket_address::parse(parsed.host_spec);
         auto os = std::ostringstream{};
-        os.imbue(std::locale::classic());
         if (!parsed.user.empty())
             os << "uid=" << parsed.user << ';';
         if (!parsed.password.empty())
@@ -61,20 +60,20 @@ inline std::unique_ptr<command> create(std::string_view url)
         return std::make_unique<odbc::command>(std::move(os).str().data());
     }
 #else
-        throw std::runtime_error("no odbc");
+        throw std::runtime_error("compiled without odbc");
 #endif
     if (url.starts_with("postgres"))
 #if __has_include(<libpq-fe.h>)
         return std::make_unique<libpq::command>(std::string{url}.data());
 #else
-        throw std::runtime_error("no libpq");
+        throw std::runtime_error("compiled without libpq");
 #endif
     if (url.starts_with("sqlite"))
 #if __has_include(<sqlite3.h>)
         return std::make_unique<sqlite::command>(
             std::string{uri::parse(url).path}.data());
 #else
-        throw std::runtime_error("no sqlite");
+        throw std::runtime_error("compiled without sqlite");
 #endif
     throw std::runtime_error("db::create");
 }

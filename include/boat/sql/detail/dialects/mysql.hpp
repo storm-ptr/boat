@@ -16,51 +16,53 @@ struct mysql : dialect {
 
     db::query layers() const override
     {
-        return {"\n select table_schema, table_name, column_name",
-                "\n from information_schema.st_geometry_columns"};
+        return "\n select table_schema, table_name, column_name"
+               "\n from information_schema.st_geometry_columns";
     }
 
     db::query columns(std::string_view schema_name,
                       std::string_view table_name) const override
     {
-        auto q = db::query{};
-        q << "\n with l (table_schema, table_name, column_name, srid) as ("
-          << "\n  select table_schema, table_name, column_name, srs_id"
-          << "\n  from information_schema.st_geometry_columns"
-          << "\n ), r (srid, epsg) as ("
-          << "\n  select srs_id, organization_coordsys_id"
-          << "\n  from information_schema.st_spatial_reference_systems"
-          << "\n  where organization = 'EPSG'"
-          << "\n )"
-          << "\n select column_name"
-          << "\n , data_type"
-          << "\n , coalesce(character_maximum_length, datetime_precision)"
-          << "\n , srid"
-          << "\n , epsg"
-          << "\n from information_schema.columns c"
-          << "\n left join l using (table_schema, table_name, column_name)"
-          << "\n left join r using (srid)"
-          << "\n where c.table_schema = " << pfr::variant(schema_name)
-          << "\n and c.table_name = " << pfr::variant(table_name);
-        return q;
+        return {
+            "\n with l (table_schema, table_name, column_name, srid) as ("
+            "\n  select table_schema, table_name, column_name, srs_id"
+            "\n  from information_schema.st_geometry_columns"
+            "\n ), r (srid, epsg) as ("
+            "\n  select srs_id, organization_coordsys_id"
+            "\n  from information_schema.st_spatial_reference_systems"
+            "\n  where organization = 'EPSG'"
+            "\n )"
+            "\n select column_name"
+            "\n , data_type"
+            "\n , coalesce(character_maximum_length, datetime_precision)"
+            "\n , srid"
+            "\n , epsg"
+            "\n from information_schema.columns c"
+            "\n left join l using (table_schema, table_name, column_name)"
+            "\n left join r using (srid)"
+            "\n where c.table_schema = ",
+            pfr::variant(schema_name),
+            "\n and c.table_name = ",
+            pfr::variant(table_name)};
     }
 
     db::query index_keys(std::string_view schema_name,
                          std::string_view table_name) const override
     {
-        auto q = db::query{};
-        q << "\n select null index_schema"
-          << "\n , index_name"
-          << "\n , column_name"
-          << "\n , (collation = 'D') is_descending_key"
-          << "\n , (expression is not null) is_partial"
-          << "\n , (index_name = 'PRIMARY') is_primary_key"
-          << "\n , (not non_unique) is_unique"
-          << "\n , seq_in_index ordinal"
-          << "\n from information_schema.statistics"
-          << "\n where table_schema = " << pfr::variant(schema_name)
-          << "\n and table_name = " << pfr::variant(table_name);
-        return q;
+        return {
+            "\n select null index_schema"
+            "\n , index_name"
+            "\n , column_name"
+            "\n , (collation = 'D') is_descending_key"
+            "\n , (expression is not null) is_partial"
+            "\n , (index_name = 'PRIMARY') is_primary_key"
+            "\n , (not non_unique) is_unique"
+            "\n , seq_in_index ordinal"
+            "\n from information_schema.statistics"
+            "\n where table_schema = ",
+            pfr::variant(schema_name),
+            "\n and table_name = ",
+            pfr::variant(table_name)};
     }
 
     db::query select(table const& tbl, page const& req) const override
@@ -89,9 +91,8 @@ struct mysql : dialect {
     {
         return {
             "\n select srs_id"
-            "\n from information_schema.st_spatial_reference_systems",
-            "\n where organization = 'EPSG'",
-            "\n and organization_coordsys_id = ",
+            "\n from information_schema.st_spatial_reference_systems"
+            "\n where organization = 'EPSG' and organization_coordsys_id = ",
             to_chars(epsg)};
     }
 

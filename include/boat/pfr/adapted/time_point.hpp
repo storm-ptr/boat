@@ -59,8 +59,8 @@ void write(variant& out, std::chrono::time_point<Clock, Duration> in)
     auto h = sc::floor<sc::hours>(epoch);
     auto min = sc::floor<sc::minutes>(epoch);
     auto us = sc::floor<sc::microseconds>(epoch);
-    auto s = static_cast<double>((us - min).count()) /
-             sc::microseconds::period::den * sc::microseconds::period::num;
+    auto s = (us - min).count() * 1. / sc::microseconds::period::den *
+             sc::microseconds::period::num;
     auto os = std::ostringstream{};
     os.imbue(std::locale::classic());
     os << std::setfill('0') << std::setw(4) << y << "-" << std::setw(2)

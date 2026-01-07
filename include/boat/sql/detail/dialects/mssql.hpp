@@ -16,84 +16,85 @@ struct mssql : dialect {
 
     db::query layers() const override
     {
-        return {"\n select table_schema, table_name, column_name",
-                "\n from information_schema.columns",
-                "\n where data_type in ('geometry','geography')"};
+        return "\n select table_schema, table_name, column_name"
+               "\n from information_schema.columns"
+               "\n where data_type in ('geometry','geography')";
     }
 
     db::query columns(std::string_view schema_name,
                       std::string_view table_name) const override
     {
-        auto q = db::query{};
-        q << "\n declare @scm nvarchar(128), @tbl nvarchar(128)"
-          << "\n  , @col nvarchar(128), @typ nvarchar(128), @qry nvarchar(max)"
-          << "\n set @scm = " << pfr::variant(schema_name)
-          << "\n set @tbl = " << pfr::variant(table_name)  //
-          << "\n set @qry"
-          << "\n  = ' select column_name, data_type'"
-          << "\n  + ' , coalesce(character_maximum_length, datetime_precision)'"
-          << "\n  + ' , 0, 0'"
-          << "\n  + ' from information_schema.columns'"
-          << "\n  + ' where table_schema = ' + quotename(@scm,'''')"
-          << "\n  + ' and table_name = ' + quotename(@tbl,'''')"
-          << "\n  + ' and data_type not in (''geography'', ''geometry'')'"
-          << "\n  + ' union'"
-          << "\n  + ' select'"
-          << "\n  + '  name, type, -1, srid, authorized_spatial_reference_id'"
-          << "\n  + ' from (values (null, null, 0)'"
-          << "\n declare cur cursor for"
-          << "\n  select column_name, data_type"
-          << "\n  from information_schema.columns"
-          << "\n  where table_schema = @scm"
-          << "\n  and table_name = @tbl"
-          << "\n  and data_type in ('geography', 'geometry')"
-          << "\n open cur"
-          << "\n fetch next from cur into @col, @typ"
-          << "\n while @@FETCH_STATUS = 0 begin"
-          << "\n  set @qry"
-          << "\n   +=', (' + quotename(@col,'''')"
-          << "\n   + '  ,' + quotename(@typ,'''')"
-          << "\n   + '  , coalesce(('"
-          << "\n   + '     select top 1 ' + quotename(@col) + '.STSrid'"
-          << "\n   + '     from ' + quotename(@scm) + '.' + quotename(@tbl)"
-          << "\n   + '    ), ('"
-          << "\n   + '     select cast(value as int)'"
-          << "\n   + '     from fn_listextendedproperty(''srid'''"
-          << "\n   + '     , ''schema'', ' + quotename(@scm,'''')"
-          << "\n   + '     , ''table'', ' + quotename(@tbl,'''')"
-          << "\n   + '     , ''column'', ' + quotename(@col,'''') + ')'"
-          << "\n   + '    ), 0))'"
-          << "\n  fetch next from cur into @col, @typ"
-          << "\n end"
-          << "\n close cur deallocate cur"
-          << "\n set @qry"
-          << "\n  +=' ) as l(name, type, srid)'"
-          << "\n  + ' left join sys.spatial_reference_systems'"
-          << "\n  + ' on srid = spatial_reference_id'"
-          << "\n  + ' where name is not null and authority_name = ''epsg'''"
-          << "\n exec(@qry)";
-        return q;
+        return {
+            "\n declare @scm nvarchar(128), @tbl nvarchar(128)"
+            "\n  , @col nvarchar(128), @typ nvarchar(128), @qry nvarchar(max)"
+            "\n set @scm = ",
+            pfr::variant(schema_name),
+            "\n set @tbl = ",
+            pfr::variant(table_name),
+            "\n set @qry"
+            "\n  = ' select column_name, data_type'"
+            "\n  + ' , coalesce(character_maximum_length, datetime_precision)'"
+            "\n  + ' , 0, 0'"
+            "\n  + ' from information_schema.columns'"
+            "\n  + ' where table_schema = ' + quotename(@scm,'''')"
+            "\n  + ' and table_name = ' + quotename(@tbl,'''')"
+            "\n  + ' and data_type not in (''geography'', ''geometry'')'"
+            "\n  + ' union'"
+            "\n  + ' select'"
+            "\n  + '  name, type, -1, srid, authorized_spatial_reference_id'"
+            "\n  + ' from (values (null, null, 0)'"
+            "\n declare cur cursor for"
+            "\n  select column_name, data_type"
+            "\n  from information_schema.columns"
+            "\n  where table_schema = @scm"
+            "\n  and table_name = @tbl"
+            "\n  and data_type in ('geography', 'geometry')"
+            "\n open cur"
+            "\n fetch next from cur into @col, @typ"
+            "\n while @@FETCH_STATUS = 0 begin"
+            "\n  set @qry"
+            "\n   +=', (' + quotename(@col,'''')"
+            "\n   + '  ,' + quotename(@typ,'''')"
+            "\n   + '  , coalesce(('"
+            "\n   + '     select top 1 ' + quotename(@col) + '.STSrid'"
+            "\n   + '     from ' + quotename(@scm) + '.' + quotename(@tbl)"
+            "\n   + '    ), ('"
+            "\n   + '     select cast(value as int)'"
+            "\n   + '     from fn_listextendedproperty(''srid'''"
+            "\n   + '     , ''schema'', ' + quotename(@scm,'''')"
+            "\n   + '     , ''table'', ' + quotename(@tbl,'''')"
+            "\n   + '     , ''column'', ' + quotename(@col,'''') + ')'"
+            "\n   + '    ), 0))'"
+            "\n  fetch next from cur into @col, @typ"
+            "\n end"
+            "\n close cur deallocate cur"
+            "\n set @qry"
+            "\n  +=' ) as l(name, type, srid)'"
+            "\n  + ' left join sys.spatial_reference_systems'"
+            "\n  + ' on srid = spatial_reference_id'"
+            "\n  + ' where name is not null and authority_name = ''epsg'''"
+            "\n exec(@qry)"};
     }
 
     db::query index_keys(std::string_view schema_name,
                          std::string_view table_name) const override
     {
-        auto q = db::query{};
-        q << "\n select null index_schema"
-          << "\n , name index_name"
-          << "\n , col_name(c.object_id, column_id) column_name"
-          << "\n , is_descending_key"
-          << "\n , has_filter is_partial"
-          << "\n , is_primary_key"
-          << "\n , is_unique"
-          << "\n , case key_ordinal when 0"
-          << "\n   then 1 else key_ordinal end ordinal"
-          << "\n from sys.indexes i, sys.index_columns c"
-          << "\n where i.index_id = c.index_id"
-          << "\n and i.object_id = c.object_id"
-          << "\n and i.object_id = object_id("
-          << pfr::variant(concat(schema_name, '.', table_name)) << ")";
-        return q;
+        return {
+            "\n select null index_schema"
+            "\n , name index_name"
+            "\n , col_name(c.object_id, column_id) column_name"
+            "\n , is_descending_key"
+            "\n , has_filter is_partial"
+            "\n , is_primary_key"
+            "\n , is_unique"
+            "\n , case key_ordinal when 0"
+            "\n   then 1 else key_ordinal end ordinal"
+            "\n from sys.indexes i, sys.index_columns c"
+            "\n where i.index_id = c.index_id"
+            "\n and i.object_id = c.object_id"
+            "\n and i.object_id = object_id(",
+            pfr::variant(concat(schema_name, '.', table_name)),
+            ")"};
     }
 
     db::query select(table const& tbl, page const& req) const override
@@ -126,11 +127,12 @@ struct mssql : dialect {
 
     db::query srid(int epsg) const override
     {
-        return {"\n select spatial_reference_id",
-                "\n from sys.spatial_reference_systems",
-                "\n where authority_name = 'epsg'",
-                "\n and authorized_spatial_reference_id = ",
-                to_chars(epsg)};
+        return {
+            "\n select spatial_reference_id"
+            "\n from sys.spatial_reference_systems"
+            "\n where authority_name = 'epsg'"
+            "\n and authorized_spatial_reference_id = ",
+            to_chars(epsg)};
     }
 
     db::query create(table const& tbl) const override
@@ -145,7 +147,7 @@ struct mssql : dialect {
             else if (col.length < 0 && any({"nvarchar", "varbinary", "varchar"},
                                            equal(col.type_name)))
                 q << "(max)";
-            if (any_primary(tbl.index_keys, col.column_name))
+            if (has_primary(tbl.index_keys, col.column_name))
                 q << " not null";
         }
         q << "\n );";

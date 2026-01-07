@@ -42,7 +42,7 @@ constexpr auto primary = [](range_of<index_key> auto&& idx) {
         idx, [](index_key const& key) { return key.primary; });
 };
 
-bool any_geo(range_of<column> auto&& cols, std::string_view column_name)
+bool has_geo(range_of<column> auto&& cols, std::string_view column_name)
 {
     return std::ranges::any_of(cols, [=](column const& col) {
         return geo(col) && col.column_name == column_name;
@@ -56,7 +56,7 @@ auto find_or_geo(range_of<column> auto&& cols, std::string_view column_name)
     });
 }
 
-bool any_primary(range_of<index_key> auto&& keys, std::string_view column_name)
+bool has_primary(range_of<index_key> auto&& keys, std::string_view column_name)
 {
     return std::ranges::any_of(keys, [=](index_key const& key) {
         return key.primary && key.column_name == column_name;

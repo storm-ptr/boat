@@ -23,14 +23,15 @@ public:
             env_);
         dbc_ = alloc<SQL_HANDLE_DBC>(env_);
         SQLSMALLINT len;
-        check(SQLDriverConnectW(dbc_.get(),
-                                0,
-                                unicode::string<SQLWCHAR>(connection).data(),
-                                SQL_NTS,
-                                0,
-                                0,
-                                &len,
-                                SQL_DRIVER_NOPROMPT),
+        check(SQLDriverConnectW(  //
+                  dbc_.get(),
+                  0,
+                  unicode::string<SQLWCHAR>(connection).data(),
+                  SQL_NTS,
+                  0,
+                  0,
+                  &len,
+                  SQL_DRIVER_NOPROMPT),
               dbc_);
     }
 
@@ -44,16 +45,17 @@ public:
         auto binds = std::vector<std::unique_ptr<params::param>>{};
         for (auto [i, var] : qry.params() | std::views::enumerate) {
             auto bnd = binds.emplace_back(params::create(var)).get();
-            check(SQLBindParameter(stmt.get(),
-                                   SQLUSMALLINT(i + 1),
-                                   SQL_PARAM_INPUT,
-                                   bnd->c_type(),
-                                   bnd->sql_type(),
-                                   bnd->length(),
-                                   0,
-                                   bnd->value(),
-                                   0,
-                                   bnd->indicator()),
+            check(SQLBindParameter(  //
+                      stmt.get(),
+                      SQLUSMALLINT(i + 1),
+                      SQL_PARAM_INPUT,
+                      bnd->c_type(),
+                      bnd->sql_type(),
+                      bnd->length(),
+                      0,
+                      bnd->value(),
+                      0,
+                      bnd->indicator()),
                   stmt);
         }
         auto ec = SQLExecute(stmt.get());

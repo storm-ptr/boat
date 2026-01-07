@@ -25,14 +25,15 @@ public:
                          MYSQL_OPT_READ_TIMEOUT,
                          MYSQL_OPT_WRITE_TIMEOUT})
             check(!mysql_options(dbc_.get(), opt, &seconds), dbc_);
-        check(mysql_real_connect(dbc_.get(),
-                                 host,
-                                 user,
-                                 password,
-                                 database,
-                                 port,
-                                 0,
-                                 CLIENT_MULTI_STATEMENTS) == dbc_.get(),
+        check(mysql_real_connect(  //
+                  dbc_.get(),
+                  host,
+                  user,
+                  password,
+                  database,
+                  port,
+                  0,
+                  CLIENT_MULTI_STATEMENTS) == dbc_.get(),
               dbc_);
         check(!mysql_set_character_set(dbc_.get(), "utf8"), dbc_);
     }

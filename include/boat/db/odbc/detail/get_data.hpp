@@ -15,11 +15,12 @@ class reader {
     size_t num_chars() const { return ind_ / sizeof(SQLWCHAR); }
     size_t num_bytes() const { return buf_.size() * sizeof(SQLWCHAR); }
 
-    bool get_data(stmt_ptr const& stmt,
-                  SQLUSMALLINT col,
-                  SQLSMALLINT type,
-                  SQLPOINTER ptr,
-                  SQLLEN len)
+    bool get_data(  //
+        stmt_ptr const& stmt,
+        SQLUSMALLINT col,
+        SQLSMALLINT type,
+        SQLPOINTER ptr,
+        SQLLEN len)
     {
         check(SQLGetData(stmt.get(), col, type, ptr, len, &ind_), stmt);
         boat::check(ind_ != SQL_NO_TOTAL, "SQL_NO_TOTAL");

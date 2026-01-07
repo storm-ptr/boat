@@ -22,14 +22,12 @@ BOOST_AUTO_TEST_CASE(db_select)
 BOOST_AUTO_TEST_CASE(db_param)
 {
     auto qry = boat::db::query{};
-    auto sep1 = "\n select ";
     auto objs = get_objects();
     auto rows = boat::pfr::to_rowset(objs);
-    for (auto& row : rows) {
+    for (auto sep1 = "\n select "; auto& row : rows) {
         qry << std::exchange(sep1, "\n union select ");
-        auto sep2 = "";
-        for (auto& var : row)
-            qry << std::exchange(sep2, ", ") << var;
+        for (auto sep2 = ""; auto& v : row)
+            qry << std::exchange(sep2, ", ") << v;
     }
     for (auto cmd : commands())
         BOOST_CHECK(

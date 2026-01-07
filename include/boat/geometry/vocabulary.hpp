@@ -26,13 +26,14 @@ struct d2 {
 
     struct geometry_collection;
 
-    using variant = std::variant<point,
-                                 linestring,
-                                 polygon,
-                                 multi_point,
-                                 multi_linestring,
-                                 multi_polygon,
-                                 geometry_collection>;
+    using variant = std::variant<  //
+        point,
+        linestring,
+        polygon,
+        multi_point,
+        multi_linestring,
+        multi_polygon,
+        geometry_collection>;
 
     struct geometry_collection : model::geometry_collection<variant> {
         using model::geometry_collection<variant>::geometry_collection;
@@ -45,7 +46,10 @@ using geographic = d2<boost::geometry::cs::geographic<boost::geometry::degree>>;
 using matrix = boost::qvm::mat<double, 3, 3>;
 
 struct tile {
-    int z, y, x;
+    int z;
+    int y;
+    int x;
+
     static constexpr int size = 256;
     friend auto operator<=>(tile const&, tile const&) = default;
 };

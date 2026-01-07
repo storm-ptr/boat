@@ -30,17 +30,16 @@ public:
     {
         namespace gil = boost::gil;
         namespace qvm = boost::qvm;
+        constexpr auto limit = 512;
         auto opt = std::optional<boat::gdal::raster>{};
         auto ref = [&] {
-            if (!opt)
-                opt.emplace(file_.data());
-            return std::cref(*opt);
+            return std::cref(opt ? *opt : opt.emplace(file_.data()));
         };
         auto m = get_or_invoke(
             cache_.get(), file_, [&] { return ref().get().get_meta(); });
         auto srs = boost::geometry::srs::epsg{m.epsg};
         auto tiles = geometry::covers(
-            m.width, m.height, m.affine, srs, grid, resolution);
+            grid, resolution, limit, m.width, m.height, m.affine, srs);
         for (auto& t : tiles) {
             auto mbr = boat::geometry::envelope(m.width, m.height, t);
             auto a = mbr.min_corner(), b = mbr.max_corner();
@@ -65,13 +64,15 @@ public:
                 std::ostringstream{std::ios_base::out | std::ios_base::binary};
             gil::write_view(os, gil::view(img), gil::png_tag());
             auto str = std::move(os).str();
-            auto mat = m.affine *
-                       qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
-                       qvm::diag_mat(qvm::vec{{scale * 1., scale * 1., 1.}});
-            co_yield feature{std::in_place_type<raster>,
-                             blob{as_bytes(str.data()), str.size()},
-                             mat,
-                             m.epsg};
+            auto mat =  //
+                m.affine * qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
+                qvm::diag_mat(qvm::vec{{scale * 1., scale * 1., 1.}});
+            co_yield feature{
+                std::in_place_type<raster>,
+                blob{as_bytes(str.data()), str.size()},
+                mat,
+                m.epsg,
+            };
         }
     }
 };

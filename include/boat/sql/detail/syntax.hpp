@@ -40,7 +40,7 @@ struct create_indices {
         auto i = 0;
         for (auto idx : in.tbl.indices() | std::views::filter(constructible)) {
             auto key = std::ranges::begin(idx);
-            auto spatial = any_geo(in.tbl.columns, key->column_name);
+            auto spatial = has_geo(in.tbl.columns, key->column_name);
             if (spatial && std::ranges::size(idx) > 1u)
                 continue;
             auto type = spatial ? "spatial" : key->unique ? "unique" : "";

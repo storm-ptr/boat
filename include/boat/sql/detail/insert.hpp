@@ -9,8 +9,9 @@
 
 namespace boat::sql {
 
-inline std::generator<db::query> inserts(table const& tbl,
-                                         pfr::rowset const& vals)
+inline std::generator<db::query> inserts(  //
+    table const& tbl,
+    pfr::rowset const& vals)
 {
     auto cols = std::vector<std::unique_ptr<adaptors::adaptor>>{};
     for (auto const& col : vals.columns)
@@ -20,17 +21,14 @@ inline std::generator<db::query> inserts(table const& tbl,
     for (auto const& rows : vals | std::views::chunk(num_rows)) {
         auto qry = db::query{};
         qry << "\n insert into " << id{tbl};
-        auto sep1 = "\n   (";
-        for (auto const& col : vals.columns)
-            qry << std::exchange(sep1, ", ") << db::id(col);
+        for (auto sep = "\n   ("; auto const& col : vals.columns)
+            qry << std::exchange(sep, ", ") << db::id(col);
         qry << ")\n values";
-        sep1 = "\n   ";
-        for (auto const& row : rows) {
+        for (auto sep1 = "\n   "; auto const& row : rows) {
             qry << std::exchange(sep1, "\n , ");
-            auto sep2 = "(";
-            for (auto [col, var] : std::views::zip(cols, row)) {
+            for (auto sep2 = "("; auto [col, v] : std::views::zip(cols, row)) {
                 qry << std::exchange(sep2, ", ");
-                col->insert(qry, var);
+                col->insert(qry, v);
             }
             qry << ")";
         }

@@ -73,7 +73,7 @@ public:
         int y,
         int width,
         int height,
-        T img,
+        T const& img,
         std::vector<int> bands = {}) const
     {
         namespace gil = boost::gil;

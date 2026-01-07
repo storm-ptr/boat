@@ -24,12 +24,13 @@ inline int zmax(int aligned)
 }  // namespace detail
 
 std::unordered_set<tile> covers(  //
+    geographic::grid const& grid,
+    double resolution,
+    int limit,
     int width,
     int height,
     matrix const& mat,
-    srs_spec auto const& srs,
-    geographic::grid const& grid,
-    double resolution)
+    srs_spec auto const& srs)
 {
     auto tf = transformation(srs);
     auto fwd = transform(srs_forward(tf), mat_inverse(mat));
@@ -55,7 +56,7 @@ std::unordered_set<tile> covers(  //
         return ret;
     auto aligned = detail::align(width, height);
     auto z = iexp2(scale_num / scale_den, detail::zmax(aligned));
-    auto k = static_cast<double>(pow2(z)) / aligned;
+    auto k = pow2(z) * 1. / aligned;
     auto snap = [=](point auto const& p) {
         return tile{
             .z = z,
@@ -65,8 +66,11 @@ std::unordered_set<tile> covers(  //
     for (auto& box : boxes) {
         auto a = snap(box.min_corner()), b = snap(box.max_corner());
         for (int x = a.x; x <= b.x; ++x)
-            for (int y = a.y; y <= b.y; ++y)
+            for (int y = a.y; y <= b.y; ++y) {
                 ret.insert({.z = z, .y = y, .x = x});
+                if (ret.size() >= limit)
+                    return ret;
+            }
     }
     return ret;
 }
@@ -74,11 +78,11 @@ std::unordered_set<tile> covers(  //
 inline cartesian::box envelope(int width, int height, tile const& t)
 {
     auto k = detail::align(width, height) / pow2(t.z);
-    auto x1 = static_cast<double>(std::clamp(k * t.x, 0, width));
-    auto y1 = static_cast<double>(std::clamp(k * t.y, 0, height));
-    auto x2 = static_cast<double>(std::clamp(k * (t.x + 1), 0, width));
-    auto y2 = static_cast<double>(std::clamp(k * (t.y + 1), 0, height));
-    return {{x1, y1}, {x2, y2}};
+    auto x1 = std::clamp(k * t.x, 0, width);
+    auto y1 = std::clamp(k * t.y, 0, height);
+    auto x2 = std::clamp(k * (t.x + 1), 0, width);
+    auto y2 = std::clamp(k * (t.y + 1), 0, height);
+    return {{x1 * 1., y1 * 1.}, {x2 * 1., y2 * 1.}};
 }
 
 inline int downscaling_factor(int width, int height, int z)

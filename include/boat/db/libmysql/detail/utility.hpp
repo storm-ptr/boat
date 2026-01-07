@@ -61,9 +61,10 @@ inline MYSQL_BIND to_bind(pfr::variant const& var)
     return ret;
 }
 
-inline pfr::variant get_value(MYSQL_FIELD& fld,
-                              char const* ptr,
-                              unsigned long len)
+inline pfr::variant get_value(  //
+    MYSQL_FIELD& fld,
+    char const* ptr,
+    unsigned long len)
 {
     if (!ptr)
         return {};
