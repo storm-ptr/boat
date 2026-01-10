@@ -17,13 +17,14 @@ inline auto buffer(double distance, size_t num_points)
             strategy::geographic_point_circle<>,
             strategy::point_circle>;
         auto ret = typename as<T>::multi_polygon{};
-        boost::geometry::buffer(geom,
-                                ret,
-                                strategy::distance_symmetric{distance},
-                                strategy::side_straight{},
-                                strategy::join_round{num_points},
-                                strategy::end_round{num_points},
-                                strategy_point_circle{num_points});
+        boost::geometry::buffer(  //
+            geom,
+            ret,
+            strategy::distance_symmetric{distance},
+            strategy::side_straight{},
+            strategy::join_round{num_points},
+            strategy::end_round{num_points},
+            strategy_point_circle{num_points});
         if constexpr (multi<T>)
             return ret;
         else
@@ -36,20 +37,22 @@ constexpr auto minmax = []<tagged T>(T const& geom) -> as<T>::box {
     double ymin = INFINITY;
     double xmax = -INFINITY;
     double ymax = -INFINITY;
-    overloaded{[&](single auto& g) {
-                   boost::geometry::for_each_point(g, [&](point auto& p) {
-                       xmin = std::min<>(xmin, p.x());
-                       ymin = std::min<>(ymin, p.y());
-                       xmax = std::max<>(xmax, p.x());
-                       ymax = std::max<>(ymax, p.y());
-                   });
-               },
-               [](this auto&& self, multi auto& g) -> void {
-                   std::ranges::for_each(g, self);
-               },
-               [](this auto&& self, dynamic auto& g) -> void {
-                   std::visit(self, g);
-               }}(geom);
+    overloaded{
+        [&](single auto& g) {
+            boost::geometry::for_each_point(g, [&](point auto& p) {
+                xmin = std::min<>(xmin, p.x());
+                ymin = std::min<>(ymin, p.y());
+                xmax = std::max<>(xmax, p.x());
+                ymax = std::max<>(ymax, p.y());
+            });
+        },
+        [](this auto&& self, multi auto& g) -> void {
+            std::ranges::for_each(g, self);
+        },
+        [](this auto&& self, dynamic auto& var) -> void {
+            std::visit(self, var);
+        },
+    }(geom);
     return {{xmin, ymin}, {xmax, ymax}};
 };
 

@@ -17,15 +17,15 @@ static auto const lonlat =
 
 inline auto ortho(geographic::point const& center)
 {
-    return boost::geometry::srs::proj4{
-        concat(" +proj=ortho +x_0=0 +y_0=0 +units=m +no_defs +a=",
-               numbers::earth::equatorial_radius,
-               " +b=",
-               numbers::earth::polar_radius,
-               " +lat_0=",
-               center.y(),
-               " +lon_0=",
-               center.x())};
+    return boost::geometry::srs::proj4{concat(  //
+        " +proj=ortho +x_0=0 +y_0=0 +units=m +no_defs +a=",
+        numbers::earth::equatorial_radius,
+        " +b=",
+        numbers::earth::polar_radius,
+        " +lat_0=",
+        center.y(),
+        " +lon_0=",
+        center.x())};
 }
 
 auto transformation(srs_spec auto const& srs)
