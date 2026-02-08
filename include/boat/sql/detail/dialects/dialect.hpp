@@ -11,7 +11,7 @@ namespace boat::sql::dialects {
 struct dialect {
     virtual ~dialect() = default;
 
-    virtual bool match(std::string_view dbms_name) const = 0;
+    virtual bool match(std::string_view dbms) const = 0;
 
     virtual db::query layers() const = 0;
 
@@ -23,7 +23,7 @@ struct dialect {
 
     virtual db::query select(table const&, page const&) const = 0;
 
-    virtual db::query select(table const&, overlap const&) const = 0;
+    virtual db::query select(table const&, bbox const&) const = 0;
 
     virtual db::query schema() const = 0;
 

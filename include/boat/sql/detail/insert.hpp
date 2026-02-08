@@ -3,9 +3,8 @@
 #ifndef BOAT_SQL_INSERT_HPP
 #define BOAT_SQL_INSERT_HPP
 
-#include <boat/db/query.hpp>
 #include <boat/pfr/rowset.hpp>
-#include <boat/sql/detail/syntax.hpp>
+#include <boat/sql/detail/manip.hpp>
 
 namespace boat::sql {
 
@@ -16,7 +15,8 @@ inline std::generator<db::query> inserts(  //
     auto cols = std::vector<std::unique_ptr<adaptors::adaptor>>{};
     for (auto const& col : vals.columns)
         cols.push_back(adaptors::create(
-            tbl, *std::ranges::find(tbl.columns, col, &column::column_name)));
+            tbl.lcase_dbms,
+            *std::ranges::find(tbl.columns, col, &column::column_name)));
     auto num_rows = std::max<size_t>(1, 999 / cols.size());
     for (auto const& rows : vals | std::views::chunk(num_rows)) {
         auto qry = db::query{};

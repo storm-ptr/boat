@@ -12,17 +12,16 @@
 
 namespace boat::sql::dialects {
 
-inline dialect const& find(std::string_view dbms_name)
+inline dialect const& find(std::string_view dbms)
 {
     static constexpr auto all =
         boost::fusion::list<mssql, mysql, postgresql, sqlite>{};
     auto ptr = static_cast<dialect const*>(nullptr);
-    auto dbms = dbms_name | unicode::lower | unicode::string<char>;
     boost::fusion::for_each(all, [&](auto& dial) {
         if (!ptr && dial.match(dbms))
             ptr = &dial;
     });
-    return ptr ? *ptr : throw std::runtime_error(dbms);
+    return ptr ? *ptr : throw std::runtime_error(std::string{dbms});
 }
 
 }  // namespace boat::sql::dialects

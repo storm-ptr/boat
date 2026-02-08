@@ -8,38 +8,36 @@
 
 namespace boat::sql::adaptors {
 
+template <std::floating_point T>
+struct type_name<T> {
+    static constexpr auto value = "double precision";
+};
+
 class real : public adaptor {
-protected:
-    std::string_view tbl_;
     std::string_view col_;
 
 public:
-    bool init(table const& tbl, column const& col) override
+    bool init(std::string_view dbms, column const& col) override
     {
-        tbl_ = tbl.table_name;
         col_ = col.column_name;
-        return any({"decfloat"
+        return any({"decfloat",
                     "decimal",
                     "double precision",
                     "float",
                     "numeric",
                     "real"},
-                   equal(col.type_name)) ||
-               (tbl.dbms_name.contains("mysql") && col.type_name == "double") ||
-               (tbl.dbms_name.contains("sqlite") &&
-                any({"real", "floa", "doub"}, within(col.type_name)));
+                   equal(col.lcase_type)) ||
+               (dbms.contains(mysql_dbms) && col.lcase_type == "double") ||
+               (dbms.contains(sqlite_dbms) &&
+                any({"real", "floa", "doub"}, within(col.lcase_type)));
     }
 
-    type migrate(std::string_view dbms) const override
+    type type_cast(std::string_view dbms) const override
     {
-        return {dbms.contains("microsoft sql server") ? "float"
-                                                      : "double precision"};
+        return {dbms.contains(mssql_dbms) ? "float" : "double precision"};
     }
 
-    void select(db::query& qry) const override
-    {
-        qry << db::id{tbl_} << "." << db::id{col_};
-    }
+    void select(db::query& qry) const override { qry << db::id{col_}; }
 
     void insert(db::query& qry, pfr::variant var) const override
     {

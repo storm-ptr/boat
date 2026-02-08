@@ -3,36 +3,33 @@
 #ifndef BOAT_GEOMETRY_ALGORITHM_HPP
 #define BOAT_GEOMETRY_ALGORITHM_HPP
 
-#include <boat/geometry/detail/utility.hpp>
+#include <boat/geometry/concepts.hpp>
 
 namespace boat::geometry {
 
 inline auto buffer(double distance, size_t num_points)
 {
-    return [=]<tagged T>(T const& geom) {
+    return [=]<single T>(T const& geom) -> polygon auto {
         namespace strategy = boost::geometry::strategy::buffer;
         using strategy_point_circle = std::conditional_t<
             std::same_as<typename boost::geometry::cs_tag<T>::type,
                          boost::geometry::geographic_tag>,
             strategy::geographic_point_circle<>,
             strategy::point_circle>;
-        auto ret = typename as<T>::multi_polygon{};
+        auto out = typename d2_of<T>::multi_polygon{};
         boost::geometry::buffer(  //
             geom,
-            ret,
+            out,
             strategy::distance_symmetric{distance},
             strategy::side_straight{},
             strategy::join_round{num_points},
             strategy::end_round{num_points},
             strategy_point_circle{num_points});
-        if constexpr (multi<T>)
-            return ret;
-        else
-            return std::move(ret.at(0));
+        return std::move(out.at(0));
     };
 }
 
-constexpr auto minmax = []<tagged T>(T const& geom) -> as<T>::box {
+constexpr auto minmax = []<tagged T>(T const& geom) -> box auto {
     double xmin = INFINITY;
     double ymin = INFINITY;
     double xmax = -INFINITY;
@@ -53,7 +50,7 @@ constexpr auto minmax = []<tagged T>(T const& geom) -> as<T>::box {
             std::visit(self, var);
         },
     }(geom);
-    return {{xmin, ymin}, {xmax, ymax}};
+    return typename d2_of<T>::box{{xmin, ymin}, {xmax, ymax}};
 };
 
 }  // namespace boat::geometry

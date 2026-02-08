@@ -4,14 +4,14 @@
 #define BOAT_SQL_DIALECTS_MYSQL_HPP
 
 #include <boat/sql/detail/dialects/dialect.hpp>
-#include <boat/sql/detail/syntax.hpp>
+#include <boat/sql/detail/manip.hpp>
 
 namespace boat::sql::dialects {
 
 struct mysql : dialect {
-    bool match(std::string_view dbms_name) const override
+    bool match(std::string_view dbms) const override
     {
-        return dbms_name.contains("mysql");
+        return dbms.contains(mysql_dbms);
     }
 
     db::query layers() const override
@@ -74,14 +74,15 @@ struct mysql : dialect {
         return q;
     }
 
-    db::query select(table const& tbl, overlap const& req) const override
+    db::query select(table const& tbl, bbox const& req) const override
     {
         auto col = find_or_geo(tbl.columns, req.spatial_column);
         auto q = db::query{};
         q << "\n select " << select_list{tbl, req.select_list} << "\n from "
           << id{tbl} << "\n where MBRIntersects("
-          << polygon{tbl, *col, req.xmin, req.ymin, req.xmax, req.ymax} << ", "
-          << db::id(col->column_name) << ")\n limit " << to_chars(req.limit);
+          << rect{tbl.lcase_dbms, *col, req.xmin, req.ymin, req.xmax, req.ymax}
+          << ", " << db::id(col->column_name) << ")\n limit "
+          << to_chars(req.limit);
         return q;
     }
 
@@ -102,10 +103,10 @@ struct mysql : dialect {
         q << "\n create table " << id{tbl};
         for (auto sep = "\n ( "; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
-              << col.type_name;
+              << col.lcase_type;
             if (col.srid > 0)
                 q << " not null srid " << to_chars(col.srid);
-            else if (col.length > 0 && !col.type_name.contains(" "))
+            else if (col.length > 0 && !col.lcase_type.contains(" "))
                 q << "(" << to_chars(col.length) << ")";
         }
         return q << "\n );" << create_indices{tbl};

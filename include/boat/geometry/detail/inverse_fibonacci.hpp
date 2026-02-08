@@ -4,7 +4,7 @@
 #define BOAT_GEOMETRY_INVERSE_FIBONACCI_HPP
 
 #include <boat/detail/numbers.hpp>
-#include <boat/geometry/detail/utility.hpp>
+#include <boat/geometry/vocabulary.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/qvm/mat_operations.hpp>
 #include <boost/qvm/vec_mat_operations.hpp>

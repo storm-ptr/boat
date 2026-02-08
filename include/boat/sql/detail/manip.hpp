@@ -1,7 +1,7 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_SQL_SYNTAX_HPP
-#define BOAT_SQL_SYNTAX_HPP
+#ifndef BOAT_SQL_MANIP_HPP
+#define BOAT_SQL_MANIP_HPP
 
 #include <boat/db/query.hpp>
 #include <boat/sql/detail/adaptors/adaptors.hpp>
@@ -57,13 +57,13 @@ struct create_indices {
 
 struct select_list {
     table const& tbl;
-    std::vector<std::string> const& column_names;
+    std::span<std::string const> cols;
 
     void print(db::query& out, range_of<column> auto&& cols) const
     {
         for (auto sep = ""; auto const& col : cols) {
             out << std::exchange(sep, ", ");
-            adaptors::create(tbl, col)->select(out);
+            adaptors::create(tbl.lcase_dbms, col)->select(out);
         }
     }
 
@@ -73,16 +73,16 @@ struct select_list {
             return *std::ranges::find(
                 in.tbl.columns, column_name, &column::column_name);
         };
-        in.column_names.empty()
+        in.cols.empty()
             ? in.print(out, in.tbl.columns)
-            : in.print(out, in.column_names | std::views::transform(to_column));
+            : in.print(out, in.cols | std::views::transform(to_column));
         return out;
     }
 };
 
 struct order_by {
     table const& tbl;
-    std::vector<order_key> const& order_keys;
+    std::span<order_key const> keys;
 
     void print(db::query& out, auto&& keys) const
     {
@@ -93,25 +93,25 @@ struct order_by {
 
     friend db::query& operator<<(db::query& out, order_by const& in)
     {
-        if (in.order_keys.empty())
+        if (in.keys.empty())
             for (auto idx : in.tbl.indices() | std::views::filter(orderable) |
                                 std::views::take(1))
                 in.print(out, idx);
         else
-            in.print(out, in.order_keys);
+            in.print(out, in.keys);
         return out;
     }
 };
 
-struct polygon {
-    table const& tbl;
+struct rect {
+    std::string_view dbms;
     column const& col;
     double xmin;
     double ymin;
     double xmax;
     double ymax;
 
-    friend db::query& operator<<(db::query& out, polygon const& in)
+    friend db::query& operator<<(db::query& out, rect const& in)
     {
         auto var = pfr::to_variant(geometry::cartesian::polygon{{
             {in.xmin, in.ymin},
@@ -120,11 +120,11 @@ struct polygon {
             {in.xmin, in.ymax},
             {in.xmin, in.ymin},
         }});
-        adaptors::create(in.tbl, in.col)->insert(out, std::move(var));
+        adaptors::create(in.dbms, in.col)->insert(out, std::move(var));
         return out;
     }
 };
 
 }  // namespace boat::sql
 
-#endif  // BOAT_SQL_SYNTAX_HPP
+#endif  // BOAT_SQL_MANIP_HPP

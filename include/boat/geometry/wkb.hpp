@@ -5,7 +5,7 @@
 
 #include <array>
 #include <boat/blob.hpp>
-#include <boat/geometry/detail/utility.hpp>
+#include <boat/geometry/concepts.hpp>
 #include <cstdint>
 
 namespace boat {

@@ -43,8 +43,7 @@ public:
         for (auto& t : tiles) {
             auto mbr = boat::geometry::envelope(m.width, m.height, t);
             auto a = mbr.min_corner(), b = mbr.max_corner();
-            auto scale =
-                boat::geometry::downscaling_factor(m.width, m.height, t.z);
+            auto scale = boat::geometry::downscaling(m.width, m.height, t.z);
             auto key = std::tuple{file_, t.z, t.y, t.x};
             auto img = get_or_invoke(cache_.get(), key, [&] {
                 auto x = static_cast<int>(a.x());

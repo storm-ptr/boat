@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(gdal)
         auto y = static_cast<int>(a.y());
         auto w = static_cast<int>(b.x() - a.x());
         auto h = static_cast<int>(b.y() - a.y());
-        auto scale = boat::geometry::downscaling_factor(m.width, m.height, t.z);
+        auto scale = boat::geometry::downscaling(m.width, m.height, t.z);
         if (i % 2)
             copy(x, y, w, h, gil::rgb8_image_t{w / scale, h / scale});
         else

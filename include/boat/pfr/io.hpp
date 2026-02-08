@@ -27,7 +27,7 @@ auto format(ostream auto const& fmt, variant const& var)
     return os.view() |
            std::views::transform([](auto c) { return iswspace(c) ? ' ' : c; }) |
            std::views::take(80) |
-           unicode::string<typename std::decay_t<decltype(fmt)>::char_type>;
+           unicode::utf<typename std::decay_t<decltype(fmt)>::char_type>;
 }
 
 template <range_of<size_t> S, range_of<variant> R>

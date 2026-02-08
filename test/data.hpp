@@ -19,7 +19,7 @@ struct object_struct {
 
 inline boat::sql::table get_object_table()
 {
-    auto ret = boat::sql::get_table<object_struct>();
+    auto ret = boat::sql::to_table<object_struct>();
     ret.index_keys = {
         {.index_name = "pk",
          .column_name = std::string(boost::pfr::get_name<0, object_struct>()),

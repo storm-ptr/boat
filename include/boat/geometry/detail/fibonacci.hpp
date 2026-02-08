@@ -17,7 +17,7 @@ auto box_fibonacci(T const& mbr, size_t num_points)
 {
     auto a = mbr.min_corner(), b = mbr.max_corner();
     return std::views::iota(0u, num_points) |
-           std::views::transform([=](auto i) -> as<T>::point {
+           std::views::transform([=](auto i) -> d2_of<T>::point {
                return {std::lerp(a.x(), b.x(), fraction(i * numbers::inv_phi)),
                        std::lerp(a.y(), b.y(), (i + .5) / num_points)};
            });

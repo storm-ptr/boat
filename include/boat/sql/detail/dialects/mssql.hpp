@@ -4,14 +4,14 @@
 #define BOAT_SQL_DIALECTS_MSSQL_HPP
 
 #include <boat/sql/detail/dialects/dialect.hpp>
-#include <boat/sql/detail/syntax.hpp>
+#include <boat/sql/detail/manip.hpp>
 
 namespace boat::sql::dialects {
 
 struct mssql : dialect {
-    bool match(std::string_view dbms_name) const override
+    bool match(std::string_view dbms) const override
     {
-        return dbms_name.contains("microsoft sql server");
+        return dbms.contains(mssql_dbms);
     }
 
     db::query layers() const override
@@ -111,12 +111,12 @@ struct mssql : dialect {
         return q;
     }
 
-    db::query select(table const& tbl, overlap const& req) const override
+    db::query select(table const& tbl, bbox const& req) const override
     {
         auto col = find_or_geo(tbl.columns, req.spatial_column);
         auto q = db::query{};
-        q << "\n declare @g " << col->type_name << "\n set @g = "
-          << polygon{tbl, *col, req.xmin, req.ymin, req.xmax, req.ymax}
+        q << "\n declare @g " << col->lcase_type << "\n set @g = "
+          << rect{tbl.lcase_dbms, *col, req.xmin, req.ymin, req.xmax, req.ymax}
           << "\n select top(" << to_chars(req.limit) << ") "
           << select_list{tbl, req.select_list} << "\n from " << id{tbl}
           << "\n where " << db::id{col->column_name} << ".Filter(@g) = 1";
@@ -141,11 +141,11 @@ struct mssql : dialect {
         q << "\n create table " << id{tbl};
         for (auto sep = "\n ( "; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
-              << col.type_name;
-            if (col.length > 0 && !col.type_name.contains(" "))
+              << col.lcase_type;
+            if (col.length > 0 && !col.lcase_type.contains(" "))
                 q << "(" << to_chars(col.length) << ")";
             else if (col.length < 0 && any({"nvarchar", "varbinary", "varchar"},
-                                           equal(col.type_name)))
+                                           equal(col.lcase_type)))
                 q << "(max)";
             if (has_primary(tbl.index_keys, col.column_name))
                 q << " not null";

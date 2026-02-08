@@ -54,7 +54,7 @@ void check(SQLRETURN ec, unique_ptr<type> const& ptr)
     }
     if (SQL_SUCCEEDED(ec))
         return;
-    auto msg = os.view() | unicode::string<char>;
+    auto msg = os.view() | unicode::utf8;
     throw std::runtime_error{msg.empty() ? "odbc" : msg};
 }
 
@@ -71,7 +71,7 @@ inline std::string info(dbc_ptr const& dbc, SQLUSMALLINT key)
     auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
     auto sz = SQLSMALLINT(buf.size());
     check(SQLGetInfoW(dbc.get(), key, buf.data(), sz, 0), dbc);
-    return std::basic_string_view{buf.data()} | unicode::string<char>;
+    return std::basic_string_view{buf.data()} | unicode::utf8;
 }
 
 inline std::string name(stmt_ptr const& stmt, SQLUSMALLINT col)
@@ -80,7 +80,7 @@ inline std::string name(stmt_ptr const& stmt, SQLUSMALLINT col)
     auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
     auto sz = SQLSMALLINT(buf.size());
     check(SQLColAttributeW(stmt.get(), col, key, buf.data(), sz, 0, 0), stmt);
-    return std::basic_string_view{buf.data()} | unicode::string<char>;
+    return std::basic_string_view{buf.data()} | unicode::utf8;
 }
 
 }  // namespace boat::db::odbc

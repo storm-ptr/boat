@@ -14,23 +14,23 @@
 
 namespace boat::sql::adaptors {
 
-inline std::unique_ptr<adaptor> try_create(table const& tbl, column const& col)
+inline auto try_create(std::string_view dbms, column const& col)
 {
     using all =
         boost::mpl::list<binary, integer, real, spatial, text, timestamp>;
     auto ret = std::unique_ptr<adaptor>{};
     boost::mpl::for_each<all>([&]<class T>(T v) {
-        if (!ret && v.init(tbl, col))
+        if (!ret && v.init(dbms, col))
             ret = std::make_unique<T>(std::move(v));
     });
     return ret;
 }
 
-inline std::unique_ptr<adaptor> create(table const& tbl, column const& col)
+inline auto create(std::string_view dbms, column const& col)
 {
-    if (auto ret = try_create(tbl, col))
+    if (auto ret = try_create(dbms, col))
         return ret;
-    throw std::runtime_error(concat(col.column_name, " ", col.type_name));
+    throw std::runtime_error(concat(col.column_name, " ", col.lcase_type));
 }
 
 }  // namespace boat::sql::adaptors

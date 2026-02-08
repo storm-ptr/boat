@@ -36,8 +36,7 @@ class text : public param {
 
 public:
     explicit text(std::string_view v)
-        : str_(v | unicode::string<SQLWCHAR>)
-        , ind_(str_.size() * sizeof(SQLWCHAR))
+        : str_(v | unicode::utf<SQLWCHAR>), ind_(str_.size() * sizeof(SQLWCHAR))
     {
     }
 

@@ -4,6 +4,7 @@
 #define BOAT_GEOMETRY_RASTER_HPP
 
 #include <boat/geometry/detail/fibonacci.hpp>
+#include <boat/geometry/detail/utility.hpp>
 #include <boat/geometry/transform.hpp>
 #include <boost/qvm/map_vec_mat.hpp>
 
@@ -12,7 +13,7 @@ namespace boat::geometry {
 template <multi_point T>
 T box_interpolate(int width, int height, size_t num_points)
 {
-    auto mbr = typename as<T>::box{{}, {width * 1., height * 1.}};
+    auto mbr = typename d2_of<T>::box{{}, {width * 1., height * 1.}};
     return box_fibonacci(mbr, num_points) | std::ranges::to<T>();
 }
 

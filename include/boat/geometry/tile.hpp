@@ -4,6 +4,7 @@
 #define BOAT_GEOMETRY_TILE_HPP
 
 #include <boat/detail/algorithm.hpp>
+#include <boat/geometry/detail/utility.hpp>
 #include <boat/geometry/transform.hpp>
 
 namespace boat::geometry {
@@ -85,7 +86,7 @@ inline cartesian::box envelope(int width, int height, tile const& t)
     return {{x1 * 1., y1 * 1.}, {x2 * 1., y2 * 1.}};
 }
 
-inline int downscaling_factor(int width, int height, int z)
+inline int downscaling(int width, int height, int z)
 {
     return pow2(detail::zmax(detail::align(width, height)) - z);
 }

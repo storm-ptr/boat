@@ -11,26 +11,20 @@ namespace boat::sql {
 
 inline table migrate(db::command& cmd, table const& tbl)
 {
-    auto& dial = dialects::find(cmd.dbms());
+    auto& dial = dialects::find(cmd.lcase_dbms());
     auto ret = table{
-        .dbms_name{cmd.dbms() | unicode::lower | unicode::string<char>},
+        .lcase_dbms{cmd.lcase_dbms()},
         .schema_name{tbl.schema_name.empty()
                          ? get<std::string>(cmd.exec(dial.schema()).value())
                          : tbl.schema_name},
         .table_name{tbl.table_name},
         .index_keys{tbl.index_keys}};
     for (auto& col : tbl.columns) {
-        auto ptr = adaptors::try_create(tbl, col);
-        if (!ptr)
-            continue;
-        auto [type, len, epsg] = ptr->migrate(ret.dbms_name);
+        auto ptr = adaptors::create(tbl.lcase_dbms, col);
+        auto [type, len, epsg] = ptr->type_cast(ret.lcase_dbms);
         auto srid = epsg > 0 ? get<int>(cmd.exec(dial.srid(epsg)).value()) : 0;
         ret.columns.emplace_back(col.column_name, type, len, srid, epsg);
     }
-    for (auto& key : ret.index_keys)
-        if (!std::ranges::contains(
-                ret.columns, key.column_name, &column::column_name))
-            key.column_name.clear();
     return ret;
 }
 

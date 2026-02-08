@@ -15,7 +15,7 @@ struct command {
     virtual void commit() = 0;
     virtual char id_quote() = 0;
     virtual std::string param_mark() = 0;
-    virtual std::string dbms() = 0;
+    virtual std::string lcase_dbms() = 0;
 };
 
 }  // namespace boat::db

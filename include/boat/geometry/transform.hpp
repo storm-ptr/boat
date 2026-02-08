@@ -5,7 +5,7 @@
 
 #include <boat/detail/charconv.hpp>
 #include <boat/detail/numbers.hpp>
-#include <boat/geometry/detail/utility.hpp>
+#include <boat/geometry/concepts.hpp>
 #include <boost/geometry/srs/epsg.hpp>
 #include <boost/geometry/strategies/transform/srs_transformer.hpp>
 #include <optional>

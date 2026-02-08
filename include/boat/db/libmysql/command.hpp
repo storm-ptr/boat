@@ -79,7 +79,7 @@ public:
     void commit() override { check(!mysql_commit(dbc_.get()), dbc_); }
     char id_quote() override { return '`'; }
     std::string param_mark() override { return "?"; }
-    std::string dbms() override { return "mysql"; }
+    std::string lcase_dbms() override { return "mysql"; }
 };
 
 }  // namespace boat::db::libmysql

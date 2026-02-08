@@ -47,7 +47,7 @@ public:
         namespace bgi = boost::geometry::index;
         auto cmd = cmd_();
         auto tbl = get_or_invoke(cache_.get(), std::tuple{key_, layer}, [&] {
-            return get_table(*cmd, layer.at(0), layer.at(1));
+            return describe(*cmd, layer.at(0), layer.at(1));
         });
         auto& col = layer.at(2);
         auto it = std::ranges::find(tbl.columns, col, &column::column_name);
@@ -70,8 +70,7 @@ public:
                 auto a = b2->min_corner(), b = b2->max_corner();
                 auto key = std::tuple{key_, layer, a.x(), a.y(), b.x(), b.y()};
                 auto rows = get_or_invoke(cache_.get(), key, [&] {
-                    auto req =
-                        overlap{{col}, col, a.x(), a.y(), b.x(), b.y(), 1};
+                    auto req = bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 1};
                     return select(*cmd, tbl, req);
                 });
                 if (rows.empty()) {

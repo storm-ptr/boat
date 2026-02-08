@@ -18,7 +18,7 @@ struct layer {
 
 struct column {
     std::string column_name;
-    std::string type_name;
+    std::string lcase_type;
     int length;
     int srid;
     int epsg;
@@ -36,7 +36,7 @@ struct index_key {
 };
 
 struct table {
-    std::string dbms_name;
+    std::string lcase_dbms;
     std::string schema_name;
     std::string table_name;
     std::vector<column> columns;
@@ -62,7 +62,7 @@ struct page {
     int limit;
 };
 
-struct overlap {
+struct bbox {
     std::vector<std::string> select_list;
     std::string spatial_column;
     double xmin;

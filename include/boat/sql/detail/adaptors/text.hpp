@@ -8,15 +8,17 @@
 
 namespace boat::sql::adaptors {
 
+template <>
+struct type_name<std::string> {
+    static constexpr auto value = "varchar";
+};
+
 class text : public adaptor {
-protected:
-    std::string_view tbl_;
     std::string_view col_;
 
 public:
-    bool init(table const& tbl, column const& col) override
+    bool init(std::string_view dbms, column const& col) override
     {
-        tbl_ = tbl.table_name;
         col_ = col.column_name;
         return any({"char",
                     "character",
@@ -27,27 +29,24 @@ public:
                     "national character large object",
                     "national character varying",
                     "nchar",
+                    "nchar varying",
                     "nclob",
                     "nvarchar",
                     "varchar"},
-                   equal(col.type_name)) ||
-               (tbl.dbms_name.contains("mysql") && col.type_name == "text") ||
-               (tbl.dbms_name.contains("postgresql") &&
-                any({"bpchar", "text"}, equal(col.type_name))) ||
-               (tbl.dbms_name.contains("sqlite") &&
-                any({"char", "clob", "text"}, within(col.type_name)));
+                   equal(col.lcase_type)) ||
+               (dbms.contains(mysql_dbms) && col.lcase_type.contains("text")) ||
+               (dbms.contains(postgresql_dbms) &&
+                any({"bpchar", "text"}, equal(col.lcase_type))) ||
+               (dbms.contains(sqlite_dbms) &&
+                any({"char", "clob", "text"}, within(col.lcase_type)));
     }
 
-    type migrate(std::string_view dbms) const override
+    type type_cast(std::string_view dbms) const override
     {
-        return {dbms.contains("microsoft sql server") ? "nvarchar" : "varchar",
-                250};
+        return {dbms.contains(mssql_dbms) ? "nvarchar" : "varchar", 250};
     }
 
-    void select(db::query& qry) const override
-    {
-        qry << db::id{tbl_} << "." << db::id{col_};
-    }
+    void select(db::query& qry) const override { qry << db::id{col_}; }
 
     void insert(db::query& qry, pfr::variant var) const override
     {

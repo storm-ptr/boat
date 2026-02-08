@@ -26,7 +26,7 @@ public:
         check(SQLDriverConnectW(  //
                   dbc_.get(),
                   0,
-                  unicode::string<SQLWCHAR>(connection).data(),
+                  unicode::utf<SQLWCHAR>(connection).data(),
                   SQL_NTS,
                   0,
                   0,
@@ -39,8 +39,7 @@ public:
     {
         auto ret = pfr::rowset{};
         auto stmt = alloc<SQL_HANDLE_STMT>(dbc_);
-        auto sql =
-            qry.sql(id_quote(), param_mark()) | unicode::string<SQLWCHAR>;
+        auto sql = qry.sql(id_quote(), param_mark()) | unicode::utf<SQLWCHAR>;
         check(SQLPrepareW(stmt.get(), sql.data(), SQL_NTS), stmt);
         auto binds = std::vector<std::unique_ptr<params::param>>{};
         for (auto [i, var] : qry.params() | std::views::enumerate) {
@@ -100,7 +99,11 @@ public:
     }
 
     std::string param_mark() override { return "?"; }
-    std::string dbms() override { return info(dbc_, SQL_DBMS_NAME); }
+
+    std::string lcase_dbms() override
+    {
+        return unicode::to_lower(info(dbc_, SQL_DBMS_NAME));
+    }
 };
 
 }  // namespace boat::db::odbc

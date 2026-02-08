@@ -42,7 +42,7 @@ class reader {
             return {};
         buf_.resize(std::max<>(buf_.size(), num_chars() + 1));
         get_data(stmt, col, SQL_C_WCHAR, buf_.data(), num_bytes());
-        return std::span{buf_.data(), num_chars()} | unicode::string<char>;
+        return std::span{buf_.data(), num_chars()} | unicode::utf8;
     }
 
     pfr::variant get_blob(stmt_ptr const& stmt, SQLUSMALLINT col)

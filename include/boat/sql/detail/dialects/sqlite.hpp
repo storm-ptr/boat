@@ -4,14 +4,14 @@
 #define BOAT_SQL_DIALECTS_SQLITE_HPP
 
 #include <boat/sql/detail/dialects/dialect.hpp>
-#include <boat/sql/detail/syntax.hpp>
+#include <boat/sql/detail/manip.hpp>
 
 namespace boat::sql::dialects {
 
 struct sqlite : dialect {
-    bool match(std::string_view dbms_name) const override
+    bool match(std::string_view dbms) const override
     {
-        return dbms_name.contains("sqlite");
+        return dbms.contains(sqlite_dbms);
     }
 
     db::query layers() const override
@@ -84,7 +84,7 @@ struct sqlite : dialect {
         return q;
     }
 
-    db::query select(table const& tbl, overlap const& req) const override
+    db::query select(table const& tbl, bbox const& req) const override
     {
         auto col = find_or_geo(tbl.columns, req.spatial_column);
         auto key = std::ranges::find(
@@ -118,7 +118,7 @@ struct sqlite : dialect {
         auto sep = "\n ( ";
         for (auto& col : tbl.columns | std::views::filter(std::not_fn(geo)))
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
-              << col.type_name;
+              << col.lcase_type;
         for (auto idx :
              tbl.indices() | std::views::filter(primary) | std::views::take(1))
             q << std::exchange(sep, "\n , ") << "primary key "

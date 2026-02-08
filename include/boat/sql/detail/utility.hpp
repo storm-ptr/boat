@@ -8,6 +8,11 @@
 
 namespace boat::sql {
 
+constexpr auto mssql_dbms = "microsoft sql server";
+constexpr auto mysql_dbms = "mysql";
+constexpr auto postgresql_dbms = "postgresql";
+constexpr auto sqlite_dbms = "sqlite";
+
 bool any(std::initializer_list<std::string_view> list, auto&& pred)
 {
     return std::ranges::any_of(list, pred);

@@ -5,7 +5,7 @@
 
 #include <boat/detail/algorithm.hpp>
 #include <boat/detail/numbers.hpp>
-#include <boat/geometry/detail/utility.hpp>
+#include <boat/geometry/concepts.hpp>
 #include <generator>
 #include <random>
 
