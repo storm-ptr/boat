@@ -38,6 +38,13 @@ std::string to_chars(T v)
     return ret;
 }
 
+inline std::string to_lower(std::string_view str)
+{
+    auto loc = std::locale::classic();
+    auto fn = [&](char ch) -> char { return std::tolower(ch, loc); };
+    return str | std::views::transform(fn) | std::ranges::to<std::string>();
+}
+
 }  // namespace boat
 
 #endif  // BOAT_CHARCONV_HPP

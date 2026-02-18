@@ -15,7 +15,7 @@
 
 namespace boat::gui::datasets {
 
-inline std::shared_ptr<dataset> create(
+inline std::shared_ptr<dataset> make(
     std::string_view url,
     std::shared_ptr<caches::cache> const& cache)
 {

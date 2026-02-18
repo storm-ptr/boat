@@ -60,7 +60,7 @@ public:
     SQLLEN* indicator() override { return &ind_; }
 };
 
-inline std::unique_ptr<param> create(pfr::variant const& var)
+inline std::unique_ptr<param> make(pfr::variant const& var)
 {
     using integer = scalar<int64_t, SQL_C_SBIGINT, SQL_BIGINT>;
     using real = scalar<double, SQL_C_DOUBLE, SQL_DOUBLE>;

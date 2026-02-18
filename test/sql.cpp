@@ -229,6 +229,6 @@ BOOST_AUTO_TEST_CASE(sql_datatypes)
             db::id{tbl_b_name},
             ") as t",
         });
-        BOOST_CHECK_EQUAL(get<int>(rows.value()), 0);
+        BOOST_CHECK_EQUAL(pfr::get<int>(rows.value()), 0);
     }
 }

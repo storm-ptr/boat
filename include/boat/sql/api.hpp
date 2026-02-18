@@ -36,7 +36,7 @@ inline table describe(  //
             std::from_range,
             cmd.exec(dial.columns(schema_name, table_name)) |
                 pfr::view<column> | std::views::transform([](auto col) {
-                    col.lcase_type = unicode::to_lower(col.lcase_type);
+                    col.lcase_type = to_lower(col.lcase_type);
                     return col;
                 }),
         },
@@ -63,7 +63,7 @@ inline table describe(  //
 inline table describe(db::command& cmd, std::string_view table_name)
 {
     auto scm = cmd.exec(dialects::find(cmd.lcase_dbms()).schema()).value();
-    return describe(cmd, get<std::string>(scm), table_name);
+    return describe(cmd, pfr::get<std::string>(scm), table_name);
 }
 
 pfr::rowset select(db::command& cmd, table const& tbl, auto const& request)
@@ -74,7 +74,7 @@ pfr::rowset select(db::command& cmd, table const& tbl, auto const& request)
 
 inline void insert(db::command& cmd, table const& tbl, pfr::rowset const& vals)
 {
-    for (auto qry : inserts(tbl, vals))
+    for (auto qry : insert_by_parts(tbl, vals))
         cmd.exec(qry);
 }
 

@@ -32,6 +32,7 @@ public:
                     "nchar varying",
                     "nclob",
                     "nvarchar",
+                    "string",  //< gdal
                     "varchar"},
                    equal(col.lcase_type)) ||
                (dbms.contains(mysql_dbms) && col.lcase_type.contains("text")) ||
@@ -41,7 +42,7 @@ public:
                 any({"char", "clob", "text"}, within(col.lcase_type)));
     }
 
-    type type_cast(std::string_view dbms) const override
+    type to_type(std::string_view dbms) const override
     {
         return {dbms.contains(mssql_dbms) ? "nvarchar" : "varchar", 250};
     }

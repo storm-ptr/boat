@@ -5,7 +5,6 @@
 
 #include <boat/pfr/io.hpp>
 #include <boat/sql/detail/utility.hpp>
-#include <boat/sql/vocabulary.hpp>
 
 namespace boat::sql {
 

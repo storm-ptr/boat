@@ -14,7 +14,7 @@
 
 namespace boat::sql::adaptors {
 
-inline auto try_create(std::string_view dbms, column const& col)
+inline auto try_make(std::string_view dbms, column const& col)
 {
     using all =
         boost::mpl::list<binary, integer, real, spatial, text, timestamp>;
@@ -26,9 +26,9 @@ inline auto try_create(std::string_view dbms, column const& col)
     return ret;
 }
 
-inline auto create(std::string_view dbms, column const& col)
+inline auto make(std::string_view dbms, column const& col)
 {
-    if (auto ret = try_create(dbms, col))
+    if (auto ret = try_make(dbms, col))
         return ret;
     throw std::runtime_error(concat(col.column_name, " ", col.lcase_type));
 }

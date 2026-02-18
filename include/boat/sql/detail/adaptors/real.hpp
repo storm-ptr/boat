@@ -32,7 +32,7 @@ public:
                 any({"real", "floa", "doub"}, within(col.lcase_type)));
     }
 
-    type type_cast(std::string_view dbms) const override
+    type to_type(std::string_view dbms) const override
     {
         return {dbms.contains(mssql_dbms) ? "float" : "double precision"};
     }

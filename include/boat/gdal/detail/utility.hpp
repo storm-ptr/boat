@@ -8,13 +8,36 @@
 #include <ogr_srs_api.h>
 #include <array>
 #include <boat/detail/charconv.hpp>
-#include <boat/geometry/vocabulary.hpp>
-#include <cstdint>
 #include <mutex>
 
 namespace boat::gdal {
 
-using geo_transform = std::array<double, 6>;
+struct layer_deleter {
+    GDALDatasetH dataset;
+
+    void operator()(OGRLayerH lyr) const
+    {
+        GDALDatasetReleaseResultSet(dataset, lyr);
+    }
+};
+
+using dataset_ptr = unique_ptr<void, GDALClose>;
+using feature_ptr = unique_ptr<void, OGR_F_Destroy>;
+using layer_ptr = std::unique_ptr<void, layer_deleter>;
+using srs_ptr = unique_ptr<void, OSRDestroySpatialReference>;
+
+constexpr auto to_data_type = overloaded{
+    [](uint8_t) { return GDT_Byte; },
+    [](int8_t) { return GDT_Int8; },
+    [](uint16_t) { return GDT_UInt16; },
+    [](int16_t) { return GDT_Int16; },
+    [](uint32_t) { return GDT_UInt32; },
+    [](int32_t) { return GDT_Int32; },
+    [](uint64_t) { return GDT_UInt64; },
+    [](int64_t) { return GDT_Int64; },
+    [](float) { return GDT_Float32; },
+    [](double) { return GDT_Float64; },
+};
 
 inline void init()
 {
@@ -22,63 +45,48 @@ inline void init()
     std::call_once(flag, [] {
         CPLSetConfigOption("GDAL_HTTP_TIMEOUT", "30");
         CPLSetConfigOption("GDAL_FILENAME_IS_UTF8", "YES");
+        CPLSetConfigOption("SHAPE_ENCODING", "UTF-8");
         GDALAllRegister();
     });
 }
 
-inline std::string error()
+inline std::string error_or(std::string_view default_value)
 {
     auto ret = std::string{CPLGetLastErrorMsg()};
     if (ret.empty())
-        ret = "gdal";
+        ret = default_value;
     return ret;
 }
 
 inline void check(CPLErr ec)
 {
     if (CE_None != ec)
-        throw std::runtime_error(error());
+        throw std::runtime_error(error_or("gdal"));
 }
 
 inline void check(OGRErr ec)
 {
     if (OGRERR_NONE != ec)
-        throw std::runtime_error(error());
+        throw std::runtime_error(error_or("gdal"));
 }
 
-inline int authority_code(OGRSpatialReferenceH srs)
+srs_ptr make_epsg_srs(int epsg)
+{
+    auto ret = srs_ptr{OSRNewSpatialReference(0)};
+    boat::check(!!ret, "OSRNewSpatialReference");
+    check(OSRImportFromEPSG(ret.get(), epsg));
+    return ret;
+}
+
+inline int get_authority_code(OGRSpatialReferenceH srs)
 {
     auto code = std::string_view{srs ? OSRGetAuthorityCode(srs, 0) : "0"};
     return from_chars<int>(code.data(), code.size());
 }
 
-template <arithmetic T>
-constexpr GDALDataType encode()
+inline layer_ptr execute(GDALDatasetH ds, char const* sql, char const* dialect)
 {
-    constexpr auto vis = overloaded{
-        [](uint8_t) { return GDT_Byte; },
-        [](int8_t) { return GDT_Int8; },
-        [](uint16_t) { return GDT_UInt16; },
-        [](int16_t) { return GDT_Int16; },
-        [](uint32_t) { return GDT_UInt32; },
-        [](int32_t) { return GDT_Int32; },
-        [](uint64_t) { return GDT_UInt64; },
-        [](int64_t) { return GDT_Int64; },
-        [](float) { return GDT_Float32; },
-        [](double) { return GDT_Float64; },
-    };
-    return std::visit(vis, std::variant<T>{});
-}
-
-constexpr geometry::matrix decode(geo_transform const& gt)
-{
-    return {{{gt[1], gt[2], gt[0]}, {gt[4], gt[5], gt[3]}, {0., 0., 1.}}};
-}
-
-constexpr geo_transform encode(geometry::matrix const& mat)
-{
-    auto& a = mat.a;
-    return {{a[0][2], a[0][0], a[0][1], a[1][2], a[1][0], a[1][1]}};
+    return {GDALDatasetExecuteSQL(ds, sql, 0, dialect), layer_deleter{ds}};
 }
 
 }  // namespace boat::gdal

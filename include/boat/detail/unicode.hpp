@@ -5,7 +5,6 @@
 
 #include <boat/detail/charconv.hpp>
 #include <boost/regex/pending/unicode_iterator.hpp>
-#include <cwctype>
 #include <iomanip>
 
 namespace boat::unicode {
@@ -50,11 +49,6 @@ constexpr auto utf = closure<Unit>{} | std::ranges::to<std::basic_string>();
 constexpr auto utf8 = utf<char>;
 constexpr auto utf16 = utf<char16_t>;
 constexpr auto utf32 = utf<char32_t>;
-
-constexpr auto to_lower = []<std::ranges::input_range R>(R&& r) {
-    return r | closure<wchar_t>{} | std::views::transform(std::towlower) |
-           utf<std::ranges::range_value_t<R>>;
-};
 
 template <std::ranges::input_range R>
 struct manip {

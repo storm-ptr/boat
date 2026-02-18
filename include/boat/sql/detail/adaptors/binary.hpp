@@ -31,7 +31,7 @@ public:
                (dbms.contains(sqlite_dbms) && col.lcase_type.contains("blob"));
     }
 
-    type type_cast(std::string_view dbms) const override
+    type to_type(std::string_view dbms) const override
     {
         return dbms.contains(mssql_dbms)        ? type{"varbinary", -1}
                : dbms.contains(postgresql_dbms) ? type{"bytea"}

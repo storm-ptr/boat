@@ -26,7 +26,7 @@ public:
         return any({"datetime", "timestamp"}, within(col.lcase_type));
     }
 
-    type type_cast(std::string_view dbms) const override
+    type to_type(std::string_view dbms) const override
     {
         return {dbms.contains(mysql_dbms)   ? type{"datetime", 6}
                 : dbms.contains(mssql_dbms) ? type{"datetime2"}

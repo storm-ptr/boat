@@ -52,22 +52,19 @@ void write(variant& out, std::chrono::time_point<Clock, Duration> in)
     // std::format("{:L%F %T}", in)
     namespace sc = std::chrono;
     auto epoch = in.time_since_epoch();
-    auto d = sc::floor<sc::days>(epoch);
-    auto ymd = sc::year_month_day(sc::sys_days(d));
-    auto y = static_cast<int>(ymd.year());
-    check(0 <= y && y <= 9999, "out of years");
-    auto h = sc::floor<sc::hours>(epoch);
-    auto min = sc::floor<sc::minutes>(epoch);
-    auto us = sc::floor<sc::microseconds>(epoch);
-    auto s = (us - min).count() * 1. / sc::microseconds::period::den *
-             sc::microseconds::period::num;
+    auto days = sc::floor<sc::days>(epoch);
+    auto ymd = sc::year_month_day{sc::sys_days(days)};
+    auto hms =
+        sc::hh_mm_ss{sc::duration_cast<sc::duration<double>>(epoch - days)};
     auto os = std::ostringstream{};
     os.imbue(std::locale::classic());
-    os << std::setfill('0') << std::setw(4) << y << "-" << std::setw(2)
-       << static_cast<unsigned>(ymd.month()) << "-" << std::setw(2)
-       << static_cast<unsigned>(ymd.day()) << " " << std::setw(2)
-       << (h - d).count() << ":" << std::setw(2) << (min - h).count() << ":"
-       << (s < 10 ? "0" : "") << s;
+    os << std::setfill('0') << std::setw(4) << static_cast<int>(ymd.year())
+       << "-" << std::setw(2) << static_cast<unsigned>(ymd.month()) << "-"
+       << std::setw(2) << static_cast<unsigned>(ymd.day()) << " "
+       << std::setw(2) << hms.hours().count() << ":" << std::setw(2)
+       << hms.minutes().count() << ":"
+       << (hms.seconds().count() < 10 ? "0" : "")
+       << hms.seconds().count() + hms.subseconds().count();
     out = std::move(os).str();
 }
 

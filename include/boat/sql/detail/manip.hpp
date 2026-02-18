@@ -63,7 +63,7 @@ struct select_list {
     {
         for (auto sep = ""; auto const& col : cols) {
             out << std::exchange(sep, ", ");
-            adaptors::create(tbl.lcase_dbms, col)->select(out);
+            adaptors::make(tbl.lcase_dbms, col)->select(out);
         }
     }
 
@@ -120,7 +120,7 @@ struct rect {
             {in.xmin, in.ymax},
             {in.xmin, in.ymin},
         }});
-        adaptors::create(in.dbms, in.col)->insert(out, std::move(var));
+        adaptors::make(in.dbms, in.col)->insert(out, std::move(var));
         return out;
     }
 };

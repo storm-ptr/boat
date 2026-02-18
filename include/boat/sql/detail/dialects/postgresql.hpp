@@ -127,7 +127,7 @@ struct postgresql : dialect {
         for (auto sep = "\n ( "; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
               << col.lcase_type;
-            if (col.srid > 0)
+            if (geo(col))
                 q << "(geometry, " << to_chars(col.srid) << ")";
             else if (col.length > 0 && !col.lcase_type.contains(" "))
                 q << "(" << to_chars(col.length) << ")";

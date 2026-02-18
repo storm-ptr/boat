@@ -28,7 +28,7 @@ public:
         auto lengths = std::vector<int>{};
         auto formats = std::vector<int>{};
         for (auto var : qry.params()) {
-            auto bnd = binds.emplace_back(params::create(var)).get();
+            auto bnd = binds.emplace_back(params::make(var)).get();
             types.emplace_back(bnd->type());
             values.emplace_back(bnd->value());
             lengths.emplace_back(bnd->length());

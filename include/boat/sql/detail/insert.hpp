@@ -8,13 +8,13 @@
 
 namespace boat::sql {
 
-inline std::generator<db::query> inserts(  //
+inline std::generator<db::query> insert_by_parts(  //
     table const& tbl,
     pfr::rowset const& vals)
 {
     auto cols = std::vector<std::unique_ptr<adaptors::adaptor>>{};
     for (auto const& col : vals.columns)
-        cols.push_back(adaptors::create(
+        cols.push_back(adaptors::make(
             tbl.lcase_dbms,
             *std::ranges::find(tbl.columns, col, &column::column_name)));
     auto num_rows = std::max<size_t>(1, 999 / cols.size());

@@ -104,9 +104,9 @@ struct mysql : dialect {
         for (auto sep = "\n ( "; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
               << col.lcase_type;
-            if (col.srid > 0)
+            if (geo(col))
                 q << " not null srid " << to_chars(col.srid);
-            else if (col.length > 0 && !col.lcase_type.contains(" "))
+            else if (col.length > 0)
                 q << "(" << to_chars(col.length) << ")";
         }
         return q << "\n );" << create_indices{tbl};

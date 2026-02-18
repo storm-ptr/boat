@@ -43,7 +43,7 @@ public:
         check(SQLPrepareW(stmt.get(), sql.data(), SQL_NTS), stmt);
         auto binds = std::vector<std::unique_ptr<params::param>>{};
         for (auto [i, var] : qry.params() | std::views::enumerate) {
-            auto bnd = binds.emplace_back(params::create(var)).get();
+            auto bnd = binds.emplace_back(params::make(var)).get();
             check(SQLBindParameter(  //
                       stmt.get(),
                       SQLUSMALLINT(i + 1),
@@ -102,7 +102,7 @@ public:
 
     std::string lcase_dbms() override
     {
-        return unicode::to_lower(info(dbc_, SQL_DBMS_NAME));
+        return to_lower(info(dbc_, SQL_DBMS_NAME));
     }
 };
 

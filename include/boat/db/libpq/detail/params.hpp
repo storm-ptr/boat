@@ -46,7 +46,7 @@ public:
     int format() override { return fmt; }
 };
 
-inline std::unique_ptr<param> create(pfr::variant const& var)
+inline std::unique_ptr<param> make(pfr::variant const& var)
 {
     using integer = scalar<int64_t, int8_oid>;
     using real = scalar<double, float8_oid>;

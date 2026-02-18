@@ -31,7 +31,7 @@ template <class T>
 concept ostream = specialized<T, std::basic_ostream>;
 
 template <class T, class U>
-concept range_of = std::same_as<std::ranges::range_value_t<T>, U>;
+concept range_of = std::convertible_to<std::ranges::range_value_t<T>, U>;
 
 template <class T, auto del>
 using unique_ptr = std::unique_ptr<T, decltype([](T* ptr) { del(ptr); })>;

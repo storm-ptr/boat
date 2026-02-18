@@ -51,7 +51,7 @@ inline table shrink_columns(table const& tbl)
     auto ret = tbl;
     std::erase_if(  //
         ret.columns,
-        [&](auto& col) { return !adaptors::try_create(tbl.lcase_dbms, col); });
+        [&](auto& col) { return !adaptors::try_make(tbl.lcase_dbms, col); });
     for (auto& key : ret.index_keys)
         if (!std::ranges::contains(
                 ret.columns, key.column_name, &column::column_name))
@@ -59,12 +59,11 @@ inline table shrink_columns(table const& tbl)
     return ret;
 }
 
-inline std::vector<std::string> to_types(table const& tbl)
+inline std::vector<std::string> to_common_types(table const& tbl)
 {
     auto ret = std::vector<std::string>{};
     for (auto& col : tbl.columns)
-        ret.push_back(
-            adaptors::create(tbl.lcase_dbms, col)->type_cast({}).name);
+        ret.push_back(adaptors::make(tbl.lcase_dbms, col)->to_type({}).name);
     return ret;
 }
 

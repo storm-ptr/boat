@@ -24,10 +24,10 @@ public:
     {
         dbms_ = dbms;
         col_ = &col;
-        return col.srid > 0;
+        return geo(col);
     }
 
-    type type_cast(std::string_view dbms) const override
+    type to_type(std::string_view dbms) const override
     {
         return dbms.contains(mssql_dbms) ? type{"geography", -1, 4326}
                                          : type{"geometry", 0, col_->epsg};

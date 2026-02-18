@@ -9,6 +9,7 @@
 #include <sql.h>
 #include <sqlext.h>
 #include <sqltypes.h>
+#include <array>
 #include <boat/detail/unicode.hpp>
 
 namespace boat::db::odbc {

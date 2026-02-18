@@ -19,7 +19,7 @@
 
 namespace boat::db {
 
-inline std::unique_ptr<command> create(std::string_view url)
+inline std::unique_ptr<command> make(std::string_view url)
 {
     if (url.starts_with("mysql"))
 #if __has_include(<mysql.h>)
@@ -75,7 +75,7 @@ inline std::unique_ptr<command> create(std::string_view url)
 #else
         throw std::runtime_error("compiled without sqlite");
 #endif
-    throw std::runtime_error("db::create");
+    throw std::runtime_error("db::make");
 }
 
 }  // namespace boat::db

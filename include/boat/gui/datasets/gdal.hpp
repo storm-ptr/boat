@@ -3,7 +3,7 @@
 #ifndef BOAT_GUI_DATASETS_GDAL_HPP
 #define BOAT_GUI_DATASETS_GDAL_HPP
 
-#include <boat/gdal/make_image.hpp>
+#include <boat/gdal/gil.hpp>
 #include <boat/gdal/raster.hpp>
 #include <boat/geometry/tile.hpp>
 #include <boat/gui/datasets/dataset.hpp>
@@ -28,34 +28,36 @@ public:
         geometry::geographic::grid grid,
         double resolution) override
     {
+        using namespace boat::gdal;
         namespace gil = boost::gil;
         namespace qvm = boost::qvm;
         constexpr auto limit = 512;
-        auto opt = std::optional<boat::gdal::raster>{};
-        auto ref = [&] {
-            return std::cref(opt ? *opt : opt.emplace(file_.data()));
+        auto ptr = dataset_ptr{};
+        auto ds = [&] {
+            if (!ptr)
+                ptr = open(file_.data());
+            return ptr.get();
         };
-        auto m = get_or_invoke(
-            cache_.get(), file_, [&] { return ref().get().get_meta(); });
-        auto srs = boost::geometry::srs::epsg{m.epsg};
+        auto r =
+            get_or_invoke(cache_.get(), file_, [&] { return *describe(ds()); });
+        auto srs = boost::geometry::srs::epsg{r.epsg};
         auto tiles = geometry::covers(
-            grid, resolution, limit, m.width, m.height, m.affine, srs);
+            grid, resolution, limit, r.width, r.height, r.affine, srs);
         for (auto& t : tiles) {
-            auto mbr = boat::geometry::envelope(m.width, m.height, t);
+            auto mbr = boat::geometry::envelope(r.width, r.height, t);
             auto a = mbr.min_corner(), b = mbr.max_corner();
-            auto scale = boat::geometry::downscaling(m.width, m.height, t.z);
+            auto scale = boat::geometry::downscaling(r.width, r.height, t.z);
             auto key = std::tuple{file_, t.z, t.y, t.x};
             auto img = get_or_invoke(cache_.get(), key, [&] {
                 auto x = static_cast<int>(a.x());
                 auto y = static_cast<int>(a.y());
                 auto w = static_cast<int>(b.x() - a.x());
                 auto h = static_cast<int>(b.y() - a.y());
-                auto ret = boat::gdal::make_image(
-                    w / scale,
-                    h / scale,
-                    m.bands | std::views::transform(&boat::gdal::band::color));
+                auto ret = make_image(w / scale, h / scale, r.to_colors());
                 boost::variant2::visit(
-                    [&](auto& v) { ref().get().io(x, y, w, h, gil::view(v)); },
+                    [&](auto& v) {
+                        image_io(ds(), GF_Read, x, y, w, h, gil::view(v));
+                    },
                     ret);
                 return ret;
             });
@@ -64,13 +66,13 @@ public:
             gil::write_view(os, gil::view(img), gil::png_tag());
             auto str = std::move(os).str();
             auto mat =  //
-                m.affine * qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
+                r.affine * qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
                 qvm::diag_mat(qvm::vec{{scale * 1., scale * 1., 1.}});
             co_yield feature{
                 std::in_place_type<raster>,
                 blob{as_bytes(str.data()), str.size()},
                 mat,
-                m.epsg,
+                r.epsg,
             };
         }
     }

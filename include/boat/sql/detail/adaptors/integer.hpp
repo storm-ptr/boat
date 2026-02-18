@@ -20,7 +20,12 @@ public:
     bool init(std::string_view dbms, column const& col) override
     {
         col_ = col.column_name;
-        return any({"bigint", "boolean", "int", "integer", "smallint"},
+        return any({"bigint",
+                    "boolean",
+                    "int",
+                    "integer",
+                    "integer64",  //< gdal
+                    "smallint"},
                    equal(col.lcase_type)) ||
                (dbms.contains(mssql_dbms) &&
                 any({"bit", "tinyint"}, equal(col.lcase_type))) ||
@@ -31,7 +36,7 @@ public:
                     equal(col.lcase_type)));
     }
 
-    type type_cast(std::string_view) const override { return {"bigint"}; }
+    type to_type(std::string_view) const override { return {"bigint"}; }
 
     void select(db::query& qry) const override { qry << db::id{col_}; }
 

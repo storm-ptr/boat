@@ -23,7 +23,7 @@ public:
     }
 
     sql(std::string url, std::shared_ptr<caches::cache> const& cache)
-        : sql([url = std::move(url)] { return db::create(url); }, cache)
+        : sql([url = std::move(url)] { return db::make(url); }, cache)
     {
     }
 

@@ -20,7 +20,7 @@ struct type {
 struct adaptor {
     virtual ~adaptor() = default;
     virtual bool init(std::string_view dbms, column const&) = 0;
-    virtual type type_cast(std::string_view dbms) const = 0;
+    virtual type to_type(std::string_view dbms) const = 0;
     virtual void select(db::query&) const = 0;
     virtual void insert(db::query&, pfr::variant) const = 0;
 };

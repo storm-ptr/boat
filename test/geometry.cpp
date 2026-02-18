@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(geometry_endian)
     for (auto& [hex, wkt] : tests) {
         auto unhex = boost::algorithm::unhex(hex);
         auto in = boat::blob_view{std::as_bytes(std::span(unhex))};
-        auto geom = get<cartesian::variant>(in);
+        auto geom = boat::get<cartesian::variant>(in);
         BOOST_CHECK_EQUAL(wkt, boost::geometry::to_wkt(geom));
     }
 }

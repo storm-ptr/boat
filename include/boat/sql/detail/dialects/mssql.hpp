@@ -18,7 +18,7 @@ struct mssql : dialect {
     {
         return "\n select table_schema, table_name, column_name"
                "\n from information_schema.columns"
-               "\n where data_type in ('geometry','geography')";
+               "\n where data_type in ('geography','geometry')";
     }
 
     db::query columns(std::string_view schema_name,
@@ -142,11 +142,9 @@ struct mssql : dialect {
         for (auto sep = "\n ( "; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
               << col.lcase_type;
-            if (col.length > 0 && !col.lcase_type.contains(" "))
-                q << "(" << to_chars(col.length) << ")";
-            else if (col.length < 0 && any({"nvarchar", "varbinary", "varchar"},
-                                           equal(col.lcase_type)))
-                q << "(max)";
+            if (col.length && !geo(col))
+                q << "(" << (col.length < 0 ? "max" : to_chars(col.length))
+                  << ")";
             if (has_primary(tbl.index_keys, col.column_name))
                 q << " not null";
         }
