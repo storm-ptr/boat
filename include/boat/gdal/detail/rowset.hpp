@@ -3,14 +3,14 @@
 #ifndef BOAT_GDAL_ROWSET_HPP
 #define BOAT_GDAL_ROWSET_HPP
 
+#include <boat/db/rowset.hpp>
 #include <boat/gdal/detail/fields/fields.hpp>
-#include <boat/pfr/rowset.hpp>
 
 namespace boat::gdal {
 
-pfr::rowset read(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
+db::rowset read(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
 {
-    auto ret = pfr::rowset{};
+    auto ret = db::rowset{};
     for (auto& fld : flds)
         ret.columns.push_back(std::visit([&](auto& v) { return v.name; }, fld));
     for (int i = 0; i < limit; ++i) {
@@ -24,7 +24,7 @@ pfr::rowset read(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
     return ret;
 }
 
-inline void write(OGRLayerH lyr, pfr::rowset const& vals)
+inline void write(OGRLayerH lyr, db::rowset const& vals)
 {
     auto fd = OGR_L_GetLayerDefn(lyr);
     auto flds = fields::make(fd, vals.columns);

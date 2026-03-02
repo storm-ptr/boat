@@ -9,11 +9,6 @@
 namespace boat::sql::dialects {
 
 struct mssql : dialect {
-    bool match(std::string_view dbms) const override
-    {
-        return dbms.contains(mssql_dbms);
-    }
-
     db::query layers() const override
     {
         return "\n select table_schema, table_name, column_name"
@@ -28,11 +23,11 @@ struct mssql : dialect {
             "\n declare @scm nvarchar(128), @tbl nvarchar(128)"
             "\n  , @col nvarchar(128), @typ nvarchar(128), @qry nvarchar(max)"
             "\n set @scm = ",
-            pfr::variant(schema_name),
+            db::variant(schema_name),
             "\n set @tbl = ",
-            pfr::variant(table_name),
+            db::variant(table_name),
             "\n set @qry"
-            "\n  = ' select column_name, data_type'"
+            "\n  = ' select null, column_name, data_type'"
             "\n  + ' , coalesce(character_maximum_length, datetime_precision)'"
             "\n  + ' , 0, 0'"
             "\n  + ' from information_schema.columns'"
@@ -40,8 +35,8 @@ struct mssql : dialect {
             "\n  + ' and table_name = ' + quotename(@tbl,'''')"
             "\n  + ' and data_type not in (''geography'', ''geometry'')'"
             "\n  + ' union'"
-            "\n  + ' select'"
-            "\n  + '  name, type, -1, srid, authorized_spatial_reference_id'"
+            "\n  + ' select null, name, type'"
+            "\n  + ' , -1, srid, authorized_spatial_reference_id'"
             "\n  + ' from (values (null, null, 0)'"
             "\n declare cur cursor for"
             "\n  select column_name, data_type"
@@ -80,46 +75,40 @@ struct mssql : dialect {
                          std::string_view table_name) const override
     {
         return {
-            "\n select null index_schema"
-            "\n , name index_name"
-            "\n , col_name(c.object_id, column_id) column_name"
-            "\n , is_descending_key"
-            "\n , has_filter is_partial"
-            "\n , is_primary_key"
-            "\n , is_unique"
-            "\n , case key_ordinal when 0"
-            "\n   then 1 else key_ordinal end ordinal"
+            "\n select null, name, col_name(c.object_id, column_id)"
+            "\n , is_descending_key, has_filter, is_primary_key, is_unique"
+            "\n , case key_ordinal when 0 then 1 else key_ordinal end"
             "\n from sys.indexes i, sys.index_columns c"
             "\n where i.index_id = c.index_id"
             "\n and i.object_id = c.object_id"
             "\n and i.object_id = object_id(",
-            pfr::variant(concat(schema_name, '.', table_name)),
+            db::variant(concat(schema_name, '.', table_name)),
             ")"};
     }
 
-    db::query select(table const& tbl, page const& req) const override
+    db::query select(db::table const& tbl, db::page const& rq) const override
     {
         auto q = db::query{};
         q << "\n select ";
-        if (!req.offset)
-            q << "top(" << to_chars(req.limit) << ") ";
-        q << select_list{tbl, req.select_list} << "\n from " << id{tbl}
-          << order_by{tbl, req.order_by};
-        if (req.offset)
-            q << "\n offset " << to_chars(req.offset) << " rows"
-              << "\n fetch next " << to_chars(req.limit) << " rows only";
+        if (!rq.offset)
+            q << "top(" << to_chars(rq.limit) << ") ";
+        q << select_list{tbl, rq.select_list} << "\n from " << id{tbl}
+          << order_by{tbl, rq.order_by};
+        if (rq.offset)
+            q << "\n offset " << to_chars(rq.offset) << " rows"
+              << "\n fetch next " << to_chars(rq.limit) << " rows only";
         return q;
     }
 
-    db::query select(table const& tbl, bbox const& req) const override
+    db::query select(db::table const& tbl, db::bbox const& rq) const override
     {
-        auto col = find_or_geo(tbl.columns, req.spatial_column);
+        auto& col = find_geo(tbl.columns, rq.layer_column);
         auto q = db::query{};
-        q << "\n declare @g " << col->lcase_type << "\n set @g = "
-          << rect{tbl.lcase_dbms, *col, req.xmin, req.ymin, req.xmax, req.ymax}
-          << "\n select top(" << to_chars(req.limit) << ") "
-          << select_list{tbl, req.select_list} << "\n from " << id{tbl}
-          << "\n where " << db::id{col->column_name} << ".Filter(@g) = 1";
+        q << "\n declare @g " << col.type_name << "\n set @g = "
+          << rect{tbl.dbms, col, rq.xmin, rq.ymin, rq.xmax, rq.ymax}
+          << "\n select top(" << to_chars(rq.limit) << ") "
+          << select_list{tbl, rq.select_list} << "\n from " << id{tbl}
+          << "\n where " << db::id{col.column_name} << ".Filter(@g) = 1";
         return q;
     }
 
@@ -128,24 +117,23 @@ struct mssql : dialect {
     db::query srid(int epsg) const override
     {
         return {
-            "\n select spatial_reference_id"
-            "\n from sys.spatial_reference_systems"
+            "\n select spatial_reference_id from sys.spatial_reference_systems"
             "\n where authority_name = 'epsg'"
             "\n and authorized_spatial_reference_id = ",
             to_chars(epsg)};
     }
 
-    db::query create(table const& tbl) const override
+    db::query create(db::table const& tbl) const override
     {
         auto q = db::query{};
         q << "\n create table " << id{tbl};
-        for (auto sep = "\n ( "; auto& col : tbl.columns) {
+        for (auto sep{"\n ( "}; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
-              << col.lcase_type;
+              << col.type_name;
             if (col.length && !geo(col))
                 q << "(" << (col.length < 0 ? "max" : to_chars(col.length))
                   << ")";
-            if (has_primary(tbl.index_keys, col.column_name))
+            if (primary(tbl.index_keys, col.column_name))
                 q << " not null";
         }
         q << "\n );";
@@ -153,11 +141,11 @@ struct mssql : dialect {
             q << "\n exec sp_addextendedproperty @name = 'srid'"
               << "\n , @value = " << to_chars(col.srid)
               << "\n , @level0type = 'schema'"
-              << "\n , @level0name = " << pfr::variant(tbl.schema_name)
+              << "\n , @level0name = " << db::variant(tbl.schema_name)
               << "\n , @level1type = 'table'"
-              << "\n , @level1name = " << pfr::variant(tbl.table_name)
+              << "\n , @level1name = " << db::variant(tbl.table_name)
               << "\n , @level2type = 'column'"
-              << "\n , @level2name = " << pfr::variant(col.column_name);
+              << "\n , @level2name = " << db::variant(col.column_name);
         return q << "\n ;" << create_indices{tbl};
     }
 };

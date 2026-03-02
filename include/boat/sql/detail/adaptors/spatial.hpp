@@ -3,63 +3,46 @@
 #ifndef BOAT_SQL_ADAPTORS_SPATIAL_HPP
 #define BOAT_SQL_ADAPTORS_SPATIAL_HPP
 
-#include <boat/geometry/concepts.hpp>
 #include <boat/sql/detail/adaptors/adaptor.hpp>
 #include <boat/sql/detail/utility.hpp>
 
 namespace boat::sql::adaptors {
 
-template <geometry::ogc99 T>
-struct type_name<T> {
-    static constexpr auto value = "geometry";
-};
+struct spatial : impl<geometry::geographic::variant> {
+    std::string_view parse() const override { return geo(*col_) ? kind_ : ""; }
 
-class spatial : public adaptor {
-protected:
-    std::string_view dbms_;
-    column const* col_;
-
-public:
-    bool init(std::string_view dbms, column const& col) override
+    db::column migrate(std::string_view dbms) const override
     {
-        dbms_ = dbms;
-        col_ = &col;
-        return geo(col);
-    }
-
-    type to_type(std::string_view dbms) const override
-    {
-        return dbms.contains(mssql_dbms) ? type{"geography", -1, 4326}
-                                         : type{"geometry", 0, col_->epsg};
+        return {.kind{kind_},
+                .column_name{col_->column_name},
+                .type_name{is_mssql(dbms) ? "geography" : "geometry"},
+                .epsg = is_mssql(dbms) ? 4326 : col_->epsg};
     }
 
     void select(db::query& qry) const override
     {
-        if (dbms_.contains(mssql_dbms))
-            qry << db::id{col_->column_name} << ".STAsBinary() "
-                << db::id{col_->column_name};
-        else if (dbms_.contains(mysql_dbms))
-            qry << "ST_AsBinary(" << db::id{col_->column_name}
-                << ", 'axis-order=long-lat') " << db::id{col_->column_name};
+        auto id = db::id{col_->column_name};
+        if (is_mssql(dbms_))
+            qry << id << ".STAsBinary() " << id;
+        else if (is_mysql(dbms_))
+            qry << "ST_AsBinary(" << id << ", 'axis-order=long-lat') " << id;
         else
-            qry << "ST_AsBinary(" << db::id{col_->column_name} << ") "
-                << db::id{col_->column_name};
+            qry << "ST_AsBinary(" << id << ") " << id;
     }
 
-    void insert(db::query& qry, pfr::variant var) const override
+    void insert(db::query& qry, db::variant var) const override
     {
-        if (dbms_.contains(mssql_dbms))
-            qry << col_->lcase_type << "::STGeomFromWKB(" << std::move(var)
-                << ", " << to_chars(col_->srid) << ")";
-        else if (dbms_.contains(mysql_dbms))
-            qry << "ST_GeomFromWKB(" << std::move(var) << ", "
-                << to_chars(col_->srid) << ", 'axis-order=long-lat')";
-        else if (dbms_.contains(postgresql_dbms) &&
-                 col_->lcase_type == "geography")
+        auto srid = to_chars(col_->srid);
+        if (is_mssql(dbms_))
+            qry << type() << "::STGeomFromWKB(" << std::move(var) << ", "
+                << srid << ")";
+        else if (is_mysql(dbms_))
+            qry << "ST_GeomFromWKB(" << std::move(var) << ", " << srid
+                << ", 'axis-order=long-lat')";
+        else if (is_postgres(dbms_) && type() == "geography")
             qry << "ST_GeogFromWKB(" << std::move(var) << ")";
         else
-            qry << "ST_GeomFromWKB(" << std::move(var) << ", "
-                << to_chars(col_->srid) << ")";
+            qry << "ST_GeomFromWKB(" << std::move(var) << ", " << srid << ")";
     }
 };
 

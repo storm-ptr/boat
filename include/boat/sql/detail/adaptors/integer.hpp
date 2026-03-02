@@ -8,41 +8,23 @@
 
 namespace boat::sql::adaptors {
 
-template <std::integral T>
-struct type_name<T> {
-    static constexpr auto value = "bigint";
-};
-
-class integer : public adaptor {
-    std::string_view col_;
-
-public:
-    bool init(std::string_view dbms, column const& col) override
+struct integer : impl<int> {
+    std::string_view parse() const override
     {
-        col_ = col.column_name;
-        return any({"bigint",
-                    "boolean",
-                    "int",
-                    "integer",
-                    "integer64",  //< gdal
-                    "smallint"},
-                   equal(col.lcase_type)) ||
-               (dbms.contains(mssql_dbms) &&
-                any({"bit", "tinyint"}, equal(col.lcase_type))) ||
-               (dbms.contains(mysql_dbms) &&
-                any({"mediumint", "tinyint"}, equal(col.lcase_type))) ||
-               (dbms.contains(postgresql_dbms) &&
-                any({"bigserial", "smallserial", "serial"},
-                    equal(col.lcase_type)));
+        if (any({"bigint", "boolean", "int", "integer", "smallint"},
+                same(type())) ||
+            is_mssql(dbms_) && any({"bit", "tinyint"}, same(type())) ||
+            is_mysql(dbms_) && any({"mediumint", "tinyint"}, same(type())) ||
+            is_postgres(dbms_) && type().contains("serial"))
+            return kind_;
+        return {};
     }
 
-    type to_type(std::string_view) const override { return {"bigint"}; }
-
-    void select(db::query& qry) const override { qry << db::id{col_}; }
-
-    void insert(db::query& qry, pfr::variant var) const override
+    db::column migrate(std::string_view) const override
     {
-        qry << std::move(var);
+        return {.kind{kind_},
+                .column_name{col_->column_name},
+                .type_name{"bigint"}};
     }
 };
 

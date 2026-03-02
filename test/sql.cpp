@@ -1,43 +1,51 @@
 // Andrew Naplavkov
 
-#include <boat/sql/api.hpp>
-#include <boat/sql/io.hpp>
+#include <boat/sql/agent.hpp>
 #include <boost/test/unit_test.hpp>
-#include <iostream>
 #include "commands.hpp"
 #include "data.hpp"
 
 using namespace boat;
 
-BOOST_AUTO_TEST_CASE(sql_api)
+BOOST_AUTO_TEST_CASE(sql_select)
+{
+    struct udt {
+        int64_t n;
+        std::optional<double> d;
+        std::string s;
+    };
+    auto expect = std::vector<udt>{{.s{"a"}}, {.n = 1, .d = 3.14, .s{"b"}}};
+    auto qry = db::query{"select 0, null, 'a' union select 1, 3.14, 'b'"};
+    for (auto cmd : commands())
+        BOOST_CHECK(std::ranges::equal(  //
+            expect,
+            cmd->exec(qry) | db::view<udt>,
+            BOAT_LIFT(boost::pfr::eq_fields)));
+}
+
+BOOST_AUTO_TEST_CASE(sql_param)
 {
     auto objs = get_objects();
-    auto page = sql::page{
-        .select_list = boost::pfr::names_as_array<object_struct>() |
-                       std::ranges::to<std::vector<std::string>>(),
-        .limit = static_cast<int>(std::ranges::size(objs)),
-    };
-    auto bbox = sql::bbox{
-        .select_list = {std::string(boost::pfr::get_name<0, object_struct>())},
-        .xmin = 9,
-        .ymin = 9,
-        .xmax = 11,
-        .ymax = 11,
-        .limit = int(std::ranges::size(objs))};
-    auto draft = get_object_table();
-    for (auto cmd : commands()) {
-        cmd->set_autocommit(false);
-        cmd->exec({"drop table if exists ", db::id{draft.table_name}});
-        auto tbl = sql::create(*cmd, draft);
-        std::cout << tbl;
-        auto rows = boat::pfr::to_rowset(objs);
-        sql::insert(*cmd, tbl, rows);
-        BOOST_CHECK(std::ranges::equal(
+    auto qry = db::query{};
+    for (auto sep1{"\n select "}; auto& row : db::to_rowset(objs)) {
+        qry << std::exchange(sep1, "\n union select ");
+        for (auto sep2{""}; auto& var : row)
+            qry << std::exchange(sep2, ", ") << var;
+    }
+    for (auto cmd : commands())
+        BOOST_CHECK(std::ranges::equal(  //
             objs,
-            sql::select(*cmd, tbl, page) | pfr::view<object_struct>,
+            cmd->exec(qry) | db::view<object_struct>,
             BOAT_LIFT(boost::pfr::eq_fields)));
-        BOOST_CHECK(std::ranges::equal(
-            std::array{2}, sql::select(*cmd, tbl, bbox) | pfr::view<int>));
+}
+
+BOOST_AUTO_TEST_CASE(sql_agent)
+{
+    for (auto cmd : commands()) {
+        auto agt = sql::agent{};
+        agt.command = std::move(cmd);
+        agt.command->set_autocommit(false);
+        check(agt);
     }
 }
 
@@ -129,7 +137,7 @@ insert into `datatypes` values (
     'b',
     'abcd');)";
 
-constexpr auto postgresql_datatypes = R"(
+constexpr auto postgres_datatypes = R"(
 create table "datatypes" (
     "bigint" bigint,
     -- bigserial,
@@ -176,14 +184,13 @@ insert into "datatypes" values (
     'text',
     '2004-10-19 10:23:54.123');)";
 
-auto datatypes_query(std::string_view lcase_dbms)
+auto datatypes_query(std::string_view dbms)
 {
-    return  //
-        lcase_dbms.contains(sql::mssql_dbms)        ? mssql_datatypes
-        : lcase_dbms.contains(sql::mysql_dbms)      ? mysql_datatypes
-        : lcase_dbms.contains(sql::postgresql_dbms) ? postgresql_datatypes
-        : lcase_dbms.contains(sql::sqlite_dbms)     ? sqlite_datatypes
-                                                    : "";
+    return sql::is_mssql(dbms)      ? mssql_datatypes
+           : sql::is_mysql(dbms)    ? mysql_datatypes
+           : sql::is_postgres(dbms) ? postgres_datatypes
+           : sql::is_sqlite(dbms)   ? sqlite_datatypes
+                                    : "";
 }
 
 }  // namespace
@@ -192,43 +199,29 @@ BOOST_AUTO_TEST_CASE(sql_datatypes)
 {
     auto tbl_a_name = "datatypes";
     auto tbl_b_name = "datatypes_copy";
-    auto page = sql::page{.limit = 1};
+    auto page = db::page{.limit = 1};
     for (auto cmd : commands()) {
-        cmd->set_autocommit(false);
-        cmd->exec({"drop table if exists ", db::id{tbl_a_name}});
-        cmd->exec({"drop table if exists ", db::id{tbl_b_name}});
-        cmd->exec(datatypes_query(cmd->lcase_dbms()));
-        auto tbl_a = sql::describe(*cmd, tbl_a_name);
-        auto rows = sql::select(*cmd, tbl_a, page);
+        auto agt = sql::agent{};
+        agt.command = std::move(cmd);
+        agt.command->set_autocommit(false);
+        agt.drop("", tbl_a_name);
+        agt.drop("", tbl_b_name);
+        agt.command->exec(datatypes_query(agt.command->dbms()));
+        auto tbl_a = agt.describe("", tbl_a_name);
+        auto rows = agt.select(tbl_a, page);
         BOOST_CHECK_EQUAL(tbl_a.columns.size(), rows.columns.size());
         BOOST_CHECK(!rows.empty());
         auto tbl_b = tbl_a;
         tbl_b.table_name = tbl_b_name;
-        tbl_b = sql::create(*cmd, tbl_b);
-        sql::insert(*cmd, tbl_b, rows);
-
-        rows = cmd->exec({
-            "select ",
-            sql::select_list{tbl_a},
-            " from ",
-            db::id{tbl_a_name},
-            " union all select ",
-            sql::select_list{tbl_b},
-            " from ",
-            db::id{tbl_b_name},
-        });
-        BOOST_CHECK_EQUAL(rows.rows.size(), 2u);
-        for (auto&& [col, val_a, val_b] :
-             std::views::zip(rows.columns, rows.rows.at(0), rows.rows.at(1)))
-            BOOST_TEST((val_a == val_b), col);
-
-        rows = cmd->exec({
+        tbl_b = agt.create(tbl_b);
+        agt.insert(tbl_b, rows);
+        rows = agt.command->exec({
             "select count(*) from (select * from ",
-            db::id{tbl_a_name},
+            sql::id{tbl_a},
             " except select * from ",
-            db::id{tbl_b_name},
+            sql::id{tbl_b},
             ") as t",
         });
-        BOOST_CHECK_EQUAL(pfr::get<int>(rows.value()), 0);
+        BOOST_CHECK_EQUAL(db::get<int>(rows.value()), 0);
     }
 }

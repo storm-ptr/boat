@@ -12,16 +12,16 @@ struct command : db::command {
     dataset_ptr dataset;
     std::string dialect;
 
-    pfr::rowset exec(db::query const& qry) override
+    db::rowset exec(db::query const& qry) override
     {
-        auto sql = qry.sql(id_quote(), param_mark());
-        if (auto lyr = execute(dataset.get(), sql.data(), dialect.data()))
+        auto txt = qry.text(id_quote(), param_mark());
+        if (auto lyr = execute(dataset.get(), txt.data(), dialect.data()))
             return read(  //
                 lyr.get(),
                 fields::make(OGR_L_GetLayerDefn(lyr.get())),
                 INT_MAX);
         auto err = error_or("");
-        return err.empty() ? pfr::rowset{} : throw std::runtime_error(err);
+        return err.empty() ? db::rowset{} : throw std::runtime_error(err);
     }
 
     void set_autocommit(bool on) override
@@ -37,7 +37,7 @@ struct command : db::command {
 
     char id_quote() override { return '"'; }
     std::string param_mark() override { return {}; }
-    std::string lcase_dbms() override { return to_lower(dialect); }
+    std::string dbms() override { return to_lower(dialect); }
 };
 
 }  // namespace boat::gdal

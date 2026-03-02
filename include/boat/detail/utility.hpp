@@ -71,11 +71,12 @@ constexpr auto mixed = [](std::endian e) {
 
 constexpr auto normal = [](std::integral auto v) { return !!v; };
 
-void check(bool success, auto const& what)
-    requires requires { std::runtime_error(what); }
+template <class T>
+void check(bool success, T&& what)
+    requires std::constructible_from<std::string, T>
 {
     if (!success)
-        throw std::runtime_error(what);
+        throw std::runtime_error(std::string{std::forward<T>(what)});
 }
 
 constexpr auto pow2 = []<std::integral T>(T exp) {

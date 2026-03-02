@@ -3,48 +3,34 @@
 #ifndef BOAT_GDAL_TABLE_HPP
 #define BOAT_GDAL_TABLE_HPP
 
+#include <boat/db/meta.hpp>
 #include <boat/gdal/detail/fields/fields.hpp>
-#include <boat/sql/reflection.hpp>
 
 namespace boat::gdal {
 
 constexpr auto to_column = overloaded{
     [](fields::attribute const& v) {
-        return sql::column{
+        return db::column{
+            .kind{v.kind()},
             .column_name = v.name,
-            .lcase_type = to_lower(OGR_GetFieldTypeName(v.type)),
+            .type_name = to_lower(OGR_GetFieldTypeName(v.type)),
         };
     },
     [](fields::geometry const& v) {
-        return sql::column{
+        return db::column{
+            .kind{v.kind},
             .column_name = v.name,
-            .lcase_type = to_lower(OGRGeometryTypeToName(v.type)),
+            .type_name = to_lower(OGRGeometryTypeToName(v.type)),
             .srid = v.epsg,
             .epsg = v.epsg,
         };
     },
 };
 
-inline OGRFieldType to_field_type(std::string_view type)
-{
-    if (type == sql::type<int64_t>)
-        return OFTInteger64;
-    if (type == sql::type<double>)
-        return OFTReal;
-    if (type == sql::type<std::string>)
-        return OFTString;
-    if (type == sql::type<blob>)
-        return OFTBinary;
-    if (type == sql::type<time_point>)
-        return OFTDateTime;
-    throw concat("OGRFieldType ", type);
-}
-
-inline sql::table get_table(OGRLayerH lyr)
+inline db::table get_table(OGRLayerH lyr)
 {
     auto fd = OGR_L_GetLayerDefn(lyr);
-    auto ret =
-        sql::table{.lcase_dbms = "gdal", .table_name = OGR_FD_GetName(fd)};
+    auto ret = db::table{.dbms = "gdal", .table_name = OGR_FD_GetName(fd)};
     for (auto& fld : fields::make(fd))
         ret.columns.push_back(std::visit(to_column, fld));
     std::ranges::sort(ret.columns, {}, [](auto& col) {
@@ -53,12 +39,11 @@ inline sql::table get_table(OGRLayerH lyr)
     return ret;
 }
 
-inline OGRLayerH add_table(GDALDatasetH ds, sql::table const& tbl)
+inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
 {
     auto ret = GDALDatasetCreateLayerFromGeomFieldDefn(
         ds, tbl.table_name.data(), 0, 0);
-    auto types = sql::to_common_types(tbl);
-    for (auto&& [tp, col] : std::views::zip(types, tbl.columns))
+    for (auto& col : tbl.columns)
         if (col.epsg) {
             auto srs = make_epsg_srs(col.epsg);
             auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
@@ -67,11 +52,23 @@ inline OGRLayerH add_table(GDALDatasetH ds, sql::table const& tbl)
             check(OGR_L_CreateGeomField(ret, fld.get(), 1));
         }
         else {
-            auto fld = unique_ptr<void, OGR_Fld_Destroy>{
-                OGR_Fld_Create(col.column_name.data(), to_field_type(tp))};
+            auto fld = unique_ptr<void, OGR_Fld_Destroy>{OGR_Fld_Create(
+                col.column_name.data(), fields::to_type(col.kind))};
             check(OGR_L_CreateField(ret, fld.get(), 1));
         }
     return ret;
+}
+
+inline void delete_table(GDALDatasetH ds, std::string_view tbl)
+{
+    for (int i{}, n = GDALDatasetGetLayerCount(ds); i < n; ++i) {
+        auto lyr = GDALDatasetGetLayer(ds, i);
+        auto fd = OGR_L_GetLayerDefn(lyr);
+        if (tbl == OGR_FD_GetName(fd)) {
+            check(OGR_DS_DeleteLayer(ds, i));
+            break;
+        }
+    }
 }
 
 }  // namespace boat::gdal

@@ -6,7 +6,6 @@
 #include <boat/gdal/vector.hpp>
 #include <boat/geometry/raster.hpp>
 #include <boat/geometry/tile.hpp>
-#include <boat/sql/io.hpp>
 #include <boost/test/unit_test.hpp>
 #include "data.hpp"
 
@@ -67,29 +66,7 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
 
 BOOST_AUTO_TEST_CASE(gdal_vector)
 {
-    auto objs = get_objects();
-    auto page = sql::page{
-        .select_list = boost::pfr::names_as_array<object_struct>() |
-                       std::ranges::to<std::vector<std::string>>(),
-        .limit = static_cast<int>(std::ranges::size(objs)),
-    };
-    auto bbox = sql::bbox{
-        .select_list = {std::string(boost::pfr::get_name<0, object_struct>())},
-        .xmin = 9,
-        .ymin = 9,
-        .xmax = 11,
-        .ymax = 11,
-        .limit = int(std::ranges::size(objs))};
-    auto draft = get_object_table();
-    auto ds = gdal::create("", "mem");
-    auto tbl = gdal::create(ds.get(), draft);
-    std::cout << tbl;
-    auto rows = pfr::to_rowset(objs);
-    gdal::insert(ds.get(), tbl, rows);
-    BOOST_CHECK(std::ranges::equal(
-        objs,
-        gdal::select(ds.get(), tbl, page) | pfr::view<object_struct>,
-        BOAT_LIFT(boost::pfr::eq_fields)));
-    BOOST_CHECK(std::ranges::equal(
-        std::array{2}, gdal::select(ds.get(), tbl, bbox) | pfr::view<int>));
+    auto agt = gdal::agent{};
+    agt.dataset = gdal::create("", "mem");
+    check(agt);
 }

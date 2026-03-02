@@ -9,8 +9,8 @@
 namespace boat::gdal {
 
 struct band {
-    std::string lcase_color;
-    std::string lcase_type;
+    std::string color_name;  //< lower case
+    std::string type_name;   //< lower case
 };
 
 struct raster {
@@ -22,7 +22,7 @@ struct raster {
 
     auto to_colors() const
     {
-        auto fn = [](auto& v) { return v.lcase_color.data(); };
+        auto fn = [](auto& v) { return v.color_name.data(); };
         return bands | std::views::transform(fn);
     }
 
@@ -32,8 +32,8 @@ struct raster {
         out << ", height: " << in.height << "\n";
         out << ", bands: {";
         for (auto sep = ""; auto& band : in.bands)
-            out << std::exchange(sep, ", ") << band.lcase_color << ":"
-                << band.lcase_type;
+            out << std::exchange(sep, ", ") << band.color_name << ":"
+                << band.type_name;
         out << "}\n";
         out << ", affine: [";
         for (auto sep1 = ""; auto& row : in.affine.a) {
@@ -58,7 +58,7 @@ inline dataset_ptr create(char const* file, char const* driver, raster const& r)
         r.width,
         r.height,
         static_cast<int>(r.bands.size()),
-        GDALGetDataTypeByName(r.bands.at(0).lcase_type.data()),
+        GDALGetDataTypeByName(r.bands.at(0).type_name.data()),
         0)};
     boat::check(!!ret, "GDALCreate");
     set_transform(ret.get(), r.affine);

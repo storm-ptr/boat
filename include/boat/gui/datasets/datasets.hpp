@@ -11,7 +11,9 @@
 #if __has_include(<curl/curl.h>)
 #include <boat/gui/datasets/slippy.hpp>
 #endif
-#include <boat/gui/datasets/sql.hpp>
+#include <boat/gui/datasets/db.hpp>
+#include <boat/sql/agent.hpp>
+#include <boat/sql/commands.hpp>
 
 namespace boat::gui::datasets {
 
@@ -47,7 +49,13 @@ inline std::shared_ptr<dataset> make(
 #else
         throw std::runtime_error("compiled without curl");
 #endif
-    return std::make_shared<sql>(std::string{url}, cache);
+    return std::make_shared<db>(
+        [url = std::string{url}] {
+            auto ret = std::make_unique<boat::sql::agent>();
+            ret->command = boat::sql::make_command(url);
+            return ret;
+        },
+        cache);
 }
 
 }  // namespace boat::gui::datasets

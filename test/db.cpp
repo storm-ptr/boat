@@ -1,37 +1,19 @@
 // Andrew Naplavkov
 
 #include <boost/test/unit_test.hpp>
-#include "commands.hpp"
 #include "data.hpp"
 
-BOOST_AUTO_TEST_CASE(db_select)
+BOOST_AUTO_TEST_CASE(db)
 {
-    struct test {
-        int64_t n;
-        std::optional<double> d;
-        std::string s;
-    };
-    auto expect = std::vector<test>{{.s = "a"}, {.n = 1, .d = 3.14, .s = "b"}};
-    auto qry = boat::db::query{"select 0, null, 'a' union select 1, 3.14, 'b'"};
-    for (auto cmd : commands())
-        BOOST_CHECK(std::ranges::equal(expect,
-                                       cmd->exec(qry) | boat::pfr::view<test>,
-                                       BOAT_LIFT(boost::pfr::eq_fields)));
-}
-
-BOOST_AUTO_TEST_CASE(db_param)
-{
-    auto qry = boat::db::query{};
     auto objs = get_objects();
-    auto rows = boat::pfr::to_rowset(objs);
-    for (auto sep1 = "\n select "; auto& row : rows) {
-        qry << std::exchange(sep1, "\n union select ");
-        for (auto sep2 = ""; auto& v : row)
-            qry << std::exchange(sep2, ", ") << v;
-    }
-    for (auto cmd : commands())
-        BOOST_CHECK(
-            std::ranges::equal(objs,
-                               cmd->exec(qry) | boat::pfr::view<object_struct>,
-                               BOAT_LIFT(boost::pfr::eq_fields)));
+    auto rows = boat::db::to_rowset(objs);
+    BOOST_CHECK(std::ranges::equal(  //
+        objs,
+        rows | boat::db::view<object_struct>,
+        BOAT_LIFT(boost::pfr::eq_fields)));
+    auto locale = std::locale{"en_US.UTF-8"};
+    auto global_scope = revoke{&std::locale::global, locale};
+    auto cout_scope = revoke{
+        std::bind_front(&decltype(std::cout)::imbue, &std::cout), locale};
+    std::cout << std::fixed << std::setprecision(2) << rows << std::endl;
 }

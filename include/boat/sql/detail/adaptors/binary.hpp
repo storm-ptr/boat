@@ -8,41 +8,30 @@
 
 namespace boat::sql::adaptors {
 
-template <>
-struct type_name<blob> {
-    static constexpr auto value = "blob";
-};
-
-class binary : public adaptor {
-    std::string_view col_;
-
-public:
-    bool init(std::string_view dbms, column const& col) override
+struct binary : impl<blob> {
+    std::string_view parse() const override
     {
-        col_ = col.column_name;
-        return any({"binary",
-                    "binary large object",
-                    "binary varying",
-                    "blob",
-                    "varbinary"},
-                   equal(col.lcase_type)) ||
-               (dbms.contains(mysql_dbms) && col.lcase_type.contains("blob")) ||
-               (dbms.contains(postgresql_dbms) && col.lcase_type == "bytea") ||
-               (dbms.contains(sqlite_dbms) && col.lcase_type.contains("blob"));
+        if (any({"binary",
+                 "binary large object",
+                 "binary varying",
+                 "blob",
+                 "varbinary"},
+                same(type())) ||
+            is_mysql(dbms_) && type().contains("blob") ||
+            is_postgres(dbms_) && type() == "bytea" ||
+            is_sqlite(dbms_) && type().contains("blob"))
+            return kind_;
+        return {};
     }
 
-    type to_type(std::string_view dbms) const override
+    db::column migrate(std::string_view dbms) const override
     {
-        return dbms.contains(mssql_dbms)        ? type{"varbinary", -1}
-               : dbms.contains(postgresql_dbms) ? type{"bytea"}
-                                                : type{"blob"};
-    }
-
-    void select(db::query& qry) const override { qry << db::id{col_}; }
-
-    void insert(db::query& qry, pfr::variant var) const override
-    {
-        qry << std::move(var);
+        return {.kind{kind_},
+                .column_name{col_->column_name},
+                .type_name{is_mssql(dbms)      ? "varbinary"
+                           : is_postgres(dbms) ? "bytea"
+                                               : "blob"},
+                .length = is_mssql(dbms) ? -1 : 0};
     }
 };
 

@@ -5,7 +5,6 @@
 
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/datasets/datasets.hpp>
-#include <boat/sql/reflection.hpp>
 #include "../commands.hpp"
 #include "../data.hpp"
 
@@ -13,30 +12,73 @@ inline std::generator<std::shared_ptr<boat::gui::datasets::dataset>> datasets()
 {
     using namespace boat;
 
-    class ref : public db::command {
-        db::command& cmd_;
+    class ref : public db::agent {
+        db::agent& agt_;
 
     public:
-        ref(db::command& cmd) : cmd_(cmd) {}
-        pfr::rowset exec(db::query const& q) override { return cmd_.exec(q); };
-        void set_autocommit(bool on) override { cmd_.set_autocommit(on); };
-        void commit() override { cmd_.commit(); };
-        char id_quote() override { return cmd_.id_quote(); };
-        std::string param_mark() override { return cmd_.param_mark(); };
-        std::string lcase_dbms() override { return cmd_.lcase_dbms(); };
+        explicit ref(db::agent& agt) : agt_(agt) {}
+
+        std::vector<db::layer> get_layers() override
+        {
+            return agt_.get_layers();
+        }
+
+        db::table describe(std::string_view schema_name,
+                           std::string_view table_name) override
+        {
+            return agt_.describe(schema_name, table_name);
+        }
+
+        db::rowset select(db::table const& tbl, db::page const& rq) override
+        {
+            return agt_.select(tbl, rq);
+        }
+
+        db::rowset select(db::table const& tbl, db::bbox const& rq) override
+        {
+            return agt_.select(tbl, rq);
+        }
+
+        void insert(db::table const& tbl, db::rowset const& vals) override
+        {
+            agt_.insert(tbl, vals);
+        }
+
+        db::table create(db::table const& tbl) override
+        {
+            return agt_.create(tbl);
+        }
+
+        void drop(std::string_view schema_name,
+                  std::string_view table_name) override
+        {
+            agt_.drop(schema_name, table_name);
+        }
     };
 
     auto cache = std::make_shared<gui::caches::lru>(10'000);
-    auto draft = get_object_table();
+    auto tbl = get_object_table();
     auto objs = get_objects();
     for (auto cmd : commands()) {
-        cmd->set_autocommit(false);
-        cmd->exec({"drop table if exists ", db::id{draft.table_name}});
-        auto tbl = sql::create(*cmd, draft);
-        auto rows = pfr::to_rowset(objs);
-        sql::insert(*cmd, tbl, rows);
-        co_yield std::make_shared<gui::datasets::sql>(
-            [cmd = std::move(cmd)] { return std::make_unique<ref>(*cmd); },
+        auto agt = sql::agent{};
+        agt.command = std::move(cmd);
+        agt.command->set_autocommit(false);
+        agt.drop(tbl.schema_name, tbl.table_name);
+        agt.insert(agt.create(tbl), db::to_rowset(objs));
+        co_yield std::make_shared<gui::datasets::db>(
+            [agt = std::move(agt)] mutable {
+                return std::make_unique<ref>(agt);
+            },
+            cache);
+    }
+    {
+        auto agt = gdal::agent{};
+        agt.dataset = gdal::create("", "mem");
+        agt.insert(agt.create(tbl), db::to_rowset(objs));
+        co_yield std::make_shared<gui::datasets::db>(
+            [agt = std::move(agt)] mutable {
+                return std::make_unique<ref>(agt);
+            },
             cache);
     }
     co_yield std::make_shared<gui::datasets::slippy>(

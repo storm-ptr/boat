@@ -5,66 +5,51 @@
 
 #include <boat/sql/detail/adaptors/adaptor.hpp>
 #include <boat/sql/detail/utility.hpp>
-#include <chrono>
 
 namespace boat::sql::adaptors {
 
-template <specialized<std::chrono::time_point> T>
-struct type_name<T> {
-    static constexpr auto value = "timestamp";
-};
-
-class timestamp : public adaptor {
-    std::string_view dbms_;
-    column const* col_;
-
-public:
-    bool init(std::string_view dbms, column const& col) override
+struct timestamp : impl<std::chrono::sys_seconds> {
+    std::string_view parse() const override
     {
-        dbms_ = dbms;
-        col_ = &col;
-        return any({"datetime", "timestamp"}, within(col.lcase_type));
+        return any({"datetime", "timestamp"}, in(type())) ? kind_ : "";
     }
 
-    type to_type(std::string_view dbms) const override
+    db::column migrate(std::string_view dbms) const override
     {
-        return {dbms.contains(mysql_dbms)   ? type{"datetime", 6}
-                : dbms.contains(mssql_dbms) ? type{"datetime2"}
-                                            : type{"timestamp"}};
+        return {.kind{kind_},
+                .column_name{col_->column_name},
+                .type_name{is_mssql(dbms)   ? "datetime2"
+                           : is_mysql(dbms) ? "datetime"
+                                            : "timestamp"},
+                .length = is_mysql(dbms) ? 6 : 0};
     }
 
     void select(db::query& qry) const override
     {
-        if (dbms_.contains(mssql_dbms) && col_->lcase_type == "datetimeoffset")
-            qry << "cast(cast(" << db::id{col_->column_name}
-                << " at time zone 'UTC' as datetime2) as varchar(50)) "
-                << db::id{col_->column_name};
-        else if (dbms_.contains(mysql_dbms))
-            qry << "date_format(" << db::id{col_->column_name}
-                << ", '%Y-%m-%d %H:%i:%s.%f')" << db::id{col_->column_name};
-        else if (dbms_.contains(postgresql_dbms) &&
-                 col_->lcase_type == "timestamp with time zone")
-            qry << "cast(cast(" << db::id{col_->column_name}
-                << " at time zone 'UTC' as timestamp) as varchar(50)) "
-                << db::id{col_->column_name};
-        else if (dbms_.contains(sqlite_dbms))
-            qry << "datetime(" << db::id{col_->column_name} << ", 'subsec') "
-                << db::id{col_->column_name};
+        auto id = db::id{col_->column_name};
+        if (is_mssql(dbms_) && type() == "datetimeoffset")
+            qry << "cast(cast(" << id
+                << " at time zone 'UTC' as datetime2) as varchar(50)) " << id;
+        else if (is_mysql(dbms_))
+            qry << "date_format(" << id << ", '%Y-%m-%d %H:%i:%s.%f')" << id;
+        else if (is_postgres(dbms_) && type() == "timestamp with time zone")
+            qry << "cast(cast(" << id
+                << " at time zone 'UTC' as timestamp) as varchar(50)) " << id;
+        else if (is_sqlite(dbms_))
+            qry << "datetime(" << id << ", 'subsec') " << id;
         else
-            qry << "cast(" << db::id{col_->column_name} << " as varchar(50)) "
-                << db::id{col_->column_name};
+            qry << "cast(" << id << " as varchar(50)) " << id;
     }
 
-    void insert(db::query& qry, pfr::variant var) const override
+    void insert(db::query& qry, db::variant var) const override
     {
-        if (dbms_.contains(mysql_dbms))
+        if (is_mysql(dbms_))
             qry << "str_to_date(" << std::move(var)
                 << ", '%Y-%m-%d %H:%i:%s.%f')";
-        else if (dbms_.contains(sqlite_dbms))
+        else if (is_sqlite(dbms_))
             qry << std::move(var);
         else
-            qry << "cast(" << std::move(var) << " as " << col_->lcase_type
-                << ")";
+            qry << "cast(" << std::move(var) << " as " << type() << ")";
     }
 };
 

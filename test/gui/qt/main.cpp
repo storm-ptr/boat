@@ -7,7 +7,7 @@
 #include "../context.hpp"
 #include "../datasets.hpp"
 
-BOOST_AUTO_TEST_CASE(draw)
+BOOST_AUTO_TEST_CASE(qt_draw)
 {
     auto pixels_sum = 0., transparent_sum = 0.;
     auto dss = datasets() | std::ranges::to<std::vector>();

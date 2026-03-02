@@ -5,8 +5,6 @@
 
 #include <boat/detail/utility.hpp>
 #include <numeric>
-#include <optional>
-#include <vector>
 
 namespace boat {
 

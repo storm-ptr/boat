@@ -14,10 +14,24 @@
 
 namespace boat::sql::adaptors {
 
-inline auto try_make(std::string_view dbms, column const& col)
+using all = boost::mpl::list<binary, integer, real, spatial, text, timestamp>;
+
+constexpr auto parse(std::string_view dbms)
 {
-    using all =
-        boost::mpl::list<binary, integer, real, spatial, text, timestamp>;
+    return [dbms](db::column col) {
+        col.type_name = to_lower(col.type_name);
+        boost::mpl::for_each<all>([&]<class T>(T v) {
+            if (col.kind.empty()) {
+                v.init(dbms, col);
+                col.kind = v.parse();
+            }
+        });
+        return col;
+    };
+}
+
+inline auto try_make(std::string_view dbms, db::column const& col)
+{
     auto ret = std::unique_ptr<adaptor>{};
     boost::mpl::for_each<all>([&]<class T>(T v) {
         if (!ret && v.init(dbms, col))
@@ -26,11 +40,11 @@ inline auto try_make(std::string_view dbms, column const& col)
     return ret;
 }
 
-inline auto make(std::string_view dbms, column const& col)
+inline auto make(std::string_view dbms, db::column const& col)
 {
     if (auto ret = try_make(dbms, col))
         return ret;
-    throw std::runtime_error(concat(col.column_name, " ", col.lcase_type));
+    throw std::runtime_error(concat(col.column_name, " ", col.type_name));
 }
 
 }  // namespace boat::sql::adaptors

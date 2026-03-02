@@ -5,23 +5,30 @@
 
 #include <boat/sql/detail/dialects/mssql.hpp>
 #include <boat/sql/detail/dialects/mysql.hpp>
-#include <boat/sql/detail/dialects/postgresql.hpp>
+#include <boat/sql/detail/dialects/postgres.hpp>
 #include <boat/sql/detail/dialects/sqlite.hpp>
-#include <boost/fusion/algorithm.hpp>
-#include <boost/fusion/container.hpp>
 
 namespace boat::sql::dialects {
 
 inline dialect const& find(std::string_view dbms)
 {
-    static constexpr auto all =
-        boost::fusion::list<mssql, mysql, postgresql, sqlite>{};
-    auto ptr = static_cast<dialect const*>(nullptr);
-    boost::fusion::for_each(all, [&](auto& dial) {
-        if (!ptr && dial.match(dbms))
-            ptr = &dial;
-    });
-    return ptr ? *ptr : throw std::runtime_error(std::string{dbms});
+    if (is_mssql(dbms)) {
+        static const auto ret = mssql{};
+        return ret;
+    }
+    if (is_mysql(dbms)) {
+        static const auto ret = mysql{};
+        return ret;
+    }
+    if (is_postgres(dbms)) {
+        static const auto ret = postgres{};
+        return ret;
+    }
+    if (is_sqlite(dbms)) {
+        static const auto ret = sqlite{};
+        return ret;
+    }
+    throw std::runtime_error(std::string{dbms});
 }
 
 }  // namespace boat::sql::dialects

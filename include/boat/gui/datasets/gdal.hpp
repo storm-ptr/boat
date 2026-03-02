@@ -5,29 +5,54 @@
 
 #include <boat/gdal/gil.hpp>
 #include <boat/gdal/raster.hpp>
+#include <boat/gdal/vector.hpp>
 #include <boat/geometry/tile.hpp>
-#include <boat/gui/datasets/dataset.hpp>
+#include <boat/gui/datasets/db.hpp>
 #include <boost/gil/extension/io/png.hpp>
 
 namespace boat::gui::datasets {
 
 class gdal : public dataset {
+    static constexpr auto raster_name = "_raster";
     std::string file_;
     std::shared_ptr<caches::cache> cache_;
+    db vector_;
 
 public:
     gdal(std::string file, std::shared_ptr<caches::cache> const& cache)
-        : file_(std::move(file)), cache_(std::move(cache))
+        : file_{file}
+        , cache_{cache}
+        , vector_{[=] {
+                      auto ret = std::make_unique<boat::gdal::agent>();
+                      ret->dataset = boat::gdal::open(file.data());
+                      return ret;
+                  },
+                  cache}
     {
     }
 
-    std::vector<qualified_name> layers() override { return {{"raster"}}; }
+    std::vector<qualified_name> layers() override
+    {
+        using namespace boat::gdal;
+        auto ret = std::vector<qualified_name>{};
+        if (get_or_invoke(cache_.get(), file_, [&] {
+                return describe(open(file_.data()).get());
+            }))
+            ret.push_back(qualified_name{{raster_name}});
+        ret.append_range(vector_.layers());
+        return ret;
+    }
 
     std::generator<feature> features(  //
-        qualified_name,
+        qualified_name lyr,
         geometry::geographic::grid grid,
         double resolution) override
     {
+        if (lyr != qualified_name{{raster_name}}) {
+            co_yield std::ranges::elements_of(
+                vector_.features(std::move(lyr), std::move(grid), resolution));
+            co_return;
+        }
         using namespace boat::gdal;
         namespace gil = boost::gil;
         namespace qvm = boost::qvm;
@@ -39,7 +64,7 @@ public:
             return ptr.get();
         };
         auto r =
-            get_or_invoke(cache_.get(), file_, [&] { return *describe(ds()); });
+            *get_or_invoke(cache_.get(), file_, [&] { return describe(ds()); });
         auto srs = boost::geometry::srs::epsg{r.epsg};
         auto tiles = geometry::covers(
             grid, resolution, limit, r.width, r.height, r.affine, srs);

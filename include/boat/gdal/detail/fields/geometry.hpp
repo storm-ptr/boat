@@ -3,12 +3,14 @@
 #ifndef BOAT_GDAL_FIELDS_GEOMETRY_HPP
 #define BOAT_GDAL_FIELDS_GEOMETRY_HPP
 
+#include <boat/db/adapted/adapted.hpp>
 #include <boat/gdal/detail/adapted/geometry.hpp>
-#include <boat/pfr/variant.hpp>
 
 namespace boat::gdal::fields {
 
 struct geometry {
+    static constexpr auto kind =
+        db::kind<boat::geometry::geographic::variant>::value;
     std::string name;
     OGRwkbGeometryType type;
     int epsg;
@@ -23,13 +25,13 @@ struct geometry {
                 .index = index};
     }
 
-    pfr::variant read(OGRFeatureH feat) const
+    db::variant read(OGRFeatureH feat) const
     {
         auto wkb = get_geometry(feat, index);
-        return wkb.empty() ? pfr::variant{} : pfr::variant{std::move(wkb)};
+        return wkb.empty() ? db::variant{} : db::variant{std::move(wkb)};
     }
 
-    void write(OGRFeatureH feat, pfr::variant const& var) const
+    void write(OGRFeatureH feat, db::variant const& var) const
     {
         if (var)
             set_geometry(feat, index, std::get<blob>(var));

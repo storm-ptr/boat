@@ -9,11 +9,6 @@
 namespace boat::sql::dialects {
 
 struct mysql : dialect {
-    bool match(std::string_view dbms) const override
-    {
-        return dbms.contains(mysql_dbms);
-    }
-
     db::query layers() const override
     {
         return "\n select table_schema, table_name, column_name"
@@ -24,65 +19,57 @@ struct mysql : dialect {
                       std::string_view table_name) const override
     {
         return {
-            "\n with l (table_schema, table_name, column_name, srid) as ("
-            "\n  select table_schema, table_name, column_name, srs_id"
+            "\n with l as ("
+            "\n  select table_schema, table_name, column_name, srs_id srid"
             "\n  from information_schema.st_geometry_columns"
-            "\n ), r (srid, epsg) as ("
-            "\n  select srs_id, organization_coordsys_id"
+            "\n ), r as ("
+            "\n  select srs_id srid, organization_coordsys_id epsg"
             "\n  from information_schema.st_spatial_reference_systems"
             "\n  where organization = 'EPSG'"
             "\n )"
-            "\n select column_name"
-            "\n , data_type"
+            "\n select null, column_name, data_type"
             "\n , coalesce(character_maximum_length, datetime_precision)"
-            "\n , srid"
-            "\n , epsg"
+            "\n , srid, epsg"
             "\n from information_schema.columns c"
             "\n left join l using (table_schema, table_name, column_name)"
             "\n left join r using (srid)"
             "\n where c.table_schema = ",
-            pfr::variant(schema_name),
+            db::variant(schema_name),
             "\n and c.table_name = ",
-            pfr::variant(table_name)};
+            db::variant(table_name)};
     }
 
     db::query index_keys(std::string_view schema_name,
                          std::string_view table_name) const override
     {
         return {
-            "\n select null index_schema"
-            "\n , index_name"
-            "\n , column_name"
-            "\n , (collation = 'D') is_descending_key"
-            "\n , (expression is not null) is_partial"
-            "\n , (index_name = 'PRIMARY') is_primary_key"
-            "\n , (not non_unique) is_unique"
-            "\n , seq_in_index ordinal"
+            "\n select null , index_name, column_name, (collation = 'D')"
+            "\n , (expression is not null), (index_name = 'PRIMARY')"
+            "\n , (not non_unique), seq_in_index"
             "\n from information_schema.statistics"
             "\n where table_schema = ",
-            pfr::variant(schema_name),
+            db::variant(schema_name),
             "\n and table_name = ",
-            pfr::variant(table_name)};
+            db::variant(table_name)};
     }
 
-    db::query select(table const& tbl, page const& req) const override
+    db::query select(db::table const& tbl, db::page const& rq) const override
     {
         auto q = db::query{};
-        q << "\n select " << select_list{tbl, req.select_list} << "\n from "
-          << id{tbl} << order_by{tbl, req.order_by} << "\n limit "
-          << to_chars(req.limit) << "\n offset " << to_chars(req.offset);
+        q << "\n select " << select_list{tbl, rq.select_list} << "\n from "
+          << id{tbl} << order_by{tbl, rq.order_by} << "\n limit "
+          << to_chars(rq.limit) << "\n offset " << to_chars(rq.offset);
         return q;
     }
 
-    db::query select(table const& tbl, bbox const& req) const override
+    db::query select(db::table const& tbl, db::bbox const& rq) const override
     {
-        auto col = find_or_geo(tbl.columns, req.spatial_column);
+        auto& col = find_geo(tbl.columns, rq.layer_column);
         auto q = db::query{};
-        q << "\n select " << select_list{tbl, req.select_list} << "\n from "
+        q << "\n select " << select_list{tbl, rq.select_list} << "\n from "
           << id{tbl} << "\n where MBRIntersects("
-          << rect{tbl.lcase_dbms, *col, req.xmin, req.ymin, req.xmax, req.ymax}
-          << ", " << db::id(col->column_name) << ")\n limit "
-          << to_chars(req.limit);
+          << rect{tbl.dbms, col, rq.xmin, rq.ymin, rq.xmax, rq.ymax} << ", "
+          << db::id(col.column_name) << ")\n limit " << to_chars(rq.limit);
         return q;
     }
 
@@ -97,13 +84,13 @@ struct mysql : dialect {
             to_chars(epsg)};
     }
 
-    db::query create(table const& tbl) const override
+    db::query create(db::table const& tbl) const override
     {
         auto q = db::query{};
         q << "\n create table " << id{tbl};
-        for (auto sep = "\n ( "; auto& col : tbl.columns) {
+        for (auto sep{"\n ( "}; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
-              << col.lcase_type;
+              << col.type_name;
             if (geo(col))
                 q << " not null srid " << to_chars(col.srid);
             else if (col.length > 0)

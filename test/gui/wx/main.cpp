@@ -39,7 +39,7 @@ void compose_darken(wxImage& lhs, wxImage const& rhs)
 
 }  // namespace
 
-BOOST_AUTO_TEST_CASE(draw)
+BOOST_AUTO_TEST_CASE(wx_draw)
 {
     wxInitAllImageHandlers();
     auto pixels_sum = 0., transparent_sum = 0.;
