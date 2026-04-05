@@ -92,14 +92,14 @@ struct d2 {
         using boat_geometry_tag = boost::geometry::geometry_collection_tag;
     };
 
-    static point operator()(geometry::point auto const& g)
+    d2<CoordSys>::point operator()(geometry::point auto const& g) const
     {
         return {g.x(), g.y()};
     }
 
-    static box operator()(geometry::box auto const& g)
+    d2<CoordSys>::box operator()(geometry::box auto const& g) const
     {
-        return {operator()(g.min_corner()), operator()(g.max_corner())};
+        return {(*this)(g.min_corner()), (*this)(g.max_corner())};
     }
 };
 
