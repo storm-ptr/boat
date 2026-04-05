@@ -3,8 +3,8 @@
 #ifndef BOAT_GEOMETRY_RASTER_HPP
 #define BOAT_GEOMETRY_RASTER_HPP
 
+#include <boat/geometry/algorithm.hpp>
 #include <boat/geometry/detail/fibonacci.hpp>
-#include <boat/geometry/detail/utility.hpp>
 #include <boat/geometry/transform.hpp>
 #include <boost/qvm/map_vec_mat.hpp>
 
@@ -21,15 +21,15 @@ geographic::grid geographic_interpolate(  //
     int width,
     int height,
     matrix const& mat,
-    srs_spec auto const& srs,
+    srs_spec auto const& sys,
     size_t num_points)
 {
-    auto tf = transformation(srs);
+    auto tf = transformation(sys);
     auto fwd = transform(srs_forward(tf), mat_inverse(mat));
     auto inv = transform(mat_forward(mat), srs_inverse(tf));
     auto mbr = cartesian::box{{}, {width * 1., height * 1.}};
     auto sentinel = [&](auto& ll) {
-        auto xy = fwd(ll).transform(cast<cartesian::point>);
+        auto xy = fwd(ll).transform(cartesian{});
         return !xy || !boost::geometry::covered_by(*xy, mbr);
     };
     auto points =
@@ -70,6 +70,14 @@ inline matrix affine(  //
            qvm::translation_mat(-qvm::vec{{width * .5, height * .5}}) *
            qvm::diag_mat(qvm::vec{{1., -1., 1.}}) *
            qvm::translation_mat(-qvm::vec{{0., height * 1.}});
+}
+
+inline matrix affine(int width, int height, cartesian::box const& mbr)
+{
+    return boost::qvm::inverse(
+        boost::geometry::strategy::transform::
+            map_transformer<double, 2, 2, true, false>{mbr, width, height}
+                .matrix());
 }
 
 }  // namespace boat::geometry

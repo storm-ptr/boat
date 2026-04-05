@@ -8,8 +8,8 @@
 
 namespace boat::gui {
 
-struct raster {
-    blob image;
+struct image {
+    blob file;
     geometry::matrix affine;
     int epsg;
 };
@@ -19,7 +19,7 @@ struct shape {
     int epsg;
 };
 
-using feature = std::variant<raster, shape>;
+using feature = std::variant<image, shape>;
 
 }  // namespace boat::gui
 

@@ -5,25 +5,25 @@
 #include <boat/gui/qt.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include "../context.hpp"
-#include "../datasets.hpp"
+#include "../providers.hpp"
 
 BOOST_AUTO_TEST_CASE(qt_draw)
 {
     auto pixels_sum = 0., transparent_sum = 0.;
-    auto dss = datasets() | std::ranges::to<std::vector>();
+    auto pvds = providers() | std::ranges::to<std::vector>();
     for (auto [i, ctx] : std::views::enumerate(contexts())) {
         auto img =
             QImage{ctx.width, ctx.height, QImage::Format_ARGB32_Premultiplied};
         img.fill(Qt::transparent);
-        auto paint = QPainter{&img};
-        paint.setCompositionMode(QPainter::CompositionMode_Darken);
-        paint.setRenderHint(QPainter::Antialiasing);
-        paint.setPen(QPen(Qt::darkCyan, 5));
-        paint.setBrush(Qt::cyan);
-        for (auto& ds : dss) {
-            auto lyr = ds->layers().front();
-            for (auto feat : ds->features(lyr, ctx.grid, ctx.resolution))
-                boat::gui::qt::draw(feat, paint, ctx.affine, ctx.srs);
+        auto art = QPainter{&img};
+        art.setCompositionMode(QPainter::CompositionMode_Darken);
+        art.setRenderHint(QPainter::Antialiasing);
+        art.setPen(QPen(Qt::darkCyan, 5));
+        art.setBrush(Qt::cyan);
+        for (auto& pvd : pvds) {
+            pvd.grid = ctx.grid;
+            for (auto feat : pvd.features())
+                boat::gui::qt::draw(art, feat, ctx.affine, ctx.system);
         }
         auto path = boat::concat(std::setfill('0'), std::setw(2), i, ".png");
         img.save(path.data());

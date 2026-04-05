@@ -20,7 +20,10 @@ public:
     any_hashable(T const& val)
         : any_{val}
         , hash_{[](std::any const& that) {
-            return boost::hash_value(std::any_cast<T const&>(that));
+            if constexpr (requires { std::hash<T>{}; })
+                return std::hash<T>{}(std::any_cast<T const&>(that));
+            else
+                return boost::hash_value(std::any_cast<T const&>(that));
         }}
         , equal_{[](std::any const& lhs, std::any const& rhs) {
             return std::any_cast<T const&>(lhs) == std::any_cast<T const&>(rhs);
@@ -34,11 +37,11 @@ public:
                lhs.equal_(lhs.any_, rhs.any_);
     }
 
-    size_t hash_code() const noexcept
+    friend size_t hash_value(any_hashable const& that)
     {
         auto ret = size_t{};
-        boost::hash_combine(ret, any_.type().hash_code());
-        boost::hash_combine(ret, hash_(any_));
+        boost::hash_combine(ret, that.any_.type().hash_code());
+        boost::hash_combine(ret, that.hash_(that.any_));
         return ret;
     }
 };
@@ -49,7 +52,7 @@ template <>
 struct std::hash<boat::any_hashable> {
     static size_t operator()(boat::any_hashable const& that)
     {
-        return that.hash_code();
+        return hash_value(that);
     }
 };
 

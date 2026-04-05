@@ -3,9 +3,8 @@
 #ifndef BOAT_TEST_UTILITY_HPP
 #define BOAT_TEST_UTILITY_HPP
 
-#include <boat/detail/algorithm.hpp>
 #include <boat/detail/numbers.hpp>
-#include <boat/geometry/concepts.hpp>
+#include <boat/geometry/vocabulary.hpp>
 #include <generator>
 #include <random>
 
@@ -21,34 +20,52 @@ bool operator==(T const& lhs, T const& rhs)
 
 template <class F, class Arg>
 struct revoke {
-    F f_;
-    Arg arg_;
-    revoke(F f, Arg const& arg) : f_{f}, arg_{std::invoke(f_, arg)} {}
-    ~revoke() { std::invoke(f_, arg_); }
+    F f;
+    Arg arg;
+    revoke(F f, Arg const& arg) : f{f}, arg{std::invoke(f, arg)} {}
+    ~revoke() { std::invoke(f, arg); }
 };
 
-inline auto add_meters(boat::geometry::geographic::point const& p,
-                       double eastward,
-                       double northward)
+template <std::floating_point T>
+T circular_clamp(T v, T lo, T hi)
 {
-    auto meter = boat::numbers::radian / boat::numbers::earth::mean_radius;
+    v = std::fmod(v - lo, hi - lo);
+    return v + (v < 0 ? hi : lo);
+}
+
+template <std::floating_point T>
+std::pair<T, bool> mirrored_clamp(T v, T lo, T hi)
+{
+    auto two_hi = 2 * hi;
+    v = circular_clamp(v, lo, two_hi - lo);
+    auto mir = v > hi;
+    return {mir ? two_hi - v : v, mir};
+}
+
+inline boat::geometry::geographic::point add_meters(  //
+    boat::geometry::geographic::point const& p,
+    double eastward,
+    double northward)
+{
+    namespace num = boat::numbers;
+    auto meter = num::radian / num::earth::mean_radius;
     auto dy = northward * meter;
-    auto [y, mir] = boat::mirrored_clamp(p.y() + dy, -90., 90.);
-    auto den = std::cos(p.y() * boat::numbers::degree);
-    auto dx = (den ? eastward * meter / den : 0.);
-    auto x = boat::circular_clamp(p.x() + dx + (mir ? 180. : 0.), -180., 180.);
-    return boat::geometry::geographic::point{x, y};
+    auto [y, mir] = mirrored_clamp(p.y() + dy, -90., 90.);
+    auto den = std::cos(p.y() * num::degree);
+    auto dx = den ? eastward * meter / den : 0.;
+    auto x = circular_clamp(p.x() + dx + (mir ? 180 : 0), -180., 180.);
+    return {x, y};
 }
 
 inline std::generator<boat::geometry::geographic::point> geographic_random()
 {
+    namespace num = boat::numbers;
     auto gen = std::mt19937{std::random_device()()};
     auto dist = std::uniform_real_distribution<double>{0, 1};
     for (;;) {
-        auto azimuthal = 2 * boat::numbers::pi * dist(gen);
+        auto azimuth = 2 * num::pi * dist(gen);
         auto polar = std::acos(1 - 2 * dist(gen));
-        co_yield {azimuthal * boat::numbers::radian - 180,
-                  polar * boat::numbers::radian - 90};
+        co_yield {azimuth * num::radian - 180, polar * num::radian - 90};
     }
 }
 

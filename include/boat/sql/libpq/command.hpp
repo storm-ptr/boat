@@ -63,7 +63,7 @@ public:
     void commit() override { exec("commit;begin;"); }
     char id_quote() override { return '"'; }
     std::string param_mark() override { return "${}"; }
-    std::string dbms() override { return "postgresql"; }
+    std::string dbms() override { return "postgres"; }
 };
 
 }  // namespace boat::sql::libpq

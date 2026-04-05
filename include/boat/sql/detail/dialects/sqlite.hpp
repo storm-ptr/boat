@@ -9,7 +9,7 @@
 namespace boat::sql::dialects {
 
 struct sqlite : dialect {
-    db::query layers() const override
+    db::query vectors() const override
     {
         return "\n select null, m.name"
                "\n , (select c.name from pragma_table_info(m.name) c"

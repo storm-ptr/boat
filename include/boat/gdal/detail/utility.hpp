@@ -26,25 +26,29 @@ using feature_ptr = unique_ptr<void, OGR_F_Destroy>;
 using layer_ptr = std::unique_ptr<void, layer_deleter>;
 using srs_ptr = unique_ptr<void, OSRDestroySpatialReference>;
 
-constexpr auto to_data_type = overloaded{
-    [](uint8_t) { return GDT_Byte; },
-    [](int8_t) { return GDT_Int8; },
-    [](uint16_t) { return GDT_UInt16; },
-    [](int16_t) { return GDT_Int16; },
-    [](uint32_t) { return GDT_UInt32; },
-    [](int32_t) { return GDT_Int32; },
-    [](uint64_t) { return GDT_UInt64; },
-    [](int64_t) { return GDT_Int64; },
-    [](float) { return GDT_Float32; },
-    [](double) { return GDT_Float64; },
-};
+template <class T>
+consteval GDALDataType as_data_type()
+{
+    return  //
+        std::same_as<T, uint8_t>    ? GDT_Byte
+        : std::same_as<T, int8_t>   ? GDT_Int8
+        : std::same_as<T, uint16_t> ? GDT_UInt16
+        : std::same_as<T, int16_t>  ? GDT_Int16
+        : std::same_as<T, uint32_t> ? GDT_UInt32
+        : std::same_as<T, int32_t>  ? GDT_Int32
+        : std::same_as<T, uint64_t> ? GDT_UInt64
+        : std::same_as<T, int64_t>  ? GDT_Int64
+        : std::same_as<T, float>    ? GDT_Float32
+        : std::same_as<T, double>   ? GDT_Float64
+                                    : throw std::out_of_range("GDALDataType");
+}
 
 inline void init()
 {
     static auto flag = std::once_flag{};
     std::call_once(flag, [] {
-        CPLSetConfigOption("GDAL_HTTP_TIMEOUT", "30");
         CPLSetConfigOption("GDAL_FILENAME_IS_UTF8", "YES");
+        CPLSetConfigOption("GDAL_HTTP_TIMEOUT", "30");
         CPLSetConfigOption("SHAPE_ENCODING", "UTF-8");
         GDALAllRegister();
     });
@@ -78,9 +82,9 @@ srs_ptr make_epsg_srs(int epsg)
     return ret;
 }
 
-inline int get_authority_code(OGRSpatialReferenceH srs)
+inline int get_authority_code(OGRSpatialReferenceH sys)
 {
-    auto code = std::string_view{srs ? OSRGetAuthorityCode(srs, 0) : "0"};
+    auto code = std::string_view{sys ? OSRGetAuthorityCode(sys, 0) : "0"};
     return from_chars<int>(code.data(), code.size());
 }
 

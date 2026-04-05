@@ -29,11 +29,13 @@ public:
         boat::check(h, "curl_easy_init");
         auto easy = easy_ptr{h};
         auto val = std::make_unique<value_type>(std::move(url), blob{});
-        check(curl_easy_setopt(h, CURLOPT_USERAGENT, useragent_.data()));
+        check(curl_easy_setopt(h, CURLOPT_SSL_VERIFYHOST, 0));
+        check(curl_easy_setopt(h, CURLOPT_SSL_VERIFYPEER, 0));
+        check(curl_easy_setopt(h, CURLOPT_TIMEOUT_MS, 30'000));
         check(curl_easy_setopt(h, CURLOPT_URL, val->first.data()));
+        check(curl_easy_setopt(h, CURLOPT_USERAGENT, useragent_.data()));
         check(curl_easy_setopt(h, CURLOPT_WRITEDATA, &val->second));
         check(curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, &callback));
-        check(curl_easy_setopt(h, CURLOPT_TIMEOUT_MS, 30'000));
         check(curl_multi_add_handle(multi_.get(), h));
         easy.get_deleter().multi = multi_.get();
         jobs_.insert({h, {std::move(easy), std::move(val)}});

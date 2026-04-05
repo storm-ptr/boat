@@ -8,7 +8,7 @@
 
 namespace boat::gdal {
 
-db::rowset read(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
+db::rowset select(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
 {
     auto ret = db::rowset{};
     for (auto& fld : flds)
@@ -24,7 +24,7 @@ db::rowset read(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
     return ret;
 }
 
-inline void write(OGRLayerH lyr, db::rowset const& vals)
+inline void insert(OGRLayerH lyr, db::rowset const& vals)
 {
     auto fd = OGR_L_GetLayerDefn(lyr);
     auto flds = fields::make(fd, vals.columns);

@@ -3,7 +3,7 @@
 #ifndef BOAT_GEOMETRY_ALGORITHM_HPP
 #define BOAT_GEOMETRY_ALGORITHM_HPP
 
-#include <boat/geometry/concepts.hpp>
+#include <boat/geometry/vocabulary.hpp>
 
 namespace boat::geometry {
 
@@ -52,6 +52,21 @@ constexpr auto minmax = []<tagged T>(T const& geom) -> box auto {
     }(geom);
     return typename d2_of<T>::box{{xmin, ymin}, {xmax, ymax}};
 };
+
+template <box T>
+polygon auto to_polygon(T const& geom)
+{
+    typename d2_of<T>::polygon ret;
+    boost::geometry::convert(geom, ret);
+    return ret;
+}
+
+template <point T>
+T add_value(T geom, double value)
+{
+    boost::geometry::add_value(geom, value);
+    return geom;
+}
 
 }  // namespace boat::geometry
 

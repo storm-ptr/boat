@@ -11,7 +11,7 @@ namespace boat::sql::dialects {
 struct dialect {
     virtual ~dialect() = default;
 
-    virtual db::query layers() const = 0;
+    virtual db::query vectors() const = 0;
 
     virtual db::query columns(std::string_view schema_name,
                               std::string_view table_name) const = 0;

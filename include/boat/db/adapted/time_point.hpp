@@ -4,7 +4,6 @@
 #define BOAT_DB_ADAPTED_TIME_POINT_HPP
 
 #include <boat/db/variant.hpp>
-#include <boat/detail/algorithm.hpp>
 #include <boat/detail/charconv.hpp>
 #include <chrono>
 #include <regex>
@@ -33,8 +32,8 @@ void read(variant const& in, std::chrono::time_point<Clock, Duration>& out)
     auto min = from_chars<int>(m[5].first, m[5].length());
     auto s = from_chars<int>(m[6].first, m[6].length());
     auto us = static_cast<int>(
-        (m[8].length() ? from_chars<int>(m[8].first, m[8].length()) * 1. /
-                             ipow(10u, m[8].length())
+        (m[8].length() ? from_chars<int>(m[8].first, m[8].length()) /
+                             std::pow(10u, m[8].length())
                        : 0) *
         sc::microseconds::period::den / sc::microseconds::period::num);
     check(ymd.ok() && h < 24 && min < 60 && s < 60, str.data());

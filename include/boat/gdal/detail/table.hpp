@@ -33,9 +33,6 @@ inline db::table get_table(OGRLayerH lyr)
     auto ret = db::table{.dbms = "gdal", .table_name = OGR_FD_GetName(fd)};
     for (auto& fld : fields::make(fd))
         ret.columns.push_back(std::visit(to_column, fld));
-    std::ranges::sort(ret.columns, {}, [](auto& col) {
-        return col.column_name | unicode::utf32;
-    });
     return ret;
 }
 
@@ -45,10 +42,10 @@ inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
         ds, tbl.table_name.data(), 0, 0);
     for (auto& col : tbl.columns)
         if (col.epsg) {
-            auto srs = make_epsg_srs(col.epsg);
+            auto sys = make_epsg_srs(col.epsg);
             auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
                 OGR_GFld_Create(col.column_name.data(), wkbUnknown)};
-            OGR_GFld_SetSpatialRef(fld.get(), srs.get());
+            OGR_GFld_SetSpatialRef(fld.get(), sys.get());
             check(OGR_L_CreateGeomField(ret, fld.get(), 1));
         }
         else {

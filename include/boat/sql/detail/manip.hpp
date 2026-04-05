@@ -4,6 +4,7 @@
 #define BOAT_SQL_MANIP_HPP
 
 #include <boat/db/query.hpp>
+#include <boat/geometry/algorithm.hpp>
 #include <boat/sql/detail/adaptors/adaptors.hpp>
 
 namespace boat::sql {
@@ -115,13 +116,8 @@ struct rect {
 
     friend db::query& operator<<(db::query& out, rect const& in)
     {
-        auto var = db::to_variant(geometry::cartesian::polygon{{
-            {in.xmin, in.ymin},
-            {in.xmax, in.ymin},
-            {in.xmax, in.ymax},
-            {in.xmin, in.ymax},
-            {in.xmin, in.ymin},
-        }});
+        auto var = db::to_variant(geometry::to_polygon(
+            geometry::cartesian::box{{in.xmin, in.ymin}, {in.xmax, in.ymax}}));
         adaptors::make(in.dbms, in.col)->insert(out, std::move(var));
         return out;
     }

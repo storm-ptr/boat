@@ -34,33 +34,75 @@ inline auto epsg(int code)
     return boost::geometry::srs::epsg{code};
 }
 
-auto forward(geometry::srs_spec auto const& srs1,
-             geometry::matrix const& affine2,
-             geometry::srs_spec auto const& srs2)
+auto forward(  //
+    geometry::srs_spec auto const& sys1,
+    geometry::matrix const& affine2,
+    geometry::srs_spec auto const& sys2)
 {
-    auto tf = boost::geometry::srs::transformation<>{srs1, srs2};
-    return geometry::transform(geometry::srs_forward(tf),
-                               geometry::mat_inverse(affine2));
+    auto tf = boost::geometry::srs::transformation<>{sys1, sys2};
+    return geometry::transform(  //
+        geometry::srs_forward(tf),
+        geometry::mat_inverse(affine2));
 }
 
-auto bidirectional(geometry::matrix const& affine1,
-                   geometry::srs_spec auto const& srs1,
-                   geometry::matrix const& affine2,
-                   geometry::srs_spec auto const& srs2)
+auto bidirectional(  //
+    geometry::matrix const& affine1,
+    geometry::srs_spec auto const& sys1,
+    geometry::matrix const& affine2,
+    geometry::srs_spec auto const& sys2)
 {
-    auto tf = boost::geometry::srs::transformation<>{srs1, srs2};
-    return std::pair{geometry::transform(geometry::mat_forward(affine1),
-                                         geometry::srs_forward(tf),
-                                         geometry::mat_inverse(affine2)),
-                     geometry::transform(geometry::mat_forward(affine2),
-                                         geometry::srs_inverse(tf),
-                                         geometry::mat_inverse(affine1))};
+    auto tf = boost::geometry::srs::transformation<>{sys1, sys2};
+    return std::pair{
+        geometry::transform(  //
+            geometry::mat_forward(affine1),
+            geometry::srs_forward(tf),
+            geometry::mat_inverse(affine2)),
+        geometry::transform(  //
+            geometry::mat_forward(affine2),
+            geometry::srs_inverse(tf),
+            geometry::mat_inverse(affine1)),
+    };
 }
 
 inline auto variant(blob_view wkb)
 {
     auto ret = geometry::geographic::variant{};
     wkb >> ret;
+    return ret;
+}
+
+auto boxes(  //
+    geometry::geographic::grid const& grid,
+    geometry::srs_spec auto const& sys)
+{
+    static auto const antimeridian = geometry::geographic::linestring{
+        {-180., 90.}, {-180., 0.}, {-180., -90.}};
+    auto lls = std::vector<geometry::geographic::box>{};
+    for (auto& lvl : grid | std::views::reverse) {
+        auto r = lvl.first * numbers::inv_sqrt_2;
+        if (r >= numbers::earth::sqrt_area / 4)
+            continue;
+        for (auto buf = geometry::buffer(r, 16); auto& p : lvl.second)
+            if (auto poly = buf(p); r < distance(p, antimeridian))
+                lls.push_back(geometry::minmax(poly));
+            else {
+                auto ps = geometry::geographic::multi_point{};
+                ps.assign_range(  //
+                    poly.outer() |
+                    std::views::filter([](auto& p) { return p.x() < 0.; }));
+                lls.push_back(geometry::minmax(ps));
+                ps.assign_range(  //
+                    poly.outer() |
+                    std::views::filter([](auto& p) { return p.x() > 0.; }));
+                lls.push_back(geometry::minmax(ps));
+            }
+    }
+    auto ret = std::vector<geometry::cartesian::box>{};
+    auto fwd = geometry::transform(
+        geometry::srs_forward(geometry::transformation(sys)));
+    for (auto& ll : lls)
+        if (auto xy = fwd(ll).transform(geometry::cartesian{}))
+            ret.push_back(*xy);
     return ret;
 }
 

@@ -19,10 +19,10 @@ struct adaptor {
 template <class T>
 class impl : public adaptor {
 protected:
-    static constexpr auto kind_ = db::kind<T>::value;
-
     std::string_view dbms_;
     db::column const* col_;
+
+    static constexpr auto kind_ = db::kind<T>::value;
 
     std::string_view type() const { return col_->type_name; }
 

@@ -76,12 +76,4 @@ struct kind<blob> {
 
 }  // namespace boat::db
 
-template <>
-struct std::hash<boat::db::variant> {
-    static size_t operator()(boat::db::variant const& that)
-    {
-        return std::hash<boat::db::variant_base>{}(that);
-    }
-};
-
 #endif  // BOAT_DB_VARIANT_HPP

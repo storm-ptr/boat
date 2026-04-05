@@ -9,7 +9,6 @@
 #include <boost/type_index/ctti_type_index.hpp>
 
 namespace boat::db {
-namespace detail {
 
 template <class T>
 constexpr auto kinds_as_array()
@@ -21,8 +20,6 @@ constexpr auto kinds_as_array()
     return ret;
 }
 
-}  // namespace detail
-
 template <class T>
 table to_table()
 {
@@ -31,7 +28,7 @@ table to_table()
     if (auto pos = ret.table_name.find_last_of(' '); pos != std::string::npos)
         ret.table_name = ret.table_name.substr(pos + 1);
     for (auto [k, n] : std::views::zip(  //
-             detail::kinds_as_array<T>(),
+             kinds_as_array<T>(),
              boost::pfr::names_as_array<T>())) {
         auto col = column{.kind{k}, .column_name{n}};
         if (col.kind == kind<geometry::geographic::variant>::value)

@@ -73,6 +73,27 @@ struct page {
     int limit;
 };
 
+struct band {
+    std::string color_name;  //< lower case
+    std::string type_name;   //< lower case
+};
+
+struct raster {
+    std::string schema_name;
+    std::string table_name;
+    std::string column_name;
+    std::vector<band> bands;
+    int width;
+    int height;
+    double xorig;
+    double yorig;
+    double xscale;
+    double yscale;
+    double xskew;
+    double yskew;
+    int epsg;
+};
+
 }  // namespace boat::db
 
 #endif  // BOAT_DB_META_HPP

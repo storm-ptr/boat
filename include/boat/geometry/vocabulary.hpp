@@ -3,12 +3,64 @@
 #ifndef BOAT_GEOMETRY_VOCABULARY_HPP
 #define BOAT_GEOMETRY_VOCABULARY_HPP
 
+#include <boat/detail/utility.hpp>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/adapted/std_variant.hpp>
-#include <boost/pfr/ops_fields.hpp>
+#include <boost/geometry/srs/transformation.hpp>
 #include <map>
 
 namespace boat::geometry {
+
+template <class T>
+using tag = boost::geometry::tag<T>::type;
+
+template <class T>
+struct has_tag : std::negation<std::is_same<tag<T>, void>> {};
+
+template <class... Ts>
+struct has_tag<std::variant<Ts...>> : std::conjunction<has_tag<Ts>...> {};
+
+template <class T>
+concept tagged = has_tag<T>::value;
+
+template <class T>
+concept box = std::same_as<tag<T>, boost::geometry::box_tag>;
+
+template <class T>
+concept dynamic = std::same_as<tag<T>, boost::geometry::dynamic_geometry_tag>;
+
+template <class T>
+concept linestring = std::same_as<tag<T>, boost::geometry::linestring_tag>;
+
+template <class T>
+concept multi = std::derived_from<tag<T>, boost::geometry::multi_tag>;
+
+template <class T>
+concept multi_point = std::same_as<tag<T>, boost::geometry::multi_point_tag>;
+
+template <class T>
+concept point = std::same_as<tag<T>, boost::geometry::point_tag>;
+
+template <class T>
+concept polygon = std::same_as<tag<T>, boost::geometry::polygon_tag>;
+
+template <class T, class U>
+concept same_tag = std::same_as<tag<T>, tag<U>>;
+
+template <class T>
+concept single = std::derived_from<tag<T>, boost::geometry::single_tag>;
+
+template <class T>
+concept curve = single<T> && point<std::ranges::range_value_t<T>>;
+
+template <class T>
+concept projection_or_transformation =
+    specialized<T, boost::geometry::srs::projection> ||
+    specialized<T, boost::geometry::srs::transformation>;
+
+template <class T>
+concept srs_spec =
+    std::constructible_from<boost::geometry::srs::projection<>, T>;
 
 namespace model = boost::geometry::model;
 
@@ -39,20 +91,31 @@ struct d2 {
         using model::geometry_collection<variant>::geometry_collection;
         using boat_geometry_tag = boost::geometry::geometry_collection_tag;
     };
+
+    static point operator()(geometry::point auto const& g)
+    {
+        return {g.x(), g.y()};
+    }
+
+    static box operator()(geometry::box auto const& g)
+    {
+        return {operator()(g.min_corner()), operator()(g.max_corner())};
+    }
 };
 
 using cartesian = d2<boost::geometry::cs::cartesian>;
 using geographic = d2<boost::geometry::cs::geographic<boost::geometry::degree>>;
 using matrix = boost::qvm::mat<double, 3, 3>;
 
-struct tile {
-    int z;
-    int y;
-    int x;
+template <class T>
+using d2_of = d2<typename boost::geometry::coordinate_system<T>::type>;
 
-    static constexpr int size = 256;
-    friend auto operator<=>(tile const&, tile const&) = default;
-};
+template <class T>
+concept ogc99 = tagged<T> && std::convertible_to<T, typename d2_of<T>::variant>;
+
+template <class T>
+constexpr size_t variant_index_v =
+    variant_index<typename d2_of<T>::variant, T>();
 
 }  // namespace boat::geometry
 
@@ -60,14 +123,6 @@ template <class T>
     requires requires { typename T::boat_geometry_tag; }
 struct boost::geometry::traits::tag<T> {
     using type = T::boat_geometry_tag;
-};
-
-template <>
-struct std::hash<boat::geometry::tile> {
-    static size_t operator()(boat::geometry::tile const& that)
-    {
-        return boost::pfr::hash_fields(that);
-    }
 };
 
 #endif  // BOAT_GEOMETRY_VOCABULARY_HPP

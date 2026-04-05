@@ -29,12 +29,12 @@ constexpr auto adapt = overloaded{
         return ret;
     }};
 
-void draw(shape const& feat,
-          QPainter& art,
+void draw(QPainter& art,
+          shape const& feat,
           geometry::matrix const& affine,
-          geometry::srs_spec auto const& srs)
+          geometry::srs_spec auto const& sys)
 {
-    auto var = forward(epsg(feat.epsg), affine, srs)(variant(feat.wkb));
+    auto var = forward(epsg(feat.epsg), affine, sys)(variant(feat.wkb));
     if (!var)
         return;
     overloaded{
@@ -49,16 +49,16 @@ void draw(shape const& feat,
         }}(*var);
 }
 
-void draw(raster const& feat,
-          QPainter& art,
+void draw(QPainter& art,
+          image const& feat,
           geometry::matrix const& affine,
-          geometry::srs_spec auto const& srs)
+          geometry::srs_spec auto const& sys)
 {
     auto img1 = QImage{};
-    if (!img1.loadFromData(reinterpret_cast<uchar const*>(feat.image.data()),
-                           static_cast<int>(feat.image.size())))
+    if (!img1.loadFromData(reinterpret_cast<uchar const*>(feat.file.data()),
+                           static_cast<int>(feat.file.size())))
         return;
-    auto [fwd, inv] = bidirectional(feat.affine, epsg(feat.epsg), affine, srs);
+    auto [fwd, inv] = bidirectional(feat.affine, epsg(feat.epsg), affine, sys);
     auto mbr2 =
         fwd(multi_point(img1.width(), img1.height()))
             .transform(geometry::minmax)
@@ -86,12 +86,12 @@ void draw(raster const& feat,
 
 }  // namespace detail
 
-void draw(feature const& feat,
-          QPainter& art,
+void draw(QPainter& art,
+          feature const& feat,
           geometry::matrix const& affine,
-          geometry::srs_spec auto const& srs)
+          geometry::srs_spec auto const& sys)
 {
-    std::visit([&](auto const& v) { detail::draw(v, art, affine, srs); }, feat);
+    std::visit([&](auto const& v) { detail::draw(art, v, affine, sys); }, feat);
 }
 
 }  // namespace boat::gui::qt

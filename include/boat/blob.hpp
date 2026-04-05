@@ -20,6 +20,11 @@ struct blob : std::basic_string<std::byte> {
     using std::basic_string<std::byte>::basic_string;
     blob(std::byte const*) = delete;
     operator blob_view() const { return {data(), size()}; }
+
+    friend size_t hash_value(blob const& that)
+    {
+        return boost::hash_range(that.begin(), that.end());
+    }
 };
 
 blob_view& operator>>(blob_view& in, arithmetic auto& out)
@@ -76,9 +81,9 @@ struct hex {
 
     friend auto& operator<<(ostream auto& out, hex const& in)
     {
-        using char_type = std::decay_t<decltype(out)>::char_type;
-        auto os = std::basic_ostringstream<char_type>{};
-        os << std::uppercase << std::hex << std::setfill<char_type>('0');
+        using char_t = std::decay_t<decltype(out)>::char_type;
+        auto os = std::basic_ostringstream<char_t>{};
+        os << std::uppercase << std::hex << std::setfill<char_t>('0');
         for (auto byte : in.bytes)
             os << std::setw(2) << static_cast<unsigned>(byte);
         return out << os.view();  //< output once
@@ -91,7 +96,7 @@ template <>
 struct std::hash<boat::blob> {
     static size_t operator()(boat::blob const& that)
     {
-        return boost::hash_range(that.begin(), that.end());
+        return hash_value(that);
     }
 };
 

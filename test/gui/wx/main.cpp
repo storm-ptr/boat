@@ -5,7 +5,7 @@
 #include <boat/gui/wx.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include "../context.hpp"
-#include "../datasets.hpp"
+#include "../providers.hpp"
 
 namespace {
 
@@ -43,28 +43,29 @@ BOOST_AUTO_TEST_CASE(wx_draw)
 {
     wxInitAllImageHandlers();
     auto pixels_sum = 0., transparent_sum = 0.;
-    auto dss = datasets() | std::ranges::to<std::vector>();
+    auto pvds = providers() | std::ranges::to<std::vector>();
     for (auto [i, ctx] : std::views::enumerate(contexts())) {
         auto img = wxImage(ctx.width, ctx.height);
         img.InitAlpha();
         auto num_pixels = ctx.width * ctx.height;
         std::memset(img.GetAlpha(), wxIMAGE_ALPHA_TRANSPARENT, num_pixels);
         std::memset(img.GetData(), UCHAR_MAX, 3 * num_pixels);
-        for (auto& ds : dss) {
+        for (auto& pvd : pvds) {
+            pvd.grid = ctx.grid;
             auto tmp = img.Copy();
-            auto gc = make_graphics_context(tmp);
-            auto lyr = ds->layers().front();
-            for (auto feat : ds->features(lyr, ctx.grid, ctx.resolution))
-                boat::gui::wx::draw(feat, *gc, ctx.affine, ctx.srs);
-            gc.reset();
+            auto art = make_graphics_context(tmp);
+            for (auto feat : pvd.features())
+                boat::gui::wx::draw(*art, feat, ctx.affine, ctx.system);
+            art.reset();
             compose_darken(img, tmp);
         }
         auto path = boat::concat(std::setfill('0'), std::setw(2), i, ".png");
         img.SaveFile(wxASCII_STR(path.data()), wxBITMAP_TYPE_PNG);
         pixels_sum += num_pixels;
-        transparent_sum += std::count(img.GetAlpha(),
-                                      img.GetAlpha() + num_pixels,
-                                      wxIMAGE_ALPHA_TRANSPARENT);
+        transparent_sum += std::count(  //
+            img.GetAlpha(),
+            img.GetAlpha() + num_pixels,
+            wxIMAGE_ALPHA_TRANSPARENT);
     }
     BOOST_TEST(transparent_sum / pixels_sum == transparent_ratio,
                boost::test_tools::tolerance(transparent_tolerance));

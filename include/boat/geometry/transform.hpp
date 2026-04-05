@@ -5,7 +5,7 @@
 
 #include <boat/detail/charconv.hpp>
 #include <boat/detail/numbers.hpp>
-#include <boat/geometry/concepts.hpp>
+#include <boat/geometry/vocabulary.hpp>
 #include <boost/geometry/srs/epsg.hpp>
 #include <boost/geometry/strategies/transform/srs_transformer.hpp>
 #include <optional>
@@ -28,9 +28,9 @@ inline auto ortho(geographic::point const& center)
         center.x())};
 }
 
-auto transformation(srs_spec auto const& srs)
+auto transformation(srs_spec auto const& sys)
 {
-    return boost::geometry::srs::transformation<>(lonlat, srs);
+    return boost::geometry::srs::transformation<>(lonlat, sys);
 }
 
 template <projection_or_transformation T>

@@ -9,7 +9,7 @@ BOOST_AUTO_TEST_CASE(db)
     auto rows = boat::db::to_rowset(objs);
     BOOST_CHECK(std::ranges::equal(  //
         objs,
-        rows | boat::db::view<object_struct>,
+        rows | boat::db::view<udt>,
         BOAT_LIFT(boost::pfr::eq_fields)));
     auto locale = std::locale{"en_US.UTF-8"};
     auto global_scope = revoke{&std::locale::global, locale};

@@ -9,7 +9,7 @@
 namespace boat::sql::dialects {
 
 struct mysql : dialect {
-    db::query layers() const override
+    db::query vectors() const override
     {
         return "\n select table_schema, table_name, column_name"
                "\n from information_schema.st_geometry_columns";

@@ -16,7 +16,7 @@ struct command : db::command {
     {
         auto txt = qry.text(id_quote(), param_mark());
         if (auto lyr = execute(dataset.get(), txt.data(), dialect.data()))
-            return read(  //
+            return select(  //
                 lyr.get(),
                 fields::make(OGR_L_GetLayerDefn(lyr.get())),
                 INT_MAX);

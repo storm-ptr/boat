@@ -53,6 +53,12 @@ constexpr auto single_span = [](arithmetic auto& v) {
     return std::span{&v, 1};
 };
 
+template <std::totally_ordered T>
+bool between(T const& v, T const& lo, T const& hi)
+{
+    return lo <= v && v <= hi;
+}
+
 constexpr auto byteswap = overloaded{
     [](std::integral auto v) { return std::byteswap(v); },
     [](std::floating_point auto v) {
@@ -61,15 +67,13 @@ constexpr auto byteswap = overloaded{
     },
 };
 
-constexpr auto fraction = [](std::floating_point auto v) {
+constexpr auto frac = [](std::floating_point auto v) {
     return std::modf(v, &v);
 };
 
 constexpr auto mixed = [](std::endian e) {
     return std::endian::big != e && std::endian::little != e;
 };
-
-constexpr auto normal = [](std::integral auto v) { return !!v; };
 
 template <class T>
 void check(bool success, T&& what)
@@ -83,8 +87,6 @@ constexpr auto pow2 = []<std::integral T>(T exp) {
     check(exp >= 0, "pow2");
     return static_cast<T>(1uz << exp);
 };
-
-constexpr auto pow4 = [](std::integral auto exp) { return pow2(2 * exp); };
 
 template <class... Ts>
 void variant_emplace(std::variant<Ts...>& var, size_t index)
