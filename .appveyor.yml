@@ -25,7 +25,7 @@ install:
   - nmake -f makefile.vc BUILD=release > nul
   - net start MSSQL$SQL2019
   - ps: Start-Service MySQL80
-  - curl -L -O -S -s http://download.osgeo.org/postgis/windows/pg16/postgis-bundle-pg16-3.6.1x64.zip
+  - curl -L -O -S -s http://download.osgeo.org/postgis/windows/pg16/archive/postgis-bundle-pg16-3.6.1x64.zip
   - call "C:\Program Files\7-Zip\7z.exe" x postgis-bundle-pg16-3.6.1x64.zip > nul
   - xcopy /s /y /q postgis-bundle-pg16-3.6.1x64 "C:\Program Files\PostgreSQL\16"
   - net start postgresql-x64-16
