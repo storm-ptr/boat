@@ -4,7 +4,7 @@
 #define BOAT_GDAL_COMMAND_HPP
 
 #include <boat/db/command.hpp>
-#include <boat/gdal/detail/rowset.hpp>
+#include <boat/gdal/detail/vector.hpp>
 
 namespace boat::gdal {
 

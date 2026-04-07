@@ -1,12 +1,26 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_GDAL_TABLE_HPP
-#define BOAT_GDAL_TABLE_HPP
+#ifndef BOAT_GDAL_VECTOR_HPP
+#define BOAT_GDAL_VECTOR_HPP
 
 #include <boat/db/meta.hpp>
+#include <boat/db/rowset.hpp>
 #include <boat/gdal/detail/fields/fields.hpp>
 
 namespace boat::gdal {
+
+inline std::vector<db::layer> vectors(GDALDatasetH ds)
+{
+    auto ret = std::vector<db::layer>{};
+    for (int i{}, n = GDALDatasetGetLayerCount(ds); i < n; ++i) {
+        auto fd = OGR_L_GetLayerDefn(GDALDatasetGetLayer(ds, i));
+        for (int j{}, m = OGR_FD_GetGeomFieldCount(fd); j < m; ++j)
+            ret.push_back({.table_name = OGR_FD_GetName(fd),
+                           .column_name = OGR_GFld_GetNameRef(
+                               OGR_FD_GetGeomFieldDefn(fd, j))});
+    }
+    return ret;
+}
 
 constexpr auto to_column = overloaded{
     [](fields::attribute const& v) {
@@ -68,6 +82,34 @@ inline void delete_table(GDALDatasetH ds, std::string_view tbl)
     }
 }
 
+db::rowset select(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
+{
+    auto ret = db::rowset{};
+    for (auto& fld : flds)
+        ret.columns.push_back(std::visit([&](auto& v) { return v.name; }, fld));
+    for (int i = 0; i < limit; ++i) {
+        auto feat = feature_ptr{OGR_L_GetNextFeature(lyr)};
+        if (!feat)
+            break;
+        for (auto& row = ret.rows.emplace_back(); auto& fld : flds)
+            row.push_back(
+                std::visit([&](auto& v) { return v.read(feat.get()); }, fld));
+    }
+    return ret;
+}
+
+inline void insert(OGRLayerH lyr, db::rowset const& vals)
+{
+    auto fd = OGR_L_GetLayerDefn(lyr);
+    auto flds = fields::make(fd, vals.columns);
+    for (auto const& row : vals) {
+        auto feat = feature_ptr{OGR_F_Create(fd)};
+        for (auto&& [fld, var] : std::views::zip(flds, row))
+            std::visit([&](auto& v) { v.write(feat.get(), var); }, fld);
+        check(OGR_L_CreateFeature(lyr, feat.get()));
+    }
+}
+
 }  // namespace boat::gdal
 
-#endif  // BOAT_GDAL_TABLE_HPP
+#endif  // BOAT_GDAL_VECTOR_HPP

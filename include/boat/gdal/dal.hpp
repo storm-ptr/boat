@@ -5,9 +5,9 @@
 
 #include <boat/db/dal.hpp>
 #include <boat/db/query.hpp>
-#include <boat/gdal/detail/rowset.hpp>
-#include <boat/gdal/detail/table.hpp>
-#include <boat/gdal/raster.hpp>
+#include <boat/gdal/dataset.hpp>
+#include <boat/gdal/detail/raster.hpp>
+#include <boat/gdal/detail/vector.hpp>
 
 namespace boat::gdal {
 
@@ -16,15 +16,7 @@ struct dal : db::dal {
 
     std::vector<db::layer> vectors() override
     {
-        auto ret = std::vector<db::layer>{};
-        for (int i{}, n = GDALDatasetGetLayerCount(dataset.get()); i < n; ++i) {
-            auto fd = OGR_L_GetLayerDefn(GDALDatasetGetLayer(dataset.get(), i));
-            for (int j{}, m = OGR_FD_GetGeomFieldCount(fd); j < m; ++j)
-                ret.push_back({.table_name = OGR_FD_GetName(fd),
-                               .column_name = OGR_GFld_GetNameRef(
-                                   OGR_FD_GetGeomFieldDefn(fd, j))});
-        }
-        return ret;
+        return gdal::vectors(dataset.get());
     }
 
     db::table get_table(std::string_view, std::string_view table_name) override
@@ -99,22 +91,8 @@ struct dal : db::dal {
         db::raster r,
         std::vector<tile> ts) override
     {
-#if __has_include(<png.h>) && __has_include(<zlib.h>)
         for (auto& t : ts)
             co_yield {t, get_png(dataset.get(), r, t)};
-#else
-        throw std::runtime_error(concat(  //
-            "compiled without libpng/zlib: ",
-            r.schema_name,
-            r.schema_name.empty() ? "" : ".",
-            r.table_name,
-            ".",
-            r.column_name,
-            " ",
-            ts.size(),
-            " tiles"));
-        co_return;
-#endif
     }
 };
 

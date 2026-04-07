@@ -3,7 +3,6 @@
 #ifndef BOAT_GDAL_RASTER_HPP
 #define BOAT_GDAL_RASTER_HPP
 
-#include <boat/gdal/dataset.hpp>
 #include <boat/gdal/gil.hpp>
 #if __has_include(<png.h>) && __has_include(<zlib.h>)
 #include <boost/gil/extension/io/png.hpp>
@@ -41,7 +40,6 @@ inline db::raster get_raster(GDALDatasetH ds)
         .epsg = get_authority_code(GDALGetSpatialRef(ds)),
     };
 }
-
 #if __has_include(<png.h>) && __has_include(<zlib.h>)
 inline blob get_png(GDALDatasetH ds, db::raster const& r, tile const& t)
 {
@@ -63,6 +61,11 @@ inline blob get_png(GDALDatasetH ds, db::raster const& r, tile const& t)
     gil::write_view(os, gil::view(img), gil::png_tag());
     auto str = std::move(os).str();
     return {as_bytes(str.data()), str.size()};
+}
+#else
+inline blob get_png(GDALDatasetH, db::raster const&, tile const&)
+{
+    throw std::runtime_error("compiled without libpng/zlib");
 }
 #endif
 

@@ -57,7 +57,8 @@ struct dal : db::dal {
         static auto const mbr =
             geometry::cartesian::box{{-lim, -lim}, {lim, lim}};
         auto size = tile::size * pow2(zmax);
-        auto a = geometry::affine(size, size, mbr).a;
+        auto mat = geometry::affine(size, size, mbr);
+        auto& a = mat.a;
         return {
             .schema_name = lyr.schema_name,
             .table_name = lyr.table_name,
