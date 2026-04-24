@@ -3,21 +3,19 @@
 #ifndef BOAT_GEOMETRY_TRANSFORM_HPP
 #define BOAT_GEOMETRY_TRANSFORM_HPP
 
-#include <boat/detail/charconv.hpp>
 #include <boat/detail/numbers.hpp>
+#include <boat/detail/string.hpp>
 #include <boat/geometry/vocabulary.hpp>
-#include <boost/geometry/srs/epsg.hpp>
 #include <boost/geometry/strategies/transform/srs_transformer.hpp>
 #include <optional>
 
 namespace boat::geometry {
 
-static auto const lonlat =
-    boost::geometry::srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
+static auto const lonlat = srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
 
 inline auto ortho(geographic::point const& center)
 {
-    return boost::geometry::srs::proj4{concat(  //
+    return srs::proj4{concat(  //
         " +proj=ortho +x_0=0 +y_0=0 +units=m +no_defs +a=",
         numbers::earth::equatorial_radius,
         " +b=",
@@ -28,9 +26,9 @@ inline auto ortho(geographic::point const& center)
         center.x())};
 }
 
-auto transformation(srs_spec auto const& sys)
+auto transformation(srs_params auto const& crs)
 {
-    return boost::geometry::srs::transformation<>(lonlat, sys);
+    return srs::transformation<>(lonlat, crs);
 }
 
 template <projection_or_transformation T>

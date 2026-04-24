@@ -9,9 +9,9 @@
 namespace boat::sql::dialects {
 
 struct mssql : dialect {
-    db::query vectors() const override
+    db::query layers() const override
     {
-        return "\n select table_schema, table_name, column_name"
+        return "\n select table_schema, table_name, column_name, 0"
                "\n from information_schema.columns"
                "\n where data_type in ('geography','geometry')";
     }

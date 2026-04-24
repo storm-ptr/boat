@@ -9,11 +9,13 @@
 namespace boat::sql::dialects {
 
 struct sqlite : dialect {
-    db::query vectors() const override
+    db::query layers() const override
     {
-        return "\n select null, m.name"
+        return "\n select null"
+               "\n , m.name"
                "\n , (select c.name from pragma_table_info(m.name) c"
                "\n    where f_geometry_column like c.name)"
+               "\n , 0"
                "\n from geometry_columns, sqlite_master m"
                "\n where f_table_name like m.name";
     }

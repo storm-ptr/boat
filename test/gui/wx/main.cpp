@@ -54,8 +54,9 @@ BOOST_AUTO_TEST_CASE(wx_draw)
             pvd.grid = ctx.grid;
             auto tmp = img.Copy();
             auto art = make_graphics_context(tmp);
-            for (auto feat : pvd.features())
-                boat::gui::wx::draw(*art, feat, ctx.affine, ctx.system);
+            auto drw = boat::gui::drawVariant(*art, ctx.affine, ctx.crs);
+            for (auto var : pvd.variants())
+                std::visit(drw, var);
             art.reset();
             compose_darken(img, tmp);
         }

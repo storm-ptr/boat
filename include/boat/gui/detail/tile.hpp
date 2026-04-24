@@ -9,23 +9,23 @@
 
 namespace boat::gui {
 
-std::unordered_set<tile> tiles(  //
+auto tiles(  //
+    geometry::geographic::grid const& grid,
     int width,
     int height,
-    geometry::matrix const& mat,
-    geometry::srs_spec auto const& sys,
-    geometry::geographic::grid const& grid)
+    geometry::matrix const& affine,
+    geometry::srs_params auto const& crs)
 {
     namespace bg = boost::geometry;
     static constexpr auto margin = 1.17;
     static constexpr auto d = {-1, 0, 1};
 
-    auto tf = geometry::transformation(sys);
+    auto tf = geometry::transformation(crs);
     auto fwd = geometry::transform(  //
         geometry::srs_forward(tf),
-        geometry::mat_inverse(mat));
+        geometry::mat_inverse(affine));
     auto inv = geometry::transform(  //
-        geometry::mat_forward(mat),
+        geometry::mat_forward(affine),
         geometry::srs_inverse(tf));
 
     auto scale_num = 0., scale_den = 0.;

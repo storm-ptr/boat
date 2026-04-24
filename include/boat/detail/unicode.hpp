@@ -3,7 +3,7 @@
 #ifndef BOAT_UNICODE_HPP
 #define BOAT_UNICODE_HPP
 
-#include <boat/detail/charconv.hpp>
+#include <boat/detail/string.hpp>
 #include <boost/regex/pending/unicode_iterator.hpp>
 #include <iomanip>
 

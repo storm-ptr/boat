@@ -10,10 +10,16 @@
 
 namespace boat::db {
 
+struct source {
+    std::string source_name;
+    std::string address;
+};
+
 struct layer {
     std::string schema_name;
     std::string table_name;
     std::string column_name;
+    bool raster;
 };
 
 struct column {
@@ -52,8 +58,8 @@ struct table {
 };
 
 struct bbox {
-    std::vector<std::string> select_list;  //< all if empty
-    std::string layer_column;              //< any if empty
+    std::vector<std::string> select_list;
+    std::string layer_column;
     double xmin;
     double ymin;
     double xmax;
@@ -67,7 +73,7 @@ struct order_key {
 };
 
 struct page {
-    std::vector<std::string> select_list;  //< all if empty
+    std::vector<std::string> select_list;
     std::vector<order_key> order_by;
     size_t offset;
     int limit;

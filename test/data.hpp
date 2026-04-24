@@ -3,7 +3,7 @@
 #ifndef BOAT_TEST_DATA_HPP
 #define BOAT_TEST_DATA_HPP
 
-#include <boat/db/dal.hpp>
+#include <boat/db/catalog.hpp>
 #include <boat/db/io.hpp>
 #include <boat/db/reflection.hpp>
 #include <iostream>
@@ -50,7 +50,7 @@ inline std::vector<udt> get_objects()
          .sample = 21.55}};
 }
 
-inline void check(boat::db::dal& dal)
+inline void check(boat::db::catalog& cat)
 {
     using namespace boat;
     static auto const objs = get_objects();
@@ -67,17 +67,17 @@ inline void check(boat::db::dal& dal)
         .limit = int(std::ranges::size(objs)),
     };
     auto tbl = get_table();
-    dal.drop(tbl.schema_name, tbl.table_name);
-    tbl = dal.create(tbl);
+    cat.drop(tbl.schema_name, tbl.table_name);
+    tbl = cat.create(tbl);
     std::cout << tbl;
-    dal.insert(tbl, db::to_rowset(objs));
+    cat.insert(tbl, db::to_rowset(objs));
     BOOST_CHECK(std::ranges::equal(  //
         objs,
-        dal.select(tbl, page) | db::view<udt>,
+        cat.select(tbl, page) | db::view<udt>,
         BOAT_LIFT(boost::pfr::eq_fields)));
     BOOST_CHECK(std::ranges::equal(  //
         std::array{2},
-        dal.select(tbl, bbox) | db::view<int>));
+        cat.select(tbl, bbox) | db::view<int>));
 }
 
 #endif  // BOAT_TEST_DATA_HPP

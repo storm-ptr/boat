@@ -18,12 +18,13 @@ BOOST_AUTO_TEST_CASE(qt_draw)
         auto art = QPainter{&img};
         art.setCompositionMode(QPainter::CompositionMode_Darken);
         art.setRenderHint(QPainter::Antialiasing);
-        art.setPen(QPen(Qt::darkCyan, 5));
+        art.setPen({Qt::darkCyan, 5});
         art.setBrush(Qt::cyan);
+        auto drw = boat::gui::drawVariant(art, ctx.affine, ctx.crs);
         for (auto& pvd : pvds) {
             pvd.grid = ctx.grid;
-            for (auto feat : pvd.features())
-                boat::gui::qt::draw(art, feat, ctx.affine, ctx.system);
+            for (auto var : pvd.variants())
+                std::visit(drw, var);
         }
         auto path = boat::concat(std::setfill('0'), std::setw(2), i, ".png");
         img.save(path.data());

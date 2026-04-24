@@ -1,13 +1,20 @@
 // Andrew Naplavkov
 
+#include <boat/gdal/catalog.hpp>
 #include <boat/gdal/command.hpp>
-#include <boat/gdal/dal.hpp>
 #include <boat/gdal/gil.hpp>
 #include <boat/geometry/raster.hpp>
 #include <boost/test/unit_test.hpp>
 #include "data.hpp"
 
 using namespace boat;
+
+BOOST_AUTO_TEST_CASE(gdal_vector)
+{
+    auto cat = gdal::catalog{};
+    cat.dataset = gdal::create("", "mem");
+    check(cat);
+}
 
 BOOST_AUTO_TEST_CASE(gdal_raster)
 {
@@ -49,9 +56,22 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
     BOOST_CHECK(lhs == rhs);
 }
 
-BOOST_AUTO_TEST_CASE(gdal_vector)
+BOOST_AUTO_TEST_CASE(gdal_sources)
 {
-    auto dal = gdal::dal{};
-    dal.dataset = gdal::create("", "mem");
-    check(dal);
+    auto cat = gdal::catalog{};
+    cat.dataset = gdal::open(
+        R"(WMS:https://wms.gebco.net/mapserv?request=GetCapabilities&service=WMS)");
+    auto sources = cat.sources();
+    BOOST_CHECK(!sources.empty());
+    for (auto& src : sources | std::views::take(2)) {
+        std::cout << src.source_name << ": " << src.address << std::endl;
+        auto sub = gdal::catalog{};
+        sub.dataset = gdal::open(src.address.data());
+        for (auto& lyr : sub.layers())
+            if (lyr.raster)
+                std::cout << sub.get_raster(lyr) << std::endl;
+            else
+                std::cout << sub.get_table(lyr.schema_name, lyr.table_name)
+                          << std::endl;
+    }
 }

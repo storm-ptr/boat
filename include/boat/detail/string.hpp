@@ -1,7 +1,7 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_CHARCONV_HPP
-#define BOAT_CHARCONV_HPP
+#ifndef BOAT_STRING_HPP
+#define BOAT_STRING_HPP
 
 #include <boat/detail/utility.hpp>
 #include <charconv>
@@ -9,6 +9,31 @@
 #include <locale>
 
 namespace boat {
+
+bool any(std::initializer_list<std::string_view> list, auto&& pred)
+{
+    return std::ranges::any_of(list, pred);
+}
+
+constexpr auto same(std::string_view lhs)
+{
+    return [lhs](std::string_view rhs) { return lhs == rhs; };
+}
+
+constexpr auto in(std::string_view lhs)
+{
+    return [lhs](std::string_view rhs) { return lhs.contains(rhs); };
+}
+
+constexpr auto has(std::string_view lhs)
+{
+    return [lhs](std::string_view rhs) { return rhs.contains(lhs); };
+}
+
+constexpr auto prefix(std::string_view lhs)
+{
+    return [lhs](std::string_view rhs) { return lhs.starts_with(rhs); };
+}
 
 template <class T = char>
 std::basic_string<T> concat(auto&&... vs)
@@ -46,4 +71,4 @@ constexpr auto to_lower = [](std::string_view str) {
 
 }  // namespace boat
 
-#endif  // BOAT_CHARCONV_HPP
+#endif  // BOAT_STRING_HPP

@@ -9,12 +9,12 @@
 namespace boat::sql::dialects {
 
 struct postgres : dialect {
-    db::query vectors() const override
+    db::query layers() const override
     {
-        return "\n select f_table_schema, f_table_name, f_geography_column"
+        return "\n select f_table_schema, f_table_name, f_geography_column, 0"
                "\n from public.geography_columns"
                "\n union"
-               "\n select f_table_schema, f_table_name, f_geometry_column"
+               "\n select f_table_schema, f_table_name, f_geometry_column, 0"
                "\n from public.geometry_columns";
     }
 

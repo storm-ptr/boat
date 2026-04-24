@@ -24,7 +24,7 @@ inline db::raster get_raster(GDALDatasetH ds)
     check(GDALGetGeoTransform(ds, a.data()));
     return {
         .table_name{"_layer"},
-        .column_name{"_raster"},
+        .column_name{"raster"},
         .bands{
             std::from_range,
             std::views::iota(0, GDALGetRasterCount(ds)) |

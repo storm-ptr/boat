@@ -4,29 +4,9 @@
 #define BOAT_SQL_UTILITY_HPP
 
 #include <boat/db/meta.hpp>
-#include <boat/detail/utility.hpp>
+#include <boat/detail/string.hpp>
 
 namespace boat::sql {
-
-bool any(std::initializer_list<std::string_view> list, auto&& pred)
-{
-    return std::ranges::any_of(list, pred);
-}
-
-constexpr auto same(std::string_view lhs)
-{
-    return [lhs](std::string_view rhs) { return lhs == rhs; };
-}
-
-constexpr auto in(std::string_view lhs)
-{
-    return [lhs](std::string_view rhs) { return lhs.contains(rhs); };
-}
-
-constexpr auto has(std::string_view lhs)
-{
-    return [lhs](std::string_view rhs) { return rhs.contains(lhs); };
-}
 
 constexpr auto is_mssql = has("microsoft sql server");
 constexpr auto is_mysql = has("mysql");

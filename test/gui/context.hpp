@@ -15,7 +15,7 @@ struct context {
     int height;
     boat::geometry::geographic::grid grid;
     boat::geometry::matrix affine;
-    boost::geometry::srs::proj4 system;
+    boat::geometry::srs_variant crs;
 };
 
 inline std::generator<context> contexts()
@@ -27,8 +27,8 @@ inline std::generator<context> contexts()
     for (auto p : {geographic::point{20., 40.}, {-117.5, 33.7}, {-179., 68.}})
         for (auto res : {100., 10'000.})
             for (auto deg : {0., 23.5})
-                for (auto sys : {lonlat, ortho(p)}) {
-                    auto fwd = transform(srs_forward(transformation(sys)));
+                for (auto crs : {lonlat, ortho(p)}) {
+                    auto fwd = transform(srs_forward(transformation(crs)));
                     auto rad = deg * boat::numbers::degree;
                     auto a = *fwd(p);
                     auto b = *fwd(add_meters(
@@ -37,8 +37,8 @@ inline std::generator<context> contexts()
                         cartesian::segment{{a.x(), a.y()}, {b.x(), b.y()}};
                     auto mat = affine(width, height, pixel);
                     auto grid = geographic_interpolate(
-                        width, height, mat, sys, num_points);
-                    co_yield {width, height, grid, mat, sys};
+                        width, height, mat, crs, num_points);
+                    co_yield {width, height, grid, mat, crs};
                 }
 }
 

@@ -1,6 +1,6 @@
 // Andrew Naplavkov
 
-#include <boat/sql/dal.hpp>
+#include <boat/sql/catalog.hpp>
 #include <boost/test/unit_test.hpp>
 #include "commands.hpp"
 #include "data.hpp"
@@ -39,13 +39,13 @@ BOOST_AUTO_TEST_CASE(sql_param)
             BOAT_LIFT(boost::pfr::eq_fields)));
 }
 
-BOOST_AUTO_TEST_CASE(sql_agent)
+BOOST_AUTO_TEST_CASE(sql_vector)
 {
     for (auto cmd : commands()) {
-        auto dal = sql::dal{};
-        dal.command = std::move(cmd);
-        dal.command->set_autocommit(false);
-        check(dal);
+        auto cat = sql::catalog{};
+        cat.command = std::move(cmd);
+        cat.command->set_autocommit(false);
+        check(cat);
     }
 }
 
@@ -201,27 +201,27 @@ BOOST_AUTO_TEST_CASE(sql_datatypes)
     auto tbl_b_name = "datatypes_copy";
     auto page = db::page{.limit = 1};
     for (auto cmd : commands()) {
-        auto dal = sql::dal{};
-        dal.command = std::move(cmd);
-        dal.command->set_autocommit(false);
-        dal.drop("", tbl_a_name);
-        dal.drop("", tbl_b_name);
-        dal.command->exec(datatypes_query(dal.command->dbms()));
-        auto tbl_a = dal.get_table("", tbl_a_name);
-        auto rows = dal.select(tbl_a, page);
-        BOOST_CHECK_EQUAL(tbl_a.columns.size(), rows.columns.size());
-        BOOST_CHECK(!rows.empty());
+        auto cat = sql::catalog{};
+        cat.command = std::move(cmd);
+        cat.command->set_autocommit(false);
+        cat.drop("", tbl_a_name);
+        cat.drop("", tbl_b_name);
+        cat.command->exec(datatypes_query(cat.command->dbms()));
+        auto tbl_a = cat.get_table("", tbl_a_name);
+        auto rs = cat.select(tbl_a, page);
+        BOOST_CHECK_EQUAL(tbl_a.columns.size(), rs.columns.size());
+        BOOST_CHECK(!rs.empty());
         auto tbl_b = tbl_a;
         tbl_b.table_name = tbl_b_name;
-        tbl_b = dal.create(tbl_b);
-        dal.insert(tbl_b, rows);
-        rows = dal.command->exec({
+        tbl_b = cat.create(tbl_b);
+        cat.insert(tbl_b, rs);
+        rs = cat.command->exec({
             "select count(*) from (select * from ",
             sql::id{tbl_a},
             " except select * from ",
             sql::id{tbl_b},
             ") as t",
         });
-        BOOST_CHECK_EQUAL(db::get<int>(rows.value()), 0);
+        BOOST_CHECK_EQUAL(db::get<int>(rs.value()), 0);
     }
 }

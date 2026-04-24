@@ -5,7 +5,7 @@
 
 #include <mysql.h>
 #include <boat/db/adapted/adapted.hpp>
-#include <boat/detail/charconv.hpp>
+#include <boat/detail/string.hpp>
 
 namespace boat::sql::libmysql {
 

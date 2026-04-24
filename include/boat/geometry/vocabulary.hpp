@@ -6,10 +6,14 @@
 #include <boat/detail/utility.hpp>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/adapted/std_variant.hpp>
+#include <boost/geometry/srs/epsg.hpp>
 #include <boost/geometry/srs/transformation.hpp>
 #include <map>
 
 namespace boat::geometry {
+
+namespace model = boost::geometry::model;
+namespace srs = boost::geometry::srs;
 
 template <class T>
 using tag = boost::geometry::tag<T>::type;
@@ -55,14 +59,10 @@ concept curve = single<T> && point<std::ranges::range_value_t<T>>;
 
 template <class T>
 concept projection_or_transformation =
-    specialized<T, boost::geometry::srs::projection> ||
-    specialized<T, boost::geometry::srs::transformation>;
+    specialized<T, srs::projection> || specialized<T, srs::transformation>;
 
 template <class T>
-concept srs_spec =
-    std::constructible_from<boost::geometry::srs::projection<>, T>;
-
-namespace model = boost::geometry::model;
+concept srs_params = std::constructible_from<srs::projection<>, T>;
 
 template <class CoordSys>
 struct d2 {
@@ -106,6 +106,7 @@ struct d2 {
 using cartesian = d2<boost::geometry::cs::cartesian>;
 using geographic = d2<boost::geometry::cs::geographic<boost::geometry::degree>>;
 using matrix = boost::qvm::mat<double, 3, 3>;
+using srs_variant = std::variant<srs::epsg, srs::proj4>;
 
 template <class T>
 using d2_of = d2<typename boost::geometry::coordinate_system<T>::type>;
@@ -114,8 +115,7 @@ template <class T>
 concept ogc99 = tagged<T> && std::convertible_to<T, typename d2_of<T>::variant>;
 
 template <class T>
-constexpr size_t variant_index_v =
-    variant_index<typename d2_of<T>::variant, T>();
+constexpr auto variant_index_v = variant_index<typename d2_of<T>::variant, T>();
 
 }  // namespace boat::geometry
 

@@ -4,7 +4,7 @@
 #define BOAT_DB_ADAPTED_TIME_POINT_HPP
 
 #include <boat/db/variant.hpp>
-#include <boat/detail/charconv.hpp>
+#include <boat/detail/string.hpp>
 #include <chrono>
 #include <regex>
 

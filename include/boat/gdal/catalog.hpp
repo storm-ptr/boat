@@ -1,9 +1,9 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_GDAL_DAL_HPP
-#define BOAT_GDAL_DAL_HPP
+#ifndef BOAT_GDAL_CATALOG_HPP
+#define BOAT_GDAL_CATALOG_HPP
 
-#include <boat/db/dal.hpp>
+#include <boat/db/catalog.hpp>
 #include <boat/db/query.hpp>
 #include <boat/gdal/dataset.hpp>
 #include <boat/gdal/detail/raster.hpp>
@@ -11,20 +11,40 @@
 
 namespace boat::gdal {
 
-struct dal : db::dal {
+struct catalog : db::catalog {
     dataset_ptr dataset;
 
-    std::vector<db::layer> vectors() override
+    std::vector<db::source> sources() override
     {
-        return gdal::vectors(dataset.get());
+        auto ret = std::vector<db::source>{};
+        auto meta = GDALGetMetadata(dataset.get(), "SUBDATASETS");
+        if (!CSLCount(meta))
+            return ret;
+        for (int i = 1;; ++i) {
+            auto desc = CSLFetchNameValue(
+                meta, concat("SUBDATASET_", i, "_DESC").data());
+            auto name = CSLFetchNameValue(
+                meta, concat("SUBDATASET_", i, "_NAME").data());
+            if (!desc || !name)
+                break;
+            ret.emplace_back(desc, name);
+        }
+        return ret;
+    }
+
+    std::vector<db::layer> layers() override
+    {
+        auto ret = std::vector<db::layer>{};
+        if (GDALGetRasterCount(dataset.get()))
+            ret.push_back({"", "_layer", "raster", true});
+        ret.append_range(vectors(dataset.get()));
+        return ret;
     }
 
     db::table get_table(std::string_view, std::string_view table_name) override
     {
-        if (auto lyr = GDALDatasetGetLayerByName(
-                dataset.get(), std::string{table_name}.data()))
-            return gdal::get_table(lyr);
-        return {};
+        return gdal::get_table(GDALDatasetGetLayerByName(
+            dataset.get(), std::string{table_name}.data()));
     }
 
     db::rowset select(db::table const& tbl, db::page const& rq) override
@@ -56,11 +76,11 @@ struct dal : db::dal {
         return gdal::select(lyr, fields::make(fd, rq.select_list), rq.limit);
     }
 
-    void insert(db::table const& tbl, db::rowset const& vals) override
+    void insert(db::table const& tbl, db::rowset const& rs) override
     {
         gdal::insert(
             GDALDatasetGetLayerByName(dataset.get(), tbl.table_name.data()),
-            vals);
+            rs);
     }
 
     db::table create(db::table const& tbl) override
@@ -73,17 +93,8 @@ struct dal : db::dal {
         delete_table(dataset.get(), table_name);
     }
 
-    std::vector<db::layer> rasters() override
-    {
-        if (!GDALGetRasterCount(dataset.get()))
-            return {};
-        return {{.table_name = "_layer", .column_name = "_raster"}};
-    }
-
     db::raster get_raster(db::layer const& lyr) override
     {
-        if (!GDALGetRasterCount(dataset.get()))
-            return {};
         return gdal::get_raster(dataset.get());
     }
 
@@ -98,4 +109,4 @@ struct dal : db::dal {
 
 }  // namespace boat::gdal
 
-#endif  // BOAT_GDAL_DAL_HPP
+#endif  // BOAT_GDAL_CATALOG_HPP

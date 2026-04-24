@@ -21,10 +21,10 @@ geographic::grid geographic_interpolate(  //
     int width,
     int height,
     matrix const& mat,
-    srs_spec auto const& sys,
+    srs_params auto const& crs,
     size_t num_points)
 {
-    auto tf = transformation(sys);
+    auto tf = transformation(crs);
     auto fwd = transform(srs_forward(tf), mat_inverse(mat));
     auto inv = transform(mat_forward(mat), srs_inverse(tf));
     auto mbr = cartesian::box{{}, {width * 1., height * 1.}};

@@ -4,10 +4,11 @@
 #define BOAT_GDAL_UTILITY_HPP
 
 #include <cpl_conv.h>
+#include <cpl_string.h>
 #include <gdal.h>
 #include <ogr_srs_api.h>
 #include <array>
-#include <boat/detail/charconv.hpp>
+#include <boat/detail/string.hpp>
 #include <mutex>
 
 namespace boat::gdal {
@@ -82,9 +83,9 @@ srs_ptr make_epsg_srs(int epsg)
     return ret;
 }
 
-inline int get_authority_code(OGRSpatialReferenceH sys)
+inline int get_authority_code(OGRSpatialReferenceH crs)
 {
-    auto code = std::string_view{sys ? OSRGetAuthorityCode(sys, 0) : "0"};
+    auto code = std::string_view{crs ? OSRGetAuthorityCode(crs, 0) : "0"};
     return from_chars<int>(code.data(), code.size());
 }
 

@@ -56,10 +56,10 @@ inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
         ds, tbl.table_name.data(), 0, 0);
     for (auto& col : tbl.columns)
         if (col.epsg) {
-            auto sys = make_epsg_srs(col.epsg);
+            auto crs = make_epsg_srs(col.epsg);
             auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
                 OGR_GFld_Create(col.column_name.data(), wkbUnknown)};
-            OGR_GFld_SetSpatialRef(fld.get(), sys.get());
+            OGR_GFld_SetSpatialRef(fld.get(), crs.get());
             check(OGR_L_CreateGeomField(ret, fld.get(), 1));
         }
         else {
@@ -98,11 +98,11 @@ db::rowset select(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
     return ret;
 }
 
-inline void insert(OGRLayerH lyr, db::rowset const& vals)
+inline void insert(OGRLayerH lyr, db::rowset const& rs)
 {
     auto fd = OGR_L_GetLayerDefn(lyr);
-    auto flds = fields::make(fd, vals.columns);
-    for (auto const& row : vals) {
+    auto flds = fields::make(fd, rs.columns);
+    for (auto const& row : rs) {
         auto feat = feature_ptr{OGR_F_Create(fd)};
         for (auto&& [fld, var] : std::views::zip(flds, row))
             std::visit([&](auto& v) { v.write(feat.get(), var); }, fld);
