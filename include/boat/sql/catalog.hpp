@@ -100,7 +100,7 @@ struct catalog : db::catalog {
         throw std::logic_error{"sql"};
     }
 
-    std::generator<std::pair<tile, blob>> mosaic(  //
+    std::generator<std::pair<tile, blob>> select(  //
         db::raster,
         std::vector<tile>) override
     {

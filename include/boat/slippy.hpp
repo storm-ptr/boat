@@ -74,7 +74,7 @@ struct catalog : db::catalog {
         };
     }
 
-    std::generator<std::pair<tile, blob>> mosaic(  //
+    std::generator<std::pair<tile, blob>> select(  //
         db::raster r,
         std::vector<tile> ts) override
     {

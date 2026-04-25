@@ -3,7 +3,6 @@
 #define BOOST_TEST_MODULE boat
 
 #include <boat/blob.hpp>
-#include <boat/catalogs.hpp>
 #include <boat/db/io.hpp>
 #include <boat/db/reflection.hpp>
 #include <boat/detail/unicode.hpp>

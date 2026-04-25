@@ -50,9 +50,9 @@ inline std::generator<boat::gui::provider> providers()
     auto cache = std::make_shared<gui::caches::lru>(10'000);
     auto key = size_t{};
     for (auto cat : catalogs())
-        for (auto&& lyr : cat->layers())
+        for (auto& lyr : cat->layers())
             co_yield gui::provider{
-                .catalog = [=] -> decltype(auto) { return *cat; },
+                .catalog = [=] -> db::catalog& { return *cat; },
                 .layer = std::move(lyr),
                 .cache = cache,
                 .key = ++key};

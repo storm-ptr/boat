@@ -98,7 +98,7 @@ struct catalog : db::catalog {
         return gdal::get_raster(dataset.get());
     }
 
-    std::generator<std::pair<tile, blob>> mosaic(  //
+    std::generator<std::pair<tile, blob>> select(  //
         db::raster r,
         std::vector<tile> ts) override
     {

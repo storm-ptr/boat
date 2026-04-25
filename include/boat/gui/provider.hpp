@@ -31,10 +31,9 @@ private:
     std::generator<vector> vectors()
     {
         namespace bgi = boost::geometry::index;
-        auto tbl =
-            get_or_invoke(cache.get(), std::tuple{key, "get_table"}, [&] {
-                return catalog().get_table(layer.schema_name, layer.table_name);
-            });
+        auto tbl = get_or_invoke(cache.get(), key, [&] {
+            return catalog().get_table(layer.schema_name, layer.table_name);
+        });
         auto& col = layer.column_name;
         auto it = std::ranges::find(tbl.columns, col, &db::column::column_name);
         check(it != tbl.columns.end(), col);
@@ -47,18 +46,13 @@ private:
                 continue;
             auto a = box.min_corner(), b = box.max_corner();
             auto wkb = get_or_invoke(
-                cache.get(),
-                std::tuple{key, "select", a.x(), a.y(), b.x(), b.y()},
-                [&] {
+                cache.get(), std::tuple{key, a.x(), a.y(), b.x(), b.y()}, [&] {
                     auto ret = std::vector<blob>{};
                     auto rs = catalog().select(
                         tbl,
                         db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 1024});
-                    std::ranges::sample(  //
-                        rs | db::view<blob>,
-                        std::back_inserter(ret),
-                        64,
-                        gen);
+                    std::ranges::sample(
+                        rs | db::view<blob>, std::back_inserter(ret), 64, gen);
                     return ret;
                 });
             if (wkb.empty())
@@ -71,9 +65,8 @@ private:
 
     std::generator<raster<>> rasters()
     {
-        auto r = get_or_invoke(cache.get(), std::tuple{key, "get_raster"}, [&] {
-            return catalog().get_raster(layer);
-        });
+        auto r = get_or_invoke(
+            cache.get(), key, [&] { return catalog().get_raster(layer); });
         auto affine = geometry::matrix{{
             {r.xscale, r.xskew, r.xorig},
             {r.yskew, r.yscale, r.yorig},
@@ -91,7 +84,7 @@ private:
                       affine * t.affine(r.width, r.height),
                       crs};
         }
-        for (auto [t, data] : catalog().mosaic(r, std::move(uncached))) {
+        for (auto [t, data] : catalog().select(r, std::move(uncached))) {
             if (cache)
                 cache->put(std::tuple{key, t}, data);
             co_yield {std::any_cast<blob>(std::move(data)),

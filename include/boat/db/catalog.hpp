@@ -35,7 +35,7 @@ struct catalog {
 
     virtual raster get_raster(layer const&) = 0;
 
-    virtual std::generator<std::pair<tile, blob>> mosaic(  //
+    virtual std::generator<std::pair<tile, blob>> select(  //
         raster,
         std::vector<tile>) = 0;
 };
