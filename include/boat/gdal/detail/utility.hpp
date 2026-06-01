@@ -7,8 +7,8 @@
 #include <cpl_string.h>
 #include <gdal.h>
 #include <ogr_srs_api.h>
-#include <array>
 #include <boat/detail/string.hpp>
+#include <cstring>
 #include <mutex>
 
 namespace boat::gdal {
@@ -26,23 +26,6 @@ using dataset_ptr = unique_ptr<void, GDALClose>;
 using feature_ptr = unique_ptr<void, OGR_F_Destroy>;
 using layer_ptr = std::unique_ptr<void, layer_deleter>;
 using srs_ptr = unique_ptr<void, OSRDestroySpatialReference>;
-
-template <class T>
-consteval GDALDataType as_data_type()
-{
-    return  //
-        std::same_as<T, uint8_t>    ? GDT_Byte
-        : std::same_as<T, int8_t>   ? GDT_Int8
-        : std::same_as<T, uint16_t> ? GDT_UInt16
-        : std::same_as<T, int16_t>  ? GDT_Int16
-        : std::same_as<T, uint32_t> ? GDT_UInt32
-        : std::same_as<T, int32_t>  ? GDT_Int32
-        : std::same_as<T, uint64_t> ? GDT_UInt64
-        : std::same_as<T, int64_t>  ? GDT_Int64
-        : std::same_as<T, float>    ? GDT_Float32
-        : std::same_as<T, double>   ? GDT_Float64
-                                    : throw std::out_of_range("GDALDataType");
-}
 
 inline void init()
 {
@@ -75,7 +58,7 @@ inline void check(OGRErr ec)
         throw std::runtime_error(error_or("gdal"));
 }
 
-srs_ptr make_epsg_srs(int epsg)
+inline srs_ptr make_epsg_srs(int epsg)
 {
     auto ret = srs_ptr{OSRNewSpatialReference(0)};
     boat::check(!!ret, "OSRNewSpatialReference");
@@ -83,15 +66,37 @@ srs_ptr make_epsg_srs(int epsg)
     return ret;
 }
 
-inline int get_authority_code(OGRSpatialReferenceH crs)
+inline int get_epsg_code(OGRSpatialReferenceH crs)
 {
-    auto code = std::string_view{crs ? OSRGetAuthorityCode(crs, 0) : "0"};
-    return from_chars<int>(code.data(), code.size());
+    if (!crs)
+        return 0;
+    auto name = OSRGetAuthorityName(crs, 0);
+    auto code = OSRGetAuthorityCode(crs, 0);
+    if (!name || !code || std::strcmp(name, "EPSG"))
+        return 0;
+    return from_chars<int>(code, std::strlen(code));
 }
 
 inline layer_ptr execute(GDALDatasetH ds, char const* sql, char const* dialect)
 {
     return {GDALDatasetExecuteSQL(ds, sql, 0, dialect), layer_deleter{ds}};
+}
+
+inline auto subdatasets(GDALDatasetH ds)
+    -> std::generator<std::pair<char const*, char const*>>
+{
+    auto meta = GDALGetMetadata(ds, "SUBDATASETS");
+    if (!CSLCount(meta))
+        co_return;
+    for (int i = 1;; ++i) {
+        auto desc =
+            CSLFetchNameValue(meta, concat("SUBDATASET_", i, "_DESC").data());
+        auto name =
+            CSLFetchNameValue(meta, concat("SUBDATASET_", i, "_NAME").data());
+        if (!desc || !name)
+            co_return;
+        co_yield {desc, name};
+    }
 }
 
 }  // namespace boat::gdal

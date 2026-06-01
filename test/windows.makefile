@@ -1,4 +1,4 @@
-CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX -MP -D_CRT_SECURE_NO_WARNINGS $(CXXFLAGS)
+CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX -Wv:18 -MP -D_CRT_SECURE_NO_WARNINGS $(CXXFLAGS)
 EXECUTABLE=run_me.exe
 INCLUDE=..\include\;$(INCLUDE)
 LIBS=gdal_i.lib libmysql.lib libpng16.lib libpq.lib odbc32.lib spatialite_i.lib sqlite3_i.lib

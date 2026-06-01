@@ -31,7 +31,7 @@ struct qt {
             return ret;
         }};
 
-    static auto drawGeometry(QPainter& out)
+    static auto draw_geometry(QPainter& out)
     {
         return overloaded{
             [&](geometry::point auto&& g) { out.drawPoint(fit(g)); },
@@ -45,13 +45,13 @@ struct qt {
             }};
     }
 
-    static bool loadImage(blob_view in, QImage& out)
+    static bool load_image(blob_view in, QImage& out)
     {
         return out.loadFromData(reinterpret_cast<uchar const*>(in.data()),
                                 static_cast<int>(in.size()));
     }
 
-    static void drawImage(  //
+    static void draw_image(  //
         QImage const& in,
         geometry::matrix const& in_affine,
         geometry::srs_params auto&& in_crs,

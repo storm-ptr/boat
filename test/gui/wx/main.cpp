@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(wx_draw)
             pvd.grid = ctx.grid;
             auto tmp = img.Copy();
             auto art = make_graphics_context(tmp);
-            auto drw = boat::gui::drawVariant(*art, ctx.affine, ctx.crs);
+            auto drw = boat::gui::draw_variant(*art, ctx.affine, ctx.crs);
             for (auto var : pvd.variants())
                 std::visit(drw, var);
             art.reset();

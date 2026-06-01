@@ -1,4 +1,4 @@
-CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX -D_UNICODE -DwxDEBUG_LEVEL=0 -MD $(CXXFLAGS)
+CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX -Wv:18 -D_UNICODE -DwxDEBUG_LEVEL=0 -MD $(CXXFLAGS)
 EXECUTABLE=run_me.exe
 INCLUDE=..\..\..\include\;$(WXWIN)\include;$(WXWIN)\include\msvc;$(INCLUDE)
 LIB=$(WXWIN)\lib\vc_x64_lib;$(LIB)

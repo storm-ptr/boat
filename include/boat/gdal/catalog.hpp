@@ -16,20 +16,10 @@ struct catalog : db::catalog {
 
     std::vector<db::source> sources() override
     {
-        auto ret = std::vector<db::source>{};
-        auto meta = GDALGetMetadata(dataset.get(), "SUBDATASETS");
-        if (!CSLCount(meta))
-            return ret;
-        for (int i = 1;; ++i) {
-            auto desc = CSLFetchNameValue(
-                meta, concat("SUBDATASET_", i, "_DESC").data());
-            auto name = CSLFetchNameValue(
-                meta, concat("SUBDATASET_", i, "_NAME").data());
-            if (!desc || !name)
-                break;
-            ret.emplace_back(desc, name);
-        }
-        return ret;
+        return gdal::subdatasets(dataset.get()) |
+               std::views::transform(
+                   [](auto p) { return db::source(p.first, p.second); }) |
+               std::ranges::to<std::vector>();
     }
 
     std::vector<db::layer> layers() override
@@ -93,17 +83,25 @@ struct catalog : db::catalog {
         delete_table(dataset.get(), table_name);
     }
 
-    db::raster get_raster(db::layer const& lyr) override
+    db::raster get_raster(db::layer const&) override
     {
         return gdal::get_raster(dataset.get());
     }
 
-    std::generator<std::pair<tile, blob>> select(  //
-        db::raster r,
+    std::generator<std::pair<tile, blob>> read(  //
+        db::raster rast,
         std::vector<tile> ts) override
     {
         for (auto& t : ts)
-            co_yield {t, get_png(dataset.get(), r, t)};
+            co_yield {t, gdal::read(dataset.get(), rast, t)};
+    }
+
+    void write(  //
+        db::raster const& rast,
+        db::rect const& rect,
+        blob_view data) override
+    {
+        gdal::write(dataset.get(), rast, rect, data);
     }
 };
 

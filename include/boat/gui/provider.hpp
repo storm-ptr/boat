@@ -84,7 +84,7 @@ private:
                       affine * t.affine(r.width, r.height),
                       crs};
         }
-        for (auto [t, data] : catalog().select(r, std::move(uncached))) {
+        for (auto [t, data] : catalog().read(r, std::move(uncached))) {
             if (cache)
                 cache->put(std::tuple{key, t}, data);
             co_yield {std::any_cast<blob>(std::move(data)),

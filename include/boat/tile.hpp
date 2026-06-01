@@ -6,22 +6,18 @@
 #include <boat/detail/utility.hpp>
 #include <boost/pfr/ops_fields.hpp>
 #include <boost/qvm/map_vec_mat.hpp>
+#include <generator>
 
 namespace boat {
 
 struct tile {
-    int z;
-    int y;
-    int x;
+    int z, y, x;
 
     static constexpr int size = 256;
 
     friend auto operator<=>(tile const&, tile const&) = default;
 
-    friend size_t hash_value(tile const& that)
-    {
-        return boost::pfr::hash_fields(that);
-    }
+    friend auto hash_value(tile const& v) { return boost::pfr::hash_fields(v); }
 
     static int zmax(int width, int height)
     {
@@ -45,16 +41,26 @@ struct tile {
         return pow2(zmax(width, height) - zoom);
     }
 
-    std::pair<int, int> min_corner(int width, int height) const
+    static std::generator<tile> level(int width, int height, int zoom)
+    {
+        int px = scale(width, height, zoom);
+        int tl = size * px;
+        int xmax = (width - 1) / tl;
+        int ymax = (height - 1) / tl;
+        for (int y{}; y <= ymax; ++y)
+            for (int x{}; x <= xmax; ++x)
+                co_yield {.z = zoom, .y = y, .x = x};
+    }
+
+    std::tuple<int, int, int, int> rect(int width, int height) const
     {
         int px = scale(width, height, z);
         int tl = size * px;
-        return {std::clamp(x * tl, 0, width), std::clamp(y * tl, 0, height)};
-    }
-
-    std::pair<int, int> max_corner(int width, int height) const
-    {
-        return tile{.z = z, .y = y + 1, .x = x + 1}.min_corner(width, height);
+        int x1 = std::clamp(x * tl, 0, width);
+        int y1 = std::clamp(y * tl, 0, height);
+        int x2 = std::clamp((x + 1) * tl, 0, width);
+        int y2 = std::clamp((y + 1) * tl, 0, height);
+        return {x1, y1, x2 - x1, y2 - y1};
     }
 
     auto affine(int width, int height) const
@@ -70,10 +76,7 @@ struct tile {
 
 template <>
 struct std::hash<boat::tile> {
-    static size_t operator()(boat::tile const& that)
-    {
-        return hash_value(that);
-    }
+    static auto operator()(boat::tile const& v) { return hash_value(v); }
 };
 
 #endif  // BOAT_TILE_HPP

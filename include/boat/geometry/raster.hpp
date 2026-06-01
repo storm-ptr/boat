@@ -47,11 +47,10 @@ geographic::grid geographic_interpolate(  //
             }
         if (indices.empty())
             continue;
-        auto& level =
-            ret[numbers::earth::sqrt_area / std::sqrt(fib.num_points)];
-        level.resize(indices.size());
+        auto& lvl = ret[numbers::earth::sqrt_area / std::sqrt(fib.num_points)];
+        lvl.resize(indices.size());
         for (auto [i, j] : indices | std::views::enumerate)
-            level[i] = fib[j];
+            lvl[i] = fib[j];
     }
     return ret;
 }

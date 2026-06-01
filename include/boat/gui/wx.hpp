@@ -23,7 +23,7 @@ struct wx {
         return out;
     }
 
-    static auto drawGeometry(wxGraphicsContext& out)
+    static auto draw_geometry(wxGraphicsContext& out)
     {
         return overloaded{
             [&](geometry::point auto&& g) {
@@ -48,14 +48,14 @@ struct wx {
             }};
     }
 
-    static bool loadImage(blob_view in, wxImage& out)
+    static bool load_image(blob_view in, wxImage& out)
     {
         auto log = wxLogNull{};
         auto is = wxMemoryInputStream{in.data(), in.size()};
         return out.LoadFile(is);
     }
 
-    static void drawImage(  //
+    static void draw_image(  //
         wxImage const& in,
         geometry::matrix const& in_affine,
         geometry::srs_params auto&& in_crs,

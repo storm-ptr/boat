@@ -3,19 +3,23 @@
 #ifndef BOAT_GDAL_RASTER_HPP
 #define BOAT_GDAL_RASTER_HPP
 
-#include <boat/gdal/gil.hpp>
-#if __has_include(<png.h>) && __has_include(<zlib.h>)
-#include <boost/gil/extension/io/png.hpp>
-#endif
+#include <array>
+#include <boat/db/meta.hpp>
+#include <boat/gdal/detail/gil.hpp>
+#include <boat/gdal/image_io.hpp>
 
 namespace boat::gdal {
 
-inline db::band get_band(GDALDatasetH ds, int i)
+inline auto get_bands(GDALDatasetH ds)
 {
-    auto b = GDALGetRasterBand(ds, i + 1);
-    return {to_lower(GDALGetColorInterpretationName(
-                GDALGetRasterColorInterpretation(b))),
-            to_lower(GDALGetDataTypeName(GDALGetRasterDataType(b)))};
+    return std::views::iota(0, GDALGetRasterCount(ds)) |
+           std::views::transform([=](int i) -> db::band {
+               auto b = GDALGetRasterBand(ds, i + 1);
+               return {to_lower(GDALGetColorInterpretationName(
+                           GDALGetRasterColorInterpretation(b))),
+                       to_lower(GDALGetDataTypeName(GDALGetRasterDataType(b)))};
+           }) |
+           std::ranges::to<std::vector>();
 }
 
 inline db::raster get_raster(GDALDatasetH ds)
@@ -25,10 +29,7 @@ inline db::raster get_raster(GDALDatasetH ds)
     return {
         .table_name{"_layer"},
         .column_name{"raster"},
-        .bands{
-            std::from_range,
-            std::views::iota(0, GDALGetRasterCount(ds)) |
-                std::views::transform([=](int i) { return get_band(ds, i); })},
+        .bands{get_bands(ds)},
         .width = GDALGetRasterXSize(ds),
         .height = GDALGetRasterYSize(ds),
         .xorig = a[0],
@@ -37,37 +38,51 @@ inline db::raster get_raster(GDALDatasetH ds)
         .yscale = a[5],
         .xskew = a[2],
         .yskew = a[4],
-        .epsg = get_authority_code(GDALGetSpatialRef(ds)),
+        .epsg = get_epsg_code(GDALGetSpatialRef(ds)),
     };
 }
-#if __has_include(<png.h>) && __has_include(<zlib.h>)
-inline blob get_png(GDALDatasetH ds, db::raster const& r, tile const& t)
+
+auto to_colors(range_of<db::band> auto&& bands)
 {
-    auto scale = tile::scale(r.width, r.height, t.z);
-    auto [x1, y1] = t.min_corner(r.width, r.height);
-    auto [x2, y2] = t.max_corner(r.width, r.height);
-    auto w = x2 - x1;
-    auto h = y2 - y1;
-    auto layout =
-        r.bands | std::views::transform([](auto& b) {
-            return GDALGetColorInterpretationByName(b.color_name.data());
-        }) |
-        std::ranges::to<std::vector>();
-    auto img = make_image(layout, w / scale, h / scale);
+    return bands | std::views::transform([](auto& b) {
+               return GDALGetColorInterpretationByName(b.color_name.data());
+           }) |
+           std::ranges::to<std::vector>();
+}
+
+inline blob read(GDALDatasetH ds, db::raster const& rast, tile const& t)
+{
+    auto scale = tile::scale(rast.width, rast.height, t.z);
+    auto [x, y, w, h] = t.rect(rast.width, rast.height);
+    auto img = make_image(to_colors(rast.bands), w / scale, h / scale);
     boost::variant2::visit(
-        [&](auto& v) { image_io(ds, GF_Read, x1, y1, w, h, gil::view(v)); },
+        [&](auto& v) {
+            image_io(ds, GF_Read, x, y, w, h, boost::gil::view(v));
+        },
         img);
-    auto os = std::ostringstream{std::ios_base::out | std::ios_base::binary};
-    gil::write_view(os, gil::view(img), gil::png_tag());
-    auto str = std::move(os).str();
-    return {as_bytes(str.data()), str.size()};
+    return gil::to_png(boost::gil::view(img));
 }
-#else
-inline blob get_png(GDALDatasetH, db::raster const&, tile const&)
+
+inline void write(  //
+    GDALDatasetH ds,
+    db::raster const& rast,
+    db::rect const& rect,
+    blob_view data)
 {
-    throw std::runtime_error("compiled without libpng/zlib");
+    boost::variant2::visit(
+        [&]<class T>(T const& v) {
+            image_io(  //
+                ds,
+                GF_Write,
+                rect.x,
+                rect.y,
+                rect.width,
+                rect.height,
+                boost::gil::const_view(v),
+                color_mapping<T>(to_colors(rast.bands)));
+        },
+        gil::from_png(data));
 }
-#endif
 
 }  // namespace boat::gdal
 

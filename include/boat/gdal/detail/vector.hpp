@@ -59,7 +59,7 @@ inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
             auto crs = make_epsg_srs(col.epsg);
             auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
                 OGR_GFld_Create(col.column_name.data(), wkbUnknown)};
-            OGR_GFld_SetSpatialRef(fld.get(), crs.get());
+            OGR_GFld_SetSpatialRef(fld.get(), crs.release());
             check(OGR_L_CreateGeomField(ret, fld.get(), 1));
         }
         else {

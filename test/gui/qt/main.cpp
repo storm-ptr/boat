@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE(qt_draw)
         art.setRenderHint(QPainter::Antialiasing);
         art.setPen({Qt::darkCyan, 5});
         art.setBrush(Qt::cyan);
-        auto drw = boat::gui::drawVariant(art, ctx.affine, ctx.crs);
+        auto drw = boat::gui::draw_variant(art, ctx.affine, ctx.crs);
         for (auto& pvd : pvds) {
             pvd.grid = ctx.grid;
             for (auto var : pvd.variants())

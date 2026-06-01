@@ -25,7 +25,7 @@ struct catalog : db::catalog {
 
     db::table get_table(std::string_view, std::string_view) override
     {
-        throw std::logic_error{"slippy"};
+        throw std::runtime_error{"slippy"};
     }
 
     db::rowset select(db::table const&, db::page const&) override
@@ -74,7 +74,7 @@ struct catalog : db::catalog {
         };
     }
 
-    std::generator<std::pair<tile, blob>> select(  //
+    std::generator<std::pair<tile, blob>> read(  //
         db::raster r,
         std::vector<tile> ts) override
     {
@@ -92,6 +92,11 @@ struct catalog : db::catalog {
             auto [u, file] = queue.pop();
             co_yield {url_to_tile.at(u), std::move(file)};
         }
+    }
+
+    void write(db::raster const&, db::rect const&, blob_view) override
+    {
+        throw std::runtime_error{"slippy"};
     }
 };
 

@@ -20,11 +20,7 @@ struct blob : std::basic_string<std::byte> {
     using std::basic_string<std::byte>::basic_string;
     blob(std::byte const*) = delete;
     operator blob_view() const { return {data(), size()}; }
-
-    friend size_t hash_value(blob const& that)
-    {
-        return boost::hash_range(that.begin(), that.end());
-    }
+    friend auto hash_value(blob const& v) { return boost::hash_value(v); }
 };
 
 blob_view& operator>>(blob_view& in, arithmetic auto& out)
@@ -94,10 +90,7 @@ struct hex {
 
 template <>
 struct std::hash<boat::blob> {
-    static size_t operator()(boat::blob const& that)
-    {
-        return hash_value(that);
-    }
+    static auto operator()(boat::blob const& v) { return hash_value(v); }
 };
 
 #endif  // BOAT_BLOB_HPP

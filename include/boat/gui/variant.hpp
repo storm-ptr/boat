@@ -26,7 +26,7 @@ template <class>
 struct traits;
 
 template <class T, class Traits = typename traits<T>::type>
-auto drawVariant(  //
+auto draw_variant(  //
     T& art,
     geometry::matrix const& affine,
     geometry::srs_variant const& crs)
@@ -42,7 +42,7 @@ auto drawVariant(  //
                 },
                 in.crs,
                 crs);
-            auto drw = Traits::drawGeometry(art);
+            auto drw = Traits::draw_geometry(art);
             for (blob_view item : in.wkb) {
                 auto g1 = geometry::geographic::variant{};
                 item >> g1;
@@ -53,7 +53,7 @@ auto drawVariant(  //
         [&](raster<typename Traits::image> const& in) {
             std::visit(
                 [&](auto& crs1, auto& crs2) {
-                    Traits::drawImage(
+                    Traits::draw_image(
                         in.data, in.affine, crs1, art, affine, crs2);
                 },
                 in.crs,
@@ -61,7 +61,7 @@ auto drawVariant(  //
         },
         [](this auto&& self, raster<> const& in) -> void {
             auto tmp = raster<typename Traits::image>{{}, in.affine, in.crs};
-            if (Traits::loadImage(in.data, tmp.data))
+            if (Traits::load_image(in.data, tmp.data))
                 self(tmp);
         }};
 }

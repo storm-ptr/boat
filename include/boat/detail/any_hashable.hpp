@@ -17,13 +17,13 @@ public:
     any_hashable() = delete;
 
     template <class T>
-    any_hashable(T const& val)
-        : any_{val}
-        , hash_{[](std::any const& that) {
+    any_hashable(T const& v)
+        : any_{v}
+        , hash_{[](std::any const& v) {
             if constexpr (requires { std::hash<T>{}; })
-                return std::hash<T>{}(std::any_cast<T const&>(that));
+                return std::hash<T>{}(std::any_cast<T const&>(v));
             else
-                return boost::hash_value(std::any_cast<T const&>(that));
+                return boost::hash_value(std::any_cast<T const&>(v));
         }}
         , equal_{[](std::any const& lhs, std::any const& rhs) {
             return std::any_cast<T const&>(lhs) == std::any_cast<T const&>(rhs);
@@ -37,11 +37,11 @@ public:
                lhs.equal_(lhs.any_, rhs.any_);
     }
 
-    friend size_t hash_value(any_hashable const& that)
+    friend size_t hash_value(any_hashable const& v)
     {
         auto ret = size_t{};
-        boost::hash_combine(ret, that.any_.type().hash_code());
-        boost::hash_combine(ret, that.hash_(that.any_));
+        boost::hash_combine(ret, v.any_.type().hash_code());
+        boost::hash_combine(ret, v.hash_(v.any_));
         return ret;
     }
 };
@@ -50,9 +50,9 @@ public:
 
 template <>
 struct std::hash<boat::any_hashable> {
-    static size_t operator()(boat::any_hashable const& that)
+    static size_t operator()(boat::any_hashable const& v)
     {
-        return hash_value(that);
+        return hash_value(v);
     }
 };
 

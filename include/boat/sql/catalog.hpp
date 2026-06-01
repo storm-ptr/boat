@@ -100,12 +100,17 @@ struct catalog : db::catalog {
         throw std::logic_error{"sql"};
     }
 
-    std::generator<std::pair<tile, blob>> select(  //
+    std::generator<std::pair<tile, blob>> read(  //
         db::raster,
         std::vector<tile>) override
     {
         throw std::logic_error{"sql"};
         co_return;
+    }
+
+    void write(db::raster const&, db::rect const&, blob_view) override
+    {
+        throw std::logic_error{"sql"};
     }
 };
 

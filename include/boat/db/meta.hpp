@@ -100,6 +100,13 @@ struct raster {
     int epsg;
 };
 
+struct rect {
+    int x;
+    int y;
+    int width;
+    int height;
+};
+
 }  // namespace boat::db
 
 #endif  // BOAT_DB_META_HPP

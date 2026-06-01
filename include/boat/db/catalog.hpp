@@ -35,9 +35,11 @@ struct catalog {
 
     virtual raster get_raster(layer const&) = 0;
 
-    virtual std::generator<std::pair<tile, blob>> select(  //
+    virtual std::generator<std::pair<tile, blob>> read(  //
         raster,
         std::vector<tile>) = 0;
+
+    virtual void write(raster const&, rect const&, blob_view) = 0;
 };
 
 }  // namespace boat::db

@@ -29,7 +29,7 @@ inline dataset_ptr create(char const* file, char const* driver)
 inline dataset_ptr create(  //
     char const* file,
     char const* driver,
-    db::raster const& r)
+    db::raster const& rast)
 {
     init();
     auto drv = GDALGetDriverByName(driver);
@@ -37,15 +37,22 @@ inline dataset_ptr create(  //
     auto ret = dataset_ptr{GDALCreate(  //
         drv,
         file,
-        r.width,
-        r.height,
-        static_cast<int>(r.bands.size()),
-        GDALGetDataTypeByName(r.bands.at(0).type_name.data()),
+        rast.width,
+        rast.height,
+        static_cast<int>(rast.bands.size()),
+        GDALGetDataTypeByName(rast.bands.at(0).type_name.data()),
         0)};
     boat::check(!!ret, "GDALCreate");
-    auto a = std::array{r.xorig, r.xscale, r.xskew, r.yorig, r.yskew, r.yscale};
+    auto a = std::array{
+        rast.xorig,
+        rast.xscale,
+        rast.xskew,
+        rast.yorig,
+        rast.yskew,
+        rast.yscale,
+    };
     check(GDALSetGeoTransform(ret.get(), a.data()));
-    check(GDALSetSpatialRef(ret.get(), make_epsg_srs(r.epsg).get()));
+    check(GDALSetSpatialRef(ret.get(), make_epsg_srs(rast.epsg).release()));
     return ret;
 }
 
