@@ -27,9 +27,9 @@ struct traits;
 
 template <class T, class Traits = typename traits<T>::type>
 auto draw_variant(  //
-    T& art,
-    geometry::matrix const& affine,
-    geometry::srs_variant const& crs)
+    T& out,
+    geometry::matrix const& out_affine,
+    geometry::srs_variant const& out_crs)
 {
     return overloaded{
         [&](vector const& in) {
@@ -38,11 +38,11 @@ auto draw_variant(  //
                     return geometry::transform(
                         geometry::srs_forward(
                             geometry::srs::transformation<>(crs1, crs2)),
-                        geometry::mat_inverse(affine));
+                        geometry::mat_inverse(out_affine));
                 },
                 in.crs,
-                crs);
-            auto drw = Traits::draw_geometry(art);
+                out_crs);
+            auto drw = Traits::draw_geometry(out);
             for (blob_view item : in.wkb) {
                 auto g1 = geometry::geographic::variant{};
                 item >> g1;
@@ -54,10 +54,10 @@ auto draw_variant(  //
             std::visit(
                 [&](auto& crs1, auto& crs2) {
                     Traits::draw_image(
-                        in.data, in.affine, crs1, art, affine, crs2);
+                        in.data, in.affine, crs1, out, out_affine, crs2);
                 },
                 in.crs,
-                crs);
+                out_crs);
         },
         [](this auto&& self, raster<> const& in) -> void {
             auto tmp = raster<typename Traits::image>{{}, in.affine, in.crs};
