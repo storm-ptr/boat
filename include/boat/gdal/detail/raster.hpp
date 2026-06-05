@@ -26,6 +26,8 @@ inline db::raster get_raster(GDALDatasetH ds)
 {
     auto a = std::array<double, 6>{};
     check(GDALGetGeoTransform(ds, a.data()));
+    auto crs = GDALGetSpatialRef(ds);
+    auto epsg = get_epsg(crs);
     return {
         .table_name{"_layer"},
         .column_name{"raster"},
@@ -38,7 +40,10 @@ inline db::raster get_raster(GDALDatasetH ds)
         .yscale = a[5],
         .xskew = a[2],
         .yskew = a[4],
-        .epsg = get_epsg_code(GDALGetSpatialRef(ds)),
+        .srid = epsg,
+        .epsg = epsg,
+        .wkt = get_wkt(crs),
+        .proj4 = get_proj4(crs),
     };
 }
 

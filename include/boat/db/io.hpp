@@ -75,7 +75,7 @@ auto& operator<<(ostream auto& out, raster const& in)
                << "\n, xorig: " << in.xorig << "\n, yorig: " << in.yorig
                << "\n, xscale: " << in.xscale << "\n, yscale: " << in.yscale
                << "\n, xskew: " << in.xskew << "\n, yskew: " << in.yskew
-               << "\n, epsg: " << in.epsg << " }\n";
+               << "\n, srid: " << in.srid << " }\n";
 }
 
 }  // namespace boat::db

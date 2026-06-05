@@ -25,8 +25,8 @@ struct sqlite : dialect {
     {
         return {
             "\n select c.*"
-            "\n , (select auth_srid from spatial_ref_sys r"
-            "\n    where auth_name = 'epsg' and c.srid = r.srid) epsg"
+            "\n , case r.auth_name when 'epsg' then r.auth_srid else null end"
+            "\n , r.srtext, r.proj4text"
             "\n from ("
             "\n  select null, name, type, 0"
             "\n  , (select srid from geometry_columns"
@@ -35,7 +35,7 @@ struct sqlite : dialect {
             "\n     and f_geometry_column like name) srid"
             "\n  from pragma_table_info(",
             db::variant(table_name),
-            ")) c"};
+            ")) c left join spatial_ref_sys r using (srid)"};
     }
 
     db::query index_keys(std::string_view,

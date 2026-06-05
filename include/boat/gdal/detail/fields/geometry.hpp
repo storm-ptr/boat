@@ -14,14 +14,19 @@ struct geometry {
     std::string name;
     OGRwkbGeometryType type;
     int epsg;
+    std::string wkt;
+    std::string proj4;
     int index;
 
     static geometry make(OGRFeatureDefnH fd, int index)
     {
         auto fld = OGR_FD_GetGeomFieldDefn(fd, index);
+        auto crs = OGR_GFld_GetSpatialRef(fld);
         return {.name = OGR_GFld_GetNameRef(fld),
                 .type = OGR_GFld_GetType(fld),
-                .epsg = get_epsg_code(OGR_GFld_GetSpatialRef(fld)),
+                .epsg = get_epsg(crs),
+                .wkt = get_wkt(crs),
+                .proj4 = get_proj4(crs),
                 .index = index};
     }
 

@@ -37,6 +37,8 @@ constexpr auto to_column = overloaded{
             .type_name = to_lower(OGRGeometryTypeToName(v.type)),
             .srid = v.epsg,
             .epsg = v.epsg,
+            .wkt = v.wkt,
+            .proj4 = v.proj4,
         };
     },
 };
@@ -55,8 +57,8 @@ inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
     auto ret = GDALDatasetCreateLayerFromGeomFieldDefn(
         ds, tbl.table_name.data(), 0, 0);
     for (auto& col : tbl.columns)
-        if (col.epsg) {
-            auto crs = make_epsg_srs(col.epsg);
+        if (col.has_coord_sys()) {
+            auto crs = make_srs(col.epsg, col.wkt, col.proj4);
             auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
                 OGR_GFld_Create(col.column_name.data(), wkbUnknown)};
             OGR_GFld_SetSpatialRef(fld.get(), crs.release());

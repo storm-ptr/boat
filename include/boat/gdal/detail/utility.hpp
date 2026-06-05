@@ -26,6 +26,7 @@ using dataset_ptr = unique_ptr<void, GDALClose>;
 using feature_ptr = unique_ptr<void, OGR_F_Destroy>;
 using layer_ptr = std::unique_ptr<void, layer_deleter>;
 using srs_ptr = unique_ptr<void, OSRDestroySpatialReference>;
+using string_ptr = unique_ptr<char, CPLFree>;
 
 inline void init()
 {
@@ -58,23 +59,49 @@ inline void check(OGRErr ec)
         throw std::runtime_error(error_or("gdal"));
 }
 
-inline srs_ptr make_epsg_srs(int epsg)
+inline srs_ptr make_srs(  //
+    int epsg,
+    std::string const& wkt,
+    std::string const& proj4)
 {
     auto ret = srs_ptr{OSRNewSpatialReference(0)};
     boat::check(!!ret, "OSRNewSpatialReference");
-    check(OSRImportFromEPSG(ret.get(), epsg));
+    if (epsg > 0)
+        check(OSRImportFromEPSG(ret.get(), epsg));
+    else if (auto ptr = const_cast<char*>(wkt.data()); !wkt.empty())
+        check(OSRImportFromWkt(ret.get(), &ptr));
+    else
+        check(OSRImportFromProj4(ret.get(), proj4.data()));
     return ret;
 }
 
-inline int get_epsg_code(OGRSpatialReferenceH crs)
+inline int get_epsg(OGRSpatialReferenceH crs)
 {
-    if (!crs)
-        return 0;
     auto name = OSRGetAuthorityName(crs, 0);
     auto code = OSRGetAuthorityCode(crs, 0);
     if (!name || !code || std::strcmp(name, "EPSG"))
         return 0;
     return from_chars<int>(code, std::strlen(code));
+}
+
+inline std::string get_proj4(OGRSpatialReferenceH crs)
+{
+    char* ptr = nullptr;
+    check(OSRExportToProj4(crs, &ptr));
+    auto str = string_ptr{ptr};
+    if (!ptr)
+        return {};
+    return {ptr};
+}
+
+inline std::string get_wkt(OGRSpatialReferenceH crs)
+{
+    char* ptr = nullptr;
+    check(OSRExportToWktEx(crs, &ptr, nullptr));
+    auto str = string_ptr{ptr};
+    if (!ptr)
+        return {};
+    return {ptr};
 }
 
 inline layer_ptr execute(GDALDatasetH ds, char const* sql, char const* dialect)

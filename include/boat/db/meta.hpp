@@ -29,6 +29,13 @@ struct column {
     int length;
     int srid;
     int epsg;
+    std::string wkt;
+    std::string proj4;
+
+    bool has_coord_sys() const
+    {
+        return epsg > 0 || !wkt.empty() || !proj4.empty();
+    }
 };
 
 struct index_key {
@@ -97,7 +104,10 @@ struct raster {
     double yscale;
     double xskew;
     double yskew;
+    int srid;
     int epsg;
+    std::string wkt;
+    std::string proj4;
 };
 
 struct rect {

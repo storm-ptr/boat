@@ -29,14 +29,16 @@ struct mssql : dialect {
             "\n set @qry"
             "\n  = ' select null, column_name, data_type'"
             "\n  + ' , coalesce(character_maximum_length, datetime_precision)'"
-            "\n  + ' , 0, 0'"
+            "\n  + ' , null, null, null, null'"
             "\n  + ' from information_schema.columns'"
             "\n  + ' where table_schema = ' + quotename(@scm,'''')"
             "\n  + ' and table_name = ' + quotename(@tbl,'''')"
             "\n  + ' and data_type not in (''geography'', ''geometry'')'"
             "\n  + ' union'"
-            "\n  + ' select null, name, type'"
-            "\n  + ' , -1, srid, authorized_spatial_reference_id'"
+            "\n  + ' select null, name, type, -1, srid'"
+            "\n  + ' , case authority_name when ''epsg'''"
+            "\n  + '   then authorized_spatial_reference_id else null end epsg'"
+            "\n  + ' , well_known_text, null'"
             "\n  + ' from (values (null, null, 0)'"
             "\n declare cur cursor for"
             "\n  select column_name, data_type"
@@ -67,7 +69,7 @@ struct mssql : dialect {
             "\n  +=' ) as l(name, type, srid)'"
             "\n  + ' left join sys.spatial_reference_systems'"
             "\n  + ' on srid = spatial_reference_id'"
-            "\n  + ' where name is not null and authority_name = ''epsg'''"
+            "\n  + ' where name is not null'"
             "\n exec(@qry)"};
     }
 

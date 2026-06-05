@@ -14,10 +14,10 @@ constexpr auto is_postgres = has("postgres");
 constexpr auto is_sqlite = has("sqlite");
 
 constexpr auto geo = overloaded{
-    [](db::column const& col) { return col.epsg > 0; },
+    [](db::column const& col) { return col.has_coord_sys(); },
     [](range_of<db::column> auto&& cols, std::string_view column_name) {
-        return std::ranges::any_of(cols, [=](auto& col) {
-            return col.epsg > 0 && col.column_name == column_name;
+        return std::ranges::any_of(cols, [&](auto& col) {
+            return col.has_coord_sys() && col.column_name == column_name;
         });
     }};
 

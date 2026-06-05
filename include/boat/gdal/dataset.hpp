@@ -52,7 +52,8 @@ inline dataset_ptr create(  //
         rast.yscale,
     };
     check(GDALSetGeoTransform(ret.get(), a.data()));
-    check(GDALSetSpatialRef(ret.get(), make_epsg_srs(rast.epsg).release()));
+    auto crs = make_srs(rast.epsg, rast.wkt, rast.proj4);
+    check(GDALSetSpatialRef(ret.get(), crs.release()));
     return ret;
 }
 
