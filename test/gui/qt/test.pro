@@ -13,6 +13,7 @@ LIBS += \
   -llibpng16\
   -llibpq\
   -lodbc32\
+  -ljpeg\
   -lspatialite_i\
   -lsqlite3_i
 TARGET = run_me

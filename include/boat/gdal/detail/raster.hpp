@@ -65,7 +65,7 @@ inline blob read(GDALDatasetH ds, db::raster const& rast, tile const& t)
             image_io(ds, GF_Read, x, y, w, h, boost::gil::view(v));
         },
         img);
-    return gil::to_png(boost::gil::view(img));
+    return gil::write_png(boost::gil::view(img));
 }
 
 inline void write(  //
@@ -86,7 +86,7 @@ inline void write(  //
                 boost::gil::const_view(v),
                 color_mapping<T>(to_colors(rast.bands)));
         },
-        gil::from_png(data));
+        gil::read_image(data));
 }
 
 }  // namespace boat::gdal

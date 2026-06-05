@@ -4,6 +4,7 @@
 #include <boat/gdal/command.hpp>
 #include <boat/gdal/image_io.hpp>
 #include <boat/geometry/raster.hpp>
+#include <boat/slippy.hpp>
 #include <boost/test/unit_test.hpp>
 #include "data.hpp"
 
@@ -36,9 +37,10 @@ BOOST_AUTO_TEST_CASE(gdal_vector)
 
 BOOST_AUTO_TEST_CASE(gdal_raster)
 {
-    auto cat1 = boat::gdal::catalog{};
-    cat1.dataset = boat::gdal::open(
-        "/vsicurl/https://download.osgeo.org/gdal/data/gtiff/small_world.tif");
+    auto cat1 = boat::slippy::catalog{};
+    cat1.user = "useragent";
+    cat1.url = "http://mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}";
+    cat1.zmax = 1;
     auto rast1 = cat1.get_raster(cat1.layers().at(0));
 
     auto cat2 = boat::gdal::catalog{};
@@ -60,7 +62,8 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
     auto img2 = cat2.read(rast2, tiles) | std::ranges::to<std::map>();
     BOOST_CHECK_EQUAL(img2.size(), tiles.size());
     for (auto& tile : tiles)
-        BOOST_CHECK(img1.at(tile) == img2.at(tile));
+        BOOST_CHECK(boat::gil::read_image(img1.at(tile)) ==
+                    boat::gil::read_image(img2.at(tile)));
 }
 
 BOOST_AUTO_TEST_CASE(gdal_image_io)
