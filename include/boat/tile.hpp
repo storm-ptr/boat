@@ -41,7 +41,7 @@ struct tile {
         return pow2(zmax(width, height) - zoom);
     }
 
-    static std::generator<tile> level(int width, int height, int zoom)
+    static std::generator<tile> all(int width, int height, int zoom)
     {
         int px = scale(width, height, zoom);
         int tl = size * px;

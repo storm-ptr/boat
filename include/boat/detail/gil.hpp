@@ -7,9 +7,13 @@
 #include <boost/gil/extension/dynamic_image/any_image.hpp>
 #if __has_include(<jpeglib.h>)
 #include <boost/gil/extension/io/jpeg.hpp>
+#else
+#pragma message("no libjpeg")
 #endif
 #if __has_include(<png.h>) && __has_include(<zlib.h>)
 #include <boost/gil/extension/io/png.hpp>
+#else
+#pragma message("no libpng/zlib")
 #endif
 #include <boost/mp11.hpp>
 #include <cstdint>
@@ -68,15 +72,15 @@ inline any_image read_png(blob_view img)
 
 inline any_image read_image(blob_view img)
 {
-    auto cast = [](std::initializer_list<int> bytes) {
+    auto fit = [](std::initializer_list<int> bytes) {
         return bytes | std::views::transform([](int i) {
                    return static_cast<std::byte>(i);
                }) |
                std::ranges::to<blob>();
     };
-    if (img.starts_with(cast({0xFF, 0xD8, 0xFF})))
+    if (img.starts_with(fit({0xFF, 0xD8, 0xFF})))
         return read_jpeg(img);
-    if (img.starts_with(cast({0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A})))
+    if (img.starts_with(fit({0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A})))
         return read_png(img);
     throw std::runtime_error("unsupported image format");
 }

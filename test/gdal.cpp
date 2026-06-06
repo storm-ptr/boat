@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
     auto cat1 = boat::slippy::catalog{};
     cat1.user = "useragent";
     cat1.url = "http://mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}";
-    cat1.zmax = 1;
+    cat1.zmax = 2;
     auto rast1 = cat1.get_raster(cat1.layers().at(0));
 
     auto cat2 = boat::gdal::catalog{};
@@ -48,8 +48,8 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
     auto rast2 = cat2.get_raster(cat2.layers().at(0));
 
     auto z = boat::tile::zmax(rast1.width, rast1.height);
-    auto tiles = boat::tile::level(rast1.width, rast1.height, z) |
-                 std::views::take(10) | std::ranges::to<std::vector>();
+    auto tiles = boat::tile::all(rast1.width, rast1.height, z) |
+                 std::views::take(16) | std::ranges::to<std::vector>();
     BOOST_CHECK(!tiles.empty());
     auto img1 = cat1.read(rast1, tiles) | std::ranges::to<std::map>();
     BOOST_CHECK_EQUAL(img1.size(), tiles.size());
