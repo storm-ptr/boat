@@ -9,7 +9,6 @@
 #include <boat/detail/uri.hpp>
 #include <boat/gdal/catalog.hpp>
 #include <boat/gdal/command.hpp>
-#include <boat/gdal/image_io.hpp>
 #include <boat/geometry/raster.hpp>
 #include <boat/geometry/wkb.hpp>
 #include <boat/gui/caches/lru.hpp>

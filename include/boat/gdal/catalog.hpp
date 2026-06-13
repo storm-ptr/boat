@@ -88,7 +88,7 @@ struct catalog : db::catalog {
         return gdal::get_raster(dataset.get());
     }
 
-    std::generator<std::pair<tile, blob>> read(  //
+    std::generator<std::pair<tile, gil::any_image>> read(
         db::raster rast,
         std::vector<tile> ts) override
     {
@@ -99,9 +99,9 @@ struct catalog : db::catalog {
     void write(  //
         db::raster const& rast,
         db::rect const& rect,
-        blob_view data) override
+        gil::any_image_view img) override
     {
-        gdal::write(dataset.get(), rast, rect, data);
+        gdal::write(dataset.get(), rast, rect, img);
     }
 };
 

@@ -4,65 +4,50 @@
 #define BOAT_GUI_VARIANT_HPP
 
 #include <boat/geometry/transform.hpp>
-#include <boat/geometry/wkb.hpp>
+#include <boost/gil.hpp>
 
 namespace boat::gui {
 
-struct vector {
-    std::vector<blob> wkb;
-    geometry::srs_variant crs;
-};
-
-template <class T = blob>
 struct raster {
-    T data;
+    boost::gil::rgba8_image_t rgba;
     geometry::matrix affine;
     geometry::srs_variant crs;
 };
 
-using variant = std::variant<vector, raster<>>;
+using variant = std::variant<geometry::geographic::geometry_collection, raster>;
 
-template <class>
-struct traits;
-
-template <class T, class Traits = typename traits<T>::type>
+template <class T>
 auto draw_variant(  //
     T& out,
     geometry::matrix const& out_affine,
     geometry::srs_variant const& out_crs)
 {
     return overloaded{
-        [&](vector const& in) {
+        [&](geometry::geographic::geometry_collection const& in) {
             auto fwd = std::visit(
-                [&](auto& crs1, auto& crs2) {
+                [&](auto& crs) {
                     return geometry::transform(
-                        geometry::srs_forward(
-                            geometry::srs::transformation<>(crs1, crs2)),
+                        geometry::srs_forward(geometry::transformation(crs)),
                         geometry::mat_inverse(out_affine));
                 },
-                in.crs,
                 out_crs);
-            auto drw = Traits::draw_geometry(out);
-            for (blob_view item : in.wkb) {
-                auto g1 = geometry::geographic::variant{};
-                item >> g1;
-                if (auto g2 = fwd(g1))
-                    drw(*g2);
-            }
+            auto drw = draw_geometry(out);
+            if (auto g = fwd(in))
+                drw(*g);
         },
-        [&](raster<typename Traits::image> const& in) {
+        [&](raster const& in) {
             std::visit(
                 [&](auto& crs1, auto& crs2) {
-                    Traits::draw_image(
-                        in.data, in.affine, crs1, out, out_affine, crs2);
+                    draw_image(  //
+                        const_view(in.rgba),
+                        in.affine,
+                        crs1,
+                        out,
+                        out_affine,
+                        crs2);
                 },
                 in.crs,
                 out_crs);
-        },
-        [](this auto&& self, raster<> const& in) -> void {
-            auto tmp = raster<typename Traits::image>{{}, in.affine, in.crs};
-            if (Traits::load_image(in.data, tmp.data))
-                self(tmp);
         }};
 }
 

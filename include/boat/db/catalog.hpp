@@ -5,6 +5,7 @@
 
 #include <boat/db/meta.hpp>
 #include <boat/db/rowset.hpp>
+#include <boat/gil.hpp>
 #include <boat/tile.hpp>
 #include <generator>
 
@@ -35,11 +36,11 @@ struct catalog {
 
     virtual raster get_raster(layer const&) = 0;
 
-    virtual std::generator<std::pair<tile, blob>> read(  //
+    virtual std::generator<std::pair<tile, gil::any_image>> read(
         raster,
         std::vector<tile>) = 0;
 
-    virtual void write(raster const&, rect const&, blob_view) = 0;
+    virtual void write(raster const&, rect const&, gil::any_image_view) = 0;
 };
 
 }  // namespace boat::db

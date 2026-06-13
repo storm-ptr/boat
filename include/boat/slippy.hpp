@@ -10,7 +10,10 @@
 
 namespace boat::slippy {
 
-struct catalog : db::catalog {
+class catalog : public db::catalog {
+    inline static auto const err = std::runtime_error{"slippy"};
+
+public:
     std::string user;
     std::string url;
     int epsg = 3857;  //< mercator only, e.g. 3395
@@ -25,28 +28,16 @@ struct catalog : db::catalog {
 
     db::table get_table(std::string_view, std::string_view) override
     {
-        throw std::runtime_error{"slippy"};
+        throw err;
     }
 
-    db::rowset select(db::table const&, db::page const&) override
-    {
-        throw std::logic_error{"slippy"};
-    }
+    db::rowset select(db::table const&, db::page const&) override { throw err; }
 
-    db::rowset select(db::table const&, db::bbox const&) override
-    {
-        throw std::logic_error{"slippy"};
-    }
+    db::rowset select(db::table const&, db::bbox const&) override { throw err; }
 
-    void insert(db::table const&, db::rowset const&) override
-    {
-        throw std::logic_error{"slippy"};
-    }
+    void insert(db::table const&, db::rowset const&) override { throw err; }
 
-    db::table create(db::table const&) override
-    {
-        throw std::logic_error{"slippy"};
-    }
+    db::table create(db::table const&) override { throw err; }
 
     void drop(std::string_view, std::string_view) override {}
 
@@ -61,7 +52,10 @@ struct catalog : db::catalog {
         return {
             .table_name{"_layer"},
             .column_name{"raster"},
-            .bands{{"red", "byte"}, {"green", "byte"}, {"blue", "byte"}},
+            .bands{{"red", "byte"},
+                   {"green", "byte"},
+                   {"blue", "byte"},
+                   {"alpha", "byte"}},
             .width = size,
             .height = size,
             .xorig = mat.a[0][2],
@@ -74,7 +68,7 @@ struct catalog : db::catalog {
         };
     }
 
-    std::generator<std::pair<tile, blob>> read(  //
+    std::generator<std::pair<tile, gil::any_image>> read(
         db::raster r,
         std::vector<tile> ts) override
     {
@@ -89,14 +83,15 @@ struct catalog : db::catalog {
             url_to_tile.insert({u, t});
         }
         while (queue.size()) {
-            auto [u, file] = queue.pop();
-            co_yield {url_to_tile.at(u), std::move(file)};
+            auto [u, img] = queue.pop();
+            co_yield {url_to_tile.at(u),
+                      gil::read<boost::gil::rgba8_image_t>(img)};
         }
     }
 
-    void write(db::raster const&, db::rect const&, blob_view) override
+    void write(db::raster const&, db::rect const&, gil::any_image_view) override
     {
-        throw std::runtime_error{"slippy"};
+        throw err;
     }
 };
 

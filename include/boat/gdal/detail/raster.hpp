@@ -6,7 +6,7 @@
 #include <array>
 #include <boat/db/meta.hpp>
 #include <boat/gdal/detail/gil.hpp>
-#include <boat/gdal/image_io.hpp>
+#include <boat/gdal/detail/image_io.hpp>
 
 namespace boat::gdal {
 
@@ -55,27 +55,53 @@ auto to_colors(range_of<db::band> auto&& bands)
            std::ranges::to<std::vector>();
 }
 
-inline blob read(GDALDatasetH ds, db::raster const& rast, tile const& t)
+inline gil::any_image read(  //
+    GDALDatasetH ds,
+    db::raster const& rast,
+    tile const& t)
 {
-    auto scale = tile::scale(rast.width, rast.height, t.z);
+    auto cs = to_colors(rast.bands);
+    auto ret = [&] {
+        switch (GDALGetDataTypeByName(rast.bands.at(0).type_name.data())) {
+            case GDT_Byte:
+                return make_image<uint8_t>(cs);
+            case GDT_Int8:
+                return make_image<int8_t>(cs);
+            case GDT_UInt16:
+                return make_image<uint16_t>(cs);
+            case GDT_Int16:
+                return make_image<int16_t>(cs);
+            case GDT_UInt32:
+                return make_image<uint32_t>(cs);
+            case GDT_Int32:
+                return make_image<int32_t>(cs);
+            case GDT_UInt64:
+                return make_image<uint64_t>(cs);
+            case GDT_Int64:
+                return make_image<int64_t>(cs);
+            case GDT_Float32:
+                return make_image<float>(cs);
+            case GDT_Float64:
+                return make_image<double>(cs);
+            default:
+                throw std::runtime_error(rast.bands.at(0).type_name);
+        }
+    }();
     auto [x, y, w, h] = t.rect(rast.width, rast.height);
-    auto img = make_image(to_colors(rast.bands), w / scale, h / scale);
-    boost::variant2::visit(
-        [&](auto& v) {
-            image_io(ds, GF_Read, x, y, w, h, boost::gil::view(v));
-        },
-        img);
-    return gil::write_png(boost::gil::view(img));
+    auto scale = tile::scale(rast.width, rast.height, t.z);
+    ret.recreate(w / scale, h / scale);
+    visit([&](auto v) { image_io(ds, GF_Read, x, y, w, h, v); }, view(ret));
+    return ret;
 }
 
 inline void write(  //
     GDALDatasetH ds,
     db::raster const& rast,
     db::rect const& rect,
-    blob_view data)
+    gil::any_image_view img)
 {
-    boost::variant2::visit(
-        [&]<class T>(T const& v) {
+    visit(
+        [&]<class T>(T v) {
             image_io(  //
                 ds,
                 GF_Write,
@@ -83,10 +109,10 @@ inline void write(  //
                 rect.y,
                 rect.width,
                 rect.height,
-                boost::gil::const_view(v),
+                v,
                 color_mapping<T>(to_colors(rast.bands)));
         },
-        gil::read_image(data));
+        img);
 }
 
 }  // namespace boat::gdal

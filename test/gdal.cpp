@@ -2,7 +2,7 @@
 
 #include <boat/gdal/catalog.hpp>
 #include <boat/gdal/command.hpp>
-#include <boat/gdal/image_io.hpp>
+#include <boat/gdal/detail/image_io.hpp>
 #include <boat/geometry/raster.hpp>
 #include <boat/slippy.hpp>
 #include <boost/test/unit_test.hpp>
@@ -53,17 +53,16 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
     BOOST_CHECK(!tiles.empty());
     auto img1 = cat1.read(rast1, tiles) | std::ranges::to<std::map>();
     BOOST_CHECK_EQUAL(img1.size(), tiles.size());
-    for (auto [tile, data] : img1)
+    for (auto [tile, img] : img1)
         cat2.write(  //
             rast2,
             std::make_from_tuple<boat::db::rect>(
                 tile.rect(rast2.width, rast2.height)),
-            data);
+            const_view(img));
     auto img2 = cat2.read(rast2, tiles) | std::ranges::to<std::map>();
     BOOST_CHECK_EQUAL(img2.size(), tiles.size());
     for (auto& tile : tiles)
-        BOOST_CHECK(boat::gil::read_image(img1.at(tile)) ==
-                    boat::gil::read_image(img2.at(tile)));
+        BOOST_CHECK(img1.at(tile) == img2.at(tile));
 }
 
 BOOST_AUTO_TEST_CASE(gdal_image_io)

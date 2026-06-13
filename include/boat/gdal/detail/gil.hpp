@@ -3,8 +3,8 @@
 #ifndef BOAT_GDAL_GIL_HPP
 #define BOAT_GDAL_GIL_HPP
 
-#include <boat/detail/gil.hpp>
 #include <boat/gdal/detail/utility.hpp>
+#include <boat/gil.hpp>
 
 namespace boat::gdal {
 
@@ -47,36 +47,34 @@ auto color_mapping(R&& colors)
     auto ret = std::vector<int>{};
     for (auto c : as_colors<T>()) {
         auto it = std::ranges::find(colors, c);
-        boat::check(it != colors.end(), GDALGetColorInterpretationName(c));
+        boat::check(it != colors.end(),
+                    concat("color_mapping", GDALGetColorInterpretationName(c)));
         ret.push_back(static_cast<int>(std::distance(colors.begin(), it)));
     }
     return ret;
 }
 
-template <class T = uint8_t>
-gil::any_image make_image(  //
-    std::vector<GDALColorInterp> const& colors,
-    int width,
-    int height)
+template <class T>
+gil::any_image make_image(std::vector<GDALColorInterp> const& colors)
 {
     auto is = [&](auto... cs) { return colors == std::vector{cs...}; };
     if (is(GCI_AlphaBand, GCI_BlueBand, GCI_GreenBand, GCI_RedBand))
-        return gil::image<T, boost::gil::abgr_layout_t>{width, height};
+        return gil::image<T, boost::gil::abgr_layout_t>{};
     if (is(GCI_AlphaBand, GCI_RedBand, GCI_GreenBand, GCI_BlueBand))
-        return gil::image<T, boost::gil::argb_layout_t>{width, height};
+        return gil::image<T, boost::gil::argb_layout_t>{};
     if (is(GCI_BlueBand, GCI_GreenBand, GCI_RedBand))
-        return gil::image<T, boost::gil::bgr_layout_t>{width, height};
+        return gil::image<T, boost::gil::bgr_layout_t>{};
     if (is(GCI_BlueBand, GCI_GreenBand, GCI_RedBand, GCI_AlphaBand))
-        return gil::image<T, boost::gil::bgra_layout_t>{width, height};
+        return gil::image<T, boost::gil::bgra_layout_t>{};
     if (is(GCI_CyanBand, GCI_MagentaBand, GCI_YellowBand, GCI_BlackBand))
-        return gil::image<T, boost::gil::cmyk_layout_t>{width, height};
+        return gil::image<T, boost::gil::cmyk_layout_t>{};
     if (is(GCI_GrayIndex))
-        return gil::image<T, boost::gil::gray_layout_t>{width, height};
+        return gil::image<T, boost::gil::gray_layout_t>{};
     if (is(GCI_RedBand, GCI_GreenBand, GCI_BlueBand))
-        return gil::image<T, boost::gil::rgb_layout_t>{width, height};
+        return gil::image<T, boost::gil::rgb_layout_t>{};
     if (is(GCI_RedBand, GCI_GreenBand, GCI_BlueBand, GCI_AlphaBand))
-        return gil::image<T, boost::gil::rgba_layout_t>{width, height};
-    auto os = std::ostringstream{} << "gdal::make_image";
+        return gil::image<T, boost::gil::rgba_layout_t>{};
+    auto os = std::ostringstream{} << "make_image";
     for (auto sep = " "; auto c : colors)
         os << std::exchange(sep, ", ") << GDALGetColorInterpretationName(c);
     throw std::runtime_error{os.str()};

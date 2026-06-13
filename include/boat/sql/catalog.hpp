@@ -8,7 +8,10 @@
 
 namespace boat::sql {
 
-struct catalog : db::catalog {
+class catalog : public db::catalog {
+    inline static auto const err = std::runtime_error{"sql"};
+
+public:
     std::unique_ptr<db::command> command;
 
     std::vector<db::source> sources() override { return {}; }
@@ -95,22 +98,19 @@ struct catalog : db::catalog {
         command->exec({"drop table if exists ", id{scm, table_name}});
     }
 
-    db::raster get_raster(db::layer const&) override
-    {
-        throw std::logic_error{"sql"};
-    }
+    db::raster get_raster(db::layer const&) override { throw err; }
 
-    std::generator<std::pair<tile, blob>> read(  //
+    std::generator<std::pair<tile, gil::any_image>> read(
         db::raster,
         std::vector<tile>) override
     {
-        throw std::logic_error{"sql"};
+        throw err;
         co_return;
     }
 
-    void write(db::raster const&, db::rect const&, blob_view) override
+    void write(db::raster const&, db::rect const&, gil::any_image_view) override
     {
-        throw std::logic_error{"sql"};
+        throw err;
     }
 };
 

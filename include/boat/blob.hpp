@@ -23,32 +23,29 @@ struct blob : std::basic_string<std::byte> {
     friend auto hash_value(blob const& v) { return boost::hash_value(v); }
 };
 
-blob_view& operator>>(blob_view& in, arithmetic auto& out)
+template <class I, class O>
+    requires std::same_as<std::remove_cvref_t<I>, blob_view>
+decltype(auto) operator>>(I && in, O & out)
 {
-    check(in.size() >= sizeof out, "out of blob");
-    std::memcpy(&out, in.data(), sizeof out);
-    in.remove_prefix(sizeof out);
-    return in;
+    if constexpr (arithmetic<O>) {
+        check(in.size() >= sizeof out, "out of blob");
+        std::memcpy(&out, in.data(), sizeof out);
+        in.remove_prefix(sizeof out);
+    }
+    else
+        static_cast<blob_view&>(in) >> out;
+    return std::forward<I>(in);
 }
 
-blob_view&& operator>>(blob_view&& in, auto& out)
-    requires requires { in >> out; }
+template <class O, class I>
+    requires std::same_as<std::remove_cvref_t<O>, blob>
+decltype(auto) operator<<(O && out, I const& in)
 {
-    in >> out;
-    return std::move(in);
-}
-
-blob& operator<<(blob& out, arithmetic auto const& in)
-{
-    out.append_range(std::as_bytes(single_span(in)));
-    return out;
-}
-
-blob&& operator<<(blob&& out, auto const& in)
-    requires requires { out << in; }
-{
-    out << in;
-    return std::move(out);
+    if constexpr (arithmetic<I>)
+        out.append_range(std::as_bytes(single_span(in)));
+    else
+        static_cast<blob&>(out) << in;
+    return std::forward<O>(out);
 }
 
 template <class T>

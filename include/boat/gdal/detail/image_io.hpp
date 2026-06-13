@@ -8,7 +8,6 @@
 #include <cstdint>
 
 namespace boat::gdal {
-namespace detail {
 
 template <class T>
 consteval GDALDataType as_data_type()
@@ -27,8 +26,6 @@ consteval GDALDataType as_data_type()
          : throw std::out_of_range("GDALDataType");
     // clang-format on
 }
-
-}  // namespace detail
 
 template <specialized<boost::gil::image_view> T>
     requires(!specialized<typename T::value_type, boost::gil::packed_pixel>)
@@ -68,7 +65,7 @@ void image_io(  //
         data,
         static_cast<int>(img.width()),
         static_cast<int>(img.height()),
-        detail::as_data_type<value_t>(),
+        as_data_type<value_t>(),
         static_cast<int>(bands.size()),
         bands.data(),
         static_cast<int>(pixel),
