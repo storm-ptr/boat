@@ -133,9 +133,9 @@ inline std::string mssql_gdal_address()
     for (auto [srv, drv] : detail::odbc_drivers({"sql server"}))
         if (srv == "sql server")
             return boat::concat(  //
-                "mssql:driver=",
+                "mssql:driver={",
                 drv,
-                ";Encrypt=no;server=",
+                "};Encrypt=no;TrustServerCertificate=yes;server=",
                 mssql_host,
                 ";database=master;uid=sa;pwd=",
                 password);
