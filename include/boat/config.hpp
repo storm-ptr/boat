@@ -122,7 +122,7 @@ inline std::vector<std::string> odbc_address()
                 password,
                 "@",
                 mssql_host,
-                "/master?Encrypt=Optional&DRIVER=",
+                "/master?Encrypt=no&DRIVER=",
                 drv));
     }
     return ret;
@@ -135,7 +135,7 @@ inline std::string mssql_gdal_address()
             return boat::concat(  //
                 "mssql:driver=",
                 drv,
-                ";Encrypt=Optional;server=",
+                ";Encrypt=no;server=",
                 mssql_host,
                 ";database=master;uid=sa;pwd=",
                 password);
