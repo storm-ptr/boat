@@ -15,8 +15,9 @@ struct mysql : dialect {
                "\n from information_schema.st_geometry_columns";
     }
 
-    db::query columns(std::string_view schema_name,
-                      std::string_view table_name) const override
+    db::query columns(  //
+        std::string_view schema_name,
+        std::string_view table_name) const override
     {
         return {
             "\n with l as ("
@@ -41,8 +42,9 @@ struct mysql : dialect {
             db::variant(table_name)};
     }
 
-    db::query index_keys(std::string_view schema_name,
-                         std::string_view table_name) const override
+    db::query index_keys(  //
+        std::string_view schema_name,
+        std::string_view table_name) const override
     {
         return {
             "\n select null , index_name, column_name, (collation = 'D')"
@@ -98,7 +100,22 @@ struct mysql : dialect {
             else if (col.length > 0)
                 q << "(" << to_chars(col.length) << ")";
         }
-        return q << "\n );" << create_indices{tbl};
+        q << "\n );";
+        int i{};
+        for (auto idx : tbl.indices() | std::views::filter(constructible)) {
+            auto key = std::ranges::begin(idx);
+            auto spatial = geo(tbl.columns, key->column_name);
+            if (spatial && std::ranges::size(idx) > 1u)
+                continue;
+            auto type = spatial ? "spatial" : key->unique ? "unique" : "";
+            if (key->primary)
+                q << "\n alter table " << id{tbl} << " add primary key ";
+            else
+                q << "\n create " << type << " index _" << to_chars(++i)
+                  << " on " << id{tbl} << " ";
+            q << index_spec{idx} << ";";
+        }
+        return q;
     }
 };
 

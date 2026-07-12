@@ -8,87 +8,91 @@
 
 namespace boat::sql::odbc {
 
-class reader {
-    std::basic_string<SQLWCHAR> buf_;
-    SQLLEN ind_;
+template <arithmetic T, SQLSMALLINT type>
+db::variant get(stmt_ptr const& stmt, SQLUSMALLINT col)
+{
+    T val;
+    SQLLEN ind = 0;
+    check(SQLGetData(stmt.get(), col, type, &val, sizeof val, &ind), stmt);
+    boat::check(ind != SQL_NO_TOTAL, "SQL_NO_TOTAL");
+    if (ind == SQL_NULL_DATA)
+        return {};
+    return val;
+}
 
-    size_t num_chars() const { return ind_ / sizeof(SQLWCHAR); }
-    size_t num_bytes() const { return buf_.size() * sizeof(SQLWCHAR); }
-
-    bool get_data(  //
-        stmt_ptr const& stmt,
-        SQLUSMALLINT col,
-        SQLSMALLINT type,
-        SQLPOINTER ptr,
-        SQLLEN len)
-    {
-        check(SQLGetData(stmt.get(), col, type, ptr, len, &ind_), stmt);
-        boat::check(ind_ != SQL_NO_TOTAL, "SQL_NO_TOTAL");
-        return SQL_NULL_DATA != ind_;
-    }
-
-    template <arithmetic T, SQLSMALLINT type>
-    db::variant get(stmt_ptr const& stmt, SQLUSMALLINT col)
-    {
-        T v;
-        if (!get_data(stmt, col, type, &v, sizeof v))
+inline db::variant get_text(stmt_ptr const& stmt, SQLUSMALLINT col)
+{
+    thread_local std::vector<SQLWCHAR> buf(2048);
+    std::vector<SQLWCHAR> val;
+    SQLLEN num_bytes = buf.size() * sizeof(SQLWCHAR);
+    SQLLEN ind = 0;
+    SQLRETURN ec;
+    do {
+        ec = SQLGetData(
+            stmt.get(), col, SQL_C_WCHAR, buf.data(), num_bytes, &ind);
+        check(ec, stmt);
+        if (ind == SQL_NULL_DATA)
             return {};
-        return v;
-    }
+        if (ind == SQL_NO_TOTAL || ind >= num_bytes)
+            val.append_range(std::span{buf.data(), buf.size() - 1});
+        else if (ind > 0)
+            val.append_range(std::span{buf.data(), ind / sizeof(SQLWCHAR)});
+    } while (ec == SQL_SUCCESS_WITH_INFO);
+    return std::span{val.data(), val.size()} | unicode::utf8;
+}
 
-    db::variant get_text(stmt_ptr const& stmt, SQLUSMALLINT col)
-    {
-        if (!get_data(stmt, col, SQL_C_WCHAR, buf_.data(), 0))
+inline db::variant get_blob(stmt_ptr const& stmt, SQLUSMALLINT col)
+{
+    thread_local blob buf(4096, {});
+    blob val;
+    SQLLEN ind = 0;
+    SQLRETURN ec;
+    do {
+        ec = SQLGetData(
+            stmt.get(), col, SQL_C_BINARY, buf.data(), buf.size(), &ind);
+        check(ec, stmt);
+        if (ind == SQL_NULL_DATA)
             return {};
-        buf_.resize(std::max<>(buf_.size(), num_chars() + 1));
-        get_data(stmt, col, SQL_C_WCHAR, buf_.data(), num_bytes());
-        return std::span{buf_.data(), num_chars()} | unicode::utf8;
-    }
+        if (ind == SQL_NO_TOTAL || ind >= SQLLEN(buf.size()))
+            val.append_range(buf);
+        else if (ind > 0)
+            val.append_range(std::span{buf.data(), size_t(ind)});
+    } while (ec == SQL_SUCCESS_WITH_INFO);
+    return val;
+}
 
-    db::variant get_blob(stmt_ptr const& stmt, SQLUSMALLINT col)
-    {
-        if (!get_data(stmt, col, SQL_C_BINARY, buf_.data(), 0))
-            return {};
-        buf_.resize(std::max<>(buf_.size(), num_chars() + 1));
-        get_data(stmt, col, SQL_C_BINARY, buf_.data(), num_bytes());
-        return db::variant{
-            std::in_place_type<blob>, as_bytes(buf_.data()), ind_};
+inline db::variant get_data(stmt_ptr const& stmt, SQLUSMALLINT col)
+{
+    SQLLEN type;
+    check(SQLColAttribute(stmt.get(), col, SQL_DESC_TYPE, 0, 0, 0, &type),
+          stmt);
+    switch (type) {
+        case SQL_BIGINT:
+        case SQL_BIT:
+        case SQL_INTEGER:
+        case SQL_SMALLINT:
+        case SQL_TINYINT:
+            return get<int64_t, SQL_C_SBIGINT>(stmt, col);
+        case SQL_DECIMAL:
+        case SQL_DOUBLE:
+        case SQL_FLOAT:
+        case SQL_NUMERIC:
+        case SQL_REAL:
+            return get<double, SQL_C_DOUBLE>(stmt, col);
+        case SQL_CHAR:
+        case SQL_LONGVARCHAR:
+        case SQL_VARCHAR:
+        case SQL_WCHAR:
+        case SQL_WLONGVARCHAR:
+        case SQL_WVARCHAR:
+            return get_text(stmt, col);
+        case SQL_BINARY:
+        case SQL_LONGVARBINARY:
+        case SQL_VARBINARY:
+            return get_blob(stmt, col);
     }
-
-public:
-    db::variant get_data(stmt_ptr const& stmt, SQLUSMALLINT col)
-    {
-        SQLLEN type;
-        check(SQLColAttribute(stmt.get(), col, SQL_DESC_TYPE, 0, 0, 0, &type),
-              stmt);
-        switch (type) {
-            case SQL_BIGINT:
-            case SQL_BIT:
-            case SQL_INTEGER:
-            case SQL_SMALLINT:
-            case SQL_TINYINT:
-                return get<int64_t, SQL_C_SBIGINT>(stmt, col);
-            case SQL_DECIMAL:
-            case SQL_DOUBLE:
-            case SQL_FLOAT:
-            case SQL_NUMERIC:
-            case SQL_REAL:
-                return get<double, SQL_C_DOUBLE>(stmt, col);
-            case SQL_CHAR:
-            case SQL_LONGVARCHAR:
-            case SQL_VARCHAR:
-            case SQL_WCHAR:
-            case SQL_WLONGVARCHAR:
-            case SQL_WVARCHAR:
-                return get_text(stmt, col);
-            case SQL_BINARY:
-            case SQL_LONGVARBINARY:
-            case SQL_VARBINARY:
-                return get_blob(stmt, col);
-        }
-        throw std::runtime_error{concat(name(stmt, col), " ", type)};
-    }
-};
+    throw std::runtime_error{concat(name(stmt, col), " ", type)};
+}
 
 }  // namespace boat::sql::odbc
 

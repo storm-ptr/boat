@@ -54,30 +54,33 @@ inline void check(boat::db::catalog& cat)
 {
     using namespace boat;
     static auto const objs = get_objects();
-    static auto const page =
-        db::page{.select_list = boost::pfr::names_as_array<udt>() |
-                                std::ranges::to<std::vector<std::string>>(),
-                 .limit = static_cast<int>(std::ranges::size(objs))};
-    static auto const bbox = db::bbox{
-        .select_list{std::string(boost::pfr::get_name<0, udt>())},
-        .xmin = 9,
-        .ymin = 9,
-        .xmax = 11,
-        .ymax = 11,
-        .limit = int(std::ranges::size(objs)),
-    };
     auto tbl = get_table();
     cat.drop(tbl.schema_name, tbl.table_name);
     tbl = cat.create(tbl);
     std::cout << tbl;
     cat.insert(tbl, db::to_rowset(objs));
-    BOOST_CHECK(std::ranges::equal(  //
-        objs,
-        cat.select(tbl, page) | db::view<udt>,
-        BOAT_LIFT(boost::pfr::eq_fields)));
-    BOOST_CHECK(std::ranges::equal(  //
-        std::array{2},
-        cat.select(tbl, bbox) | db::view<int>));
+
+    auto bbox = db::bbox{
+        .select_list{std::string(boost::pfr::get_name<0, udt>())},
+        .xmin = 9,
+        .ymin = 9,
+        .xmax = 11,
+        .ymax = 11,
+        .limit = int(objs.size()),
+    };
+    BOOST_CHECK(std::ranges::equal(std::array{2},
+                                   cat.select(tbl, bbox) | db::view<int>));
+
+    auto page = db::page{
+        .select_list = boost::pfr::names_as_array<udt>() |
+                       std::ranges::to<std::vector<std::string>>(),
+        .limit = 1,
+    };
+    auto res = std::vector<udt>{};
+    for (; page.offset < objs.size(); ++page.offset)
+        res.append_range(cat.select(tbl, page) | db::view<udt>);
+    BOOST_CHECK(
+        std::ranges::equal(objs, res, BOAT_LIFT(boost::pfr::eq_fields)));
 }
 
 #endif  // BOAT_TEST_DATA_HPP

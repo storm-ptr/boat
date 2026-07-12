@@ -3,72 +3,70 @@
 #ifndef BOAT_GDAL_VECTOR_HPP
 #define BOAT_GDAL_VECTOR_HPP
 
-#include <boat/db/meta.hpp>
 #include <boat/db/rowset.hpp>
 #include <boat/gdal/detail/fields/fields.hpp>
+#include <stop_token>
 
 namespace boat::gdal {
 
 inline std::vector<db::layer> vectors(GDALDatasetH ds)
 {
     auto ret = std::vector<db::layer>{};
-    for (int i{}, n = GDALDatasetGetLayerCount(ds); i < n; ++i) {
-        auto fd = OGR_L_GetLayerDefn(GDALDatasetGetLayer(ds, i));
-        for (int j{}, m = OGR_FD_GetGeomFieldCount(fd); j < m; ++j)
-            ret.push_back({.table_name = OGR_FD_GetName(fd),
-                           .column_name = OGR_GFld_GetNameRef(
-                               OGR_FD_GetGeomFieldDefn(fd, j))});
-    }
+    for (int i{}, n = GDALDatasetGetLayerCount(ds); i < n; ++i)
+        ret.append_range(
+            fields::to_layers(OGR_L_GetLayerDefn(GDALDatasetGetLayer(ds, i))));
     return ret;
 }
 
-constexpr auto to_column = overloaded{
-    [](fields::attribute const& v) {
-        return db::column{
-            .kind{v.kind()},
-            .column_name = v.name,
-            .type_name = to_lower(OGR_GetFieldTypeName(v.type)),
-        };
-    },
-    [](fields::geometry const& v) {
-        return db::column{
-            .kind{v.kind},
-            .column_name = v.name,
-            .type_name = to_lower(OGRGeometryTypeToName(v.type)),
-            .srid = v.epsg,
-            .epsg = v.epsg,
-            .wkt = v.wkt,
-            .proj4 = v.proj4,
-        };
-    },
-};
-
 inline db::table get_table(OGRLayerH lyr)
 {
-    auto fd = OGR_L_GetLayerDefn(lyr);
-    auto ret = db::table{.dbms = "gdal", .table_name = OGR_FD_GetName(fd)};
-    for (auto& fld : fields::make(fd))
-        ret.columns.push_back(std::visit(to_column, fld));
+    auto ret = db::table{
+        .dbms = to_lower(GDALGetDriverShortName(
+            GDALGetDatasetDriver(OGR_L_GetDataset(lyr)))),
+        .table_name = OGR_FD_GetName(OGR_L_GetLayerDefn(lyr)),
+    };
+    auto to_index_key = fields::to_index_key(lyr);
+    for (auto& fld : fields::make(lyr)) {
+        ret.columns.push_back(std::visit(fields::to_column, fld));
+        if (auto idx = std::visit(to_index_key, fld))
+            ret.index_keys.push_back(*std::move(idx));
+    }
     return ret;
 }
 
 inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
 {
-    auto ret = GDALDatasetCreateLayerFromGeomFieldDefn(
-        ds, tbl.table_name.data(), 0, 0);
-    for (auto& col : tbl.columns)
-        if (col.has_coord_sys()) {
-            auto crs = make_srs(col.epsg, col.wkt, col.proj4);
-            auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
-                OGR_GFld_Create(col.column_name.data(), wkbUnknown)};
-            OGR_GFld_SetSpatialRef(fld.get(), crs.release());
+    OGRLayerH ret = 0;
+    for (auto& col : tbl.columns) {
+        if (!col.has_coord_sys())
+            continue;
+        auto crs = make_srs(col.epsg, col.wkt, col.proj4);
+        auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
+            OGR_GFld_Create(col.column_name.data(), wkbUnknown)};
+        OGR_GFld_SetSpatialRef(fld.get(), crs.get());
+        if (ret)
+            check(OGR_L_CreateGeomField(ret, fld.get(), 1));
+        else if (GDALDatasetTestCapability(
+                     ds, ODsCCreateGeomFieldAfterCreateLayer)) {
+            ret = GDALDatasetCreateLayerFromGeomFieldDefn(
+                ds, tbl.table_name.data(), 0, 0);
             check(OGR_L_CreateGeomField(ret, fld.get(), 1));
         }
         else {
-            auto fld = unique_ptr<void, OGR_Fld_Destroy>{OGR_Fld_Create(
-                col.column_name.data(), fields::to_type(col.kind))};
-            check(OGR_L_CreateField(ret, fld.get(), 1));
+            auto name = concat("GEOMETRY_NAME=", col.column_name);
+            char const* opts[] = {name.data(), "SPATIAL_INDEX=YES", nullptr};
+            ret = GDALDatasetCreateLayerFromGeomFieldDefn(
+                ds, tbl.table_name.data(), fld.get(), opts);
         }
+    }
+    boat::check(!!ret, "no geometry");
+    for (auto& col : tbl.columns) {
+        if (col.has_coord_sys())
+            continue;
+        auto fld = unique_ptr<void, OGR_Fld_Destroy>{
+            OGR_Fld_Create(col.column_name.data(), fields::to_type(col.kind))};
+        check(OGR_L_CreateField(ret, fld.get(), 1));
+    }
     return ret;
 }
 
@@ -100,11 +98,13 @@ db::rowset select(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
     return ret;
 }
 
-inline void insert(OGRLayerH lyr, db::rowset const& rs)
+inline void insert(OGRLayerH lyr, db::rowset const& rs, std::stop_token tok)
 {
+    auto flds = fields::make(lyr, rs.columns);
     auto fd = OGR_L_GetLayerDefn(lyr);
-    auto flds = fields::make(fd, rs.columns);
     for (auto const& row : rs) {
+        if (tok.stop_requested())
+            break;
         auto feat = feature_ptr{OGR_F_Create(fd)};
         for (auto&& [fld, var] : std::views::zip(flds, row))
             std::visit([&](auto& v) { v.write(feat.get(), var); }, fld);

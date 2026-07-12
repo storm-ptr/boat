@@ -1,5 +1,5 @@
 CXXFLAGS=-std:c++latest -EHsc -bigobj -O2 -W3 -WX -Wv:18 -MP -D_CRT_SECURE_NO_WARNINGS $(CXXFLAGS)
-EXECUTABLE=run_me.exe
+EXECUTABLE=run.exe
 INCLUDE=..\include\;$(INCLUDE)
 LIBS=gdal_i.lib libcurl_imp.lib libmysql.lib libpng16.lib libpq.lib jpeg.lib odbc32.lib spatialite_i.lib sqlite3_i.lib
 OBJECTS=$(SOURCES:.cpp=.obj)
@@ -17,4 +17,4 @@ test: all
 	$(EXECUTABLE) --log_level=unit_scope
 
 reset:
-	del *.obj $(EXECUTABLE) *.tif
+	del *.obj $(EXECUTABLE) drop.*

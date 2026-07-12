@@ -11,13 +11,13 @@
 namespace boat::slippy {
 
 class catalog : public db::catalog {
-    inline static auto const err = std::runtime_error{"slippy"};
+    inline static auto err = std::logic_error{"slippy"};
 
 public:
     std::string user;
     std::string url;
-    int epsg = 3857;  //< mercator only, e.g. 3395
-    int zmax = 19;    //< 0-22
+    int epsg = 3857;  //< or 3395
+    int zmax = 19;
 
     std::vector<db::source> sources() override { return {}; }
 
@@ -35,7 +35,13 @@ public:
 
     db::rowset select(db::table const&, db::bbox const&) override { throw err; }
 
-    void insert(db::table const&, db::rowset const&) override { throw err; }
+    void insert(  //
+        db::table const&,
+        db::rowset const&,
+        std::stop_token = {}) override
+    {
+        throw err;
+    }
 
     db::table create(db::table const&) override { throw err; }
 
@@ -43,12 +49,11 @@ public:
 
     db::raster get_raster(db::layer const&) override
     {
-        static auto const lim =
+        auto lim =
             std::nexttoward(numbers::pi * numbers::earth::equatorial_radius, 0);
-        static auto const mbr =
-            geometry::cartesian::box{{-lim, -lim}, {lim, lim}};
-        auto size = tile::size * pow2(zmax);
-        auto mat = geometry::affine(size, size, mbr);
+        auto mbr = geometry::cartesian::box{{-lim, -lim}, {lim, lim}};
+        auto sz = tile::size * pow2(zmax);
+        auto [a] = geometry::affine(sz, sz, mbr);
         return {
             .table_name{"_layer"},
             .column_name{"raster"},
@@ -56,36 +61,36 @@ public:
                    {"green", "byte"},
                    {"blue", "byte"},
                    {"alpha", "byte"}},
-            .width = size,
-            .height = size,
-            .xorig = mat.a[0][2],
-            .yorig = mat.a[1][2],
-            .xscale = mat.a[0][0],
-            .yscale = mat.a[1][1],
-            .xskew = mat.a[0][1],
-            .yskew = mat.a[1][0],
+            .width = sz,
+            .height = sz,
+            .xorig = a[0][2],
+            .yorig = a[1][2],
+            .xscale = a[0][0],
+            .yscale = a[1][1],
+            .xskew = a[0][1],
+            .yskew = a[1][0],
+            .srid = epsg,
             .epsg = epsg,
         };
     }
 
     std::generator<std::pair<tile, gil::any_image>> read(
-        db::raster r,
+        db::raster,
         std::vector<tile> ts) override
     {
-        auto queue = curl{user};
-        auto url_to_tile = std::unordered_map<std::string, tile>{};
+        auto q = curl{user};
+        auto m = std::map<std::string, tile>{};
         for (auto& t : ts) {
             auto u = url;
             u = boost::replace_first_copy(u, "{z}", to_chars(t.z));
             u = boost::replace_first_copy(u, "{y}", to_chars(t.y));
             u = boost::replace_first_copy(u, "{x}", to_chars(t.x));
-            queue.push(u);
-            url_to_tile.insert({u, t});
+            q.push(u);
+            m.insert({u, t});
         }
-        while (queue.size()) {
-            auto [u, img] = queue.pop();
-            co_yield {url_to_tile.at(u),
-                      gil::read<boost::gil::rgba8_image_t>(img)};
+        while (q.size()) {
+            auto [u, img] = q.pop();
+            co_yield {m.at(u), gil::read<boost::gil::rgba8_image_t>(img)};
         }
     }
 
@@ -93,6 +98,10 @@ public:
     {
         throw err;
     }
+
+    void set_autocommit(bool) override { throw err; }
+
+    void commit() override { throw err; }
 };
 
 }  // namespace boat::slippy

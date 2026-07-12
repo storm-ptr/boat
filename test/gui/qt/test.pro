@@ -16,10 +16,10 @@ LIBS += \
   -ljpeg\
   -lspatialite_i\
   -lsqlite3_i
-TARGET = run_me
-reset.commands = del /q *.png & rmdir /s /q debug release
+TARGET = run
+reset.commands = del /q drop.* & rmdir /s /q debug release
 reset.depends = distclean
-test.commands = release\run_me --log_level=unit_scope
+test.commands = $$system_path(release/$$TARGET) --log_level=unit_scope
 test.depends = release
 QMAKE_EXTRA_TARGETS += reset test
 }

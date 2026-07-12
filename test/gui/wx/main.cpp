@@ -60,7 +60,8 @@ BOOST_AUTO_TEST_CASE(wx_draw)
             art.reset();
             compose_darken(img, tmp);
         }
-        auto path = boat::concat(std::setfill('0'), std::setw(2), i, ".png");
+        auto path =
+            boat::concat("drop.", std::setfill('0'), std::setw(2), i, ".png");
         img.SaveFile(wxASCII_STR(path.data()), wxBITMAP_TYPE_PNG);
         pixels_sum += num_pixels;
         transparent_sum += std::count(  //

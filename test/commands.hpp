@@ -3,53 +3,16 @@
 #ifndef BOAT_TEST_COMMANDS_HPP
 #define BOAT_TEST_COMMANDS_HPP
 
+#include <boat/config.hpp>
 #include <boat/sql/commands.hpp>
-#include <boost/preprocessor/stringize.hpp>
 
 inline std::generator<std::unique_ptr<boat::db::command>> commands()
 {
-    constexpr auto password =
-#if defined(BOAT_TEST_PASSWORD)
-        BOOST_PP_STRINGIZE(BOAT_TEST_PASSWORD)
-#else
-        "E207cGYM"
-#endif
-            ;
-    constexpr auto host = "192.168.31.128";
-    constexpr auto mssql_host =
-#if defined(BOAT_TEST_MSSQL_HOST)
-        BOOST_PP_STRINGIZE(BOAT_TEST_MSSQL_HOST)
-#else
-        host
-#endif
-            ;
-    constexpr auto mysql_host =
-#if defined(BOAT_TEST_MYSQL_HOST)
-        BOOST_PP_STRINGIZE(BOAT_TEST_MYSQL_HOST)
-#else
-        host
-#endif
-            ;
-    constexpr auto postgresql_host =
-#if defined(BOAT_TEST_POSTGRESQL_HOST)
-        BOOST_PP_STRINGIZE(BOAT_TEST_POSTGRESQL_HOST)
-#else
-        host
-#endif
-            ;
-    co_yield boat::sql::make_command(
-        boat::concat("mysql://root:", password, "@", mysql_host, "/mysql"));
-    co_yield boat::sql::make_command(boat::concat(
-        "odbc://sa:", password, "@", mssql_host, "/master?DRIVER=SQL Server"));
-    co_yield boat::sql::make_command(boat::concat(  //
-        "postgresql://postgres:",
-        password,
-        "@",
-        postgresql_host,
-        "/postgres?client_encoding=UTF8"));
-    auto cmd = boat::sql::make_command("sqlite:///:memory:");
-    cmd->exec("SELECT InitSpatialMetaData('WGS84')");
-    co_yield std::move(cmd);
+    co_yield boat::sql::make_command(boat::config::mysql_address);
+    co_yield boat::sql::make_command(boat::config::postgresql_address);
+    co_yield boat::sql::make_command("sqlite:///:memory:");
+    for (auto adr : boat::config::odbc_address())
+        co_yield boat::sql::make_command(adr);
 }
 
 #endif  // BOAT_TEST_COMMANDS_HPP

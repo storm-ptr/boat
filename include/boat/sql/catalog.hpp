@@ -9,7 +9,7 @@
 namespace boat::sql {
 
 class catalog : public db::catalog {
-    inline static auto const err = std::runtime_error{"sql"};
+    inline static auto err = std::logic_error{"sql"};
 
 public:
     std::unique_ptr<db::command> command;
@@ -42,11 +42,7 @@ public:
                             db::view<db::index_key>}};
         std::ranges::sort(ret.index_keys, {}, [](auto& key) {
             return std::tuple{
-                !key.primary,
-                key.schema_name | unicode::utf32,
-                key.index_name | unicode::utf32,
-                key.ordinal,
-            };
+                !key.primary, key.schema_name, key.index_name, key.ordinal};
         });
         return ret;
     }
@@ -61,18 +57,22 @@ public:
         return command->exec(dialects::find(command->dbms()).select(tbl, rq));
     }
 
-    void insert(db::table const& tbl, db::rowset const& rs) override
+    void insert(  //
+        db::table const& tbl,
+        db::rowset const& rs,
+        std::stop_token tok = {}) override
     {
         auto cols = std::vector<std::unique_ptr<adaptors::adaptor>>{};
         for (auto& col : rs.columns)
             cols.push_back(adaptors::make(tbl.dbms, find(tbl.columns, col)));
-        auto lim = std::max<>(1uz, 999uz / cols.size());
-        for (auto&& rows : rs | std::views::chunk(lim)) {
+        for (auto&& rows :
+             rs | std::views::chunk(std::max<>(1uz, 999uz / cols.size()))) {
+            if (tok.stop_requested())
+                break;
             auto q = db::query{"\n insert into ", id{tbl}};
             for (auto sep{"\n   ("}; auto& col : rs.columns)
                 q << std::exchange(sep, ", ") << db::id(col);
-            q << ")\n values";
-            for (auto sep1{"\n   "}; auto& row : rows) {
+            for (auto sep1{")\n values\n   "}; auto& row : rows) {
                 q << std::exchange(sep1, "\n , ");
                 for (auto sep2{"("}; auto [c, v] : std::views::zip(cols, row)) {
                     q << std::exchange(sep2, ", ");
@@ -86,9 +86,9 @@ public:
 
     db::table create(db::table const& tbl) override
     {
-        auto draft = migrate(*command, tbl);
-        command->exec(dialects::find(command->dbms()).create(draft));
-        return get_table(draft.schema_name, draft.table_name);
+        auto t = migrate(*command, tbl);
+        command->exec(dialects::find(command->dbms()).create(t));
+        return get_table(t.schema_name, t.table_name);
     }
 
     void drop(std::string_view schema_name,
@@ -112,6 +112,10 @@ public:
     {
         throw err;
     }
+
+    void set_autocommit(bool on) override { command->set_autocommit(on); }
+
+    void commit() override { command->commit(); }
 };
 
 }  // namespace boat::sql

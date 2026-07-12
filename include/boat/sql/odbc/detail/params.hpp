@@ -5,75 +5,83 @@
 
 #include <boat/db/adapted/adapted.hpp>
 #include <boat/sql/odbc/detail/utility.hpp>
+#include <variant>
 
 namespace boat::sql::odbc::params {
 
-struct param {
-    virtual ~param() = default;
-    virtual SQLSMALLINT c_type() = 0;
-    virtual SQLSMALLINT sql_type() = 0;
-    virtual SQLPOINTER value() = 0;
-    virtual SQLULEN length() = 0;
-    virtual SQLLEN* indicator() = 0;
-};
-
 template <arithmetic T, SQLSMALLINT c_type_, SQLSMALLINT sql_type_>
-class scalar : public param {
+struct scalar {
     T val_;
 
-public:
-    explicit scalar(T v) : val_(v) {}
-    SQLSMALLINT c_type() override { return c_type_; }
-    SQLSMALLINT sql_type() override { return sql_type_; }
-    SQLPOINTER value() override { return &val_; }
-    SQLULEN length() override { return std::numeric_limits<T>::digits10; }
-    SQLLEN* indicator() override { return 0; }
+    SQLSMALLINT c_type() const { return c_type_; }
+    SQLSMALLINT sql_type() const { return sql_type_; }
+    SQLPOINTER value() { return &val_; }
+    SQLULEN length() const { return std::numeric_limits<T>::digits10; }
+    SQLLEN* indicator() { return 0; }
 };
 
-class text : public param {
+struct text {
     std::basic_string<SQLWCHAR> str_;
     SQLLEN ind_;
 
-public:
     explicit text(std::string_view v)
         : str_(v | unicode::utf<SQLWCHAR>), ind_(str_.size() * sizeof(SQLWCHAR))
     {
     }
 
-    SQLSMALLINT c_type() override { return SQL_C_WCHAR; }
-    SQLSMALLINT sql_type() override { return SQL_WVARCHAR; }
-    SQLPOINTER value() override { return str_.data(); }
-    SQLULEN length() override { return std::max<SQLULEN>(ind_, 1); }
-    SQLLEN* indicator() override { return &ind_; }
+    SQLSMALLINT c_type() const { return SQL_C_WCHAR; }
+    SQLSMALLINT sql_type() const { return SQL_WVARCHAR; }
+    SQLPOINTER value() { return str_.data(); }
+    SQLULEN length() const { return ind_; }
+    SQLLEN* indicator() { return &ind_; }
 };
 
-class binary : public param {
+struct binary {
     std::byte const* ptr_;
     SQLLEN ind_;
 
-public:
     explicit binary(blob_view v) : ptr_(v.data()), ind_(v.size()) {}
-    SQLSMALLINT c_type() override { return SQL_C_BINARY; }
-    SQLSMALLINT sql_type() override { return SQL_VARBINARY; }
-    SQLPOINTER value() override { return SQLPOINTER(ptr_); }
-    SQLULEN length() override { return std::max<SQLULEN>(ind_, 1); }
-    SQLLEN* indicator() override { return &ind_; }
+    SQLSMALLINT c_type() const { return SQL_C_BINARY; }
+    SQLSMALLINT sql_type() const { return SQL_VARBINARY; }
+    SQLPOINTER value() { return SQLPOINTER(ptr_); }
+    SQLULEN length() const { return ind_; }
+    SQLLEN* indicator() { return &ind_; }
 };
 
-inline std::unique_ptr<param> make(db::variant const& var)
+using integer = scalar<int64_t, SQL_C_SBIGINT, SQL_BIGINT>;
+using real = scalar<double, SQL_C_DOUBLE, SQL_DOUBLE>;
+using param = std::variant<integer, real, text, binary>;
+
+inline param make(db::variant const& var)
 {
-    using integer = scalar<int64_t, SQL_C_SBIGINT, SQL_BIGINT>;
-    using real = scalar<double, SQL_C_DOUBLE, SQL_DOUBLE>;
-    auto ret = std::unique_ptr<param>{};
-    auto vis = overloaded{
-        [](db::null) { throw std::runtime_error{"null param"}; },
-        [&](int64_t v) { ret = std::make_unique<integer>(v); },
-        [&](double v) { ret = std::make_unique<real>(v); },
-        [&](std::string_view v) { ret = std::make_unique<text>(v); },
-        [&](blob_view v) { ret = std::make_unique<binary>(v); },
+    constexpr auto vis = overloaded{
+        [](db::null) -> param { throw std::logic_error("null param"); },
+        [](int64_t v) { return param(std::in_place_type<integer>, v); },
+        [](double v) { return param(std::in_place_type<real>, v); },
+        [](std::string_view v) { return param(std::in_place_type<text>, v); },
+        [](blob_view v) { return param(std::in_place_type<binary>, v); },
     };
-    std::visit(vis, var);
-    return ret;
+    return std::visit(vis, var);
+}
+
+inline void bind(stmt_ptr const& stmt, SQLUSMALLINT i, param& p)
+{
+    std::visit(
+        [&stmt, i](auto& v) {
+            check(SQLBindParameter(  //
+                      stmt.get(),
+                      i,
+                      SQL_PARAM_INPUT,
+                      v.c_type(),
+                      v.sql_type(),
+                      v.length(),
+                      0,
+                      v.value(),
+                      0,
+                      v.indicator()),
+                  stmt);
+        },
+        p);
 }
 
 }  // namespace boat::sql::odbc::params

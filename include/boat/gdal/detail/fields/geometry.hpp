@@ -9,8 +9,10 @@
 namespace boat::gdal::fields {
 
 struct geometry {
+    static constexpr auto alias = "_ogr_geometry_";
     static constexpr auto kind =
         db::kind<boat::geometry::geographic::variant>::value;
+
     std::string name;
     OGRwkbGeometryType type;
     int epsg;
@@ -22,11 +24,14 @@ struct geometry {
     {
         auto fld = OGR_FD_GetGeomFieldDefn(fd, index);
         auto crs = OGR_GFld_GetSpatialRef(fld);
-        return {.name = OGR_GFld_GetNameRef(fld),
+        auto name = std::string{OGR_GFld_GetNameRef(fld)};
+        if (name.empty())
+            name = alias;
+        return {.name = std::move(name),
                 .type = OGR_GFld_GetType(fld),
-                .epsg = get_epsg(crs),
-                .wkt = get_wkt(crs),
-                .proj4 = get_proj4(crs),
+                .epsg = crs ? get_epsg(crs) : 4326,
+                .wkt = crs ? get_wkt(crs) : "",
+                .proj4 = crs ? get_proj4(crs) : "",
                 .index = index};
     }
 

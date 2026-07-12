@@ -15,5 +15,5 @@ BOOST_AUTO_TEST_CASE(db)
     auto global_scope = revoke{&std::locale::global, locale};
     auto cout_scope = revoke{
         std::bind_front(&decltype(std::cout)::imbue, &std::cout), locale};
-    std::cout << std::fixed << std::setprecision(2) << rs << std::endl;
+    std::cout << std::fixed << std::setprecision(2) << rs << "\n";
 }

@@ -28,5 +28,5 @@ BOOST_AUTO_TEST_CASE(unicode)
     auto global_scope = revoke{&std::locale::global, locale};
     auto wcout_scope = revoke{
         std::bind_front(&decltype(std::wcout)::imbue, &std::wcout), locale};
-    std::wcout << boat::unicode::utf<wchar_t>(u8) << std::endl;
+    std::wcout << boat::unicode::utf<wchar_t>(u8) << "\n";
 }

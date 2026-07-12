@@ -9,6 +9,7 @@
 #include <ogr_srs_api.h>
 #include <boat/detail/string.hpp>
 #include <cstring>
+#include <generator>
 #include <mutex>
 
 namespace boat::gdal {
@@ -25,7 +26,7 @@ struct layer_deleter {
 using dataset_ptr = unique_ptr<void, GDALClose>;
 using feature_ptr = unique_ptr<void, OGR_F_Destroy>;
 using layer_ptr = std::unique_ptr<void, layer_deleter>;
-using srs_ptr = unique_ptr<void, OSRDestroySpatialReference>;
+using srs_ptr = unique_ptr<void, OSRRelease>;
 using string_ptr = unique_ptr<char, CPLFree>;
 
 inline void init()
@@ -50,13 +51,13 @@ inline std::string error_or(std::string_view default_value)
 inline void check(CPLErr ec)
 {
     if (CE_None != ec)
-        throw std::runtime_error(error_or("gdal"));
+        throw std::runtime_error(error_or(concat("gdal CPLErr ", ec)));
 }
 
 inline void check(OGRErr ec)
 {
     if (OGRERR_NONE != ec)
-        throw std::runtime_error(error_or("gdal"));
+        throw std::runtime_error(error_or(concat("gdal OGRErr ", ec)));
 }
 
 inline srs_ptr make_srs(  //
@@ -70,8 +71,10 @@ inline srs_ptr make_srs(  //
         check(OSRImportFromEPSG(ret.get(), epsg));
     else if (auto ptr = const_cast<char*>(wkt.data()); !wkt.empty())
         check(OSRImportFromWkt(ret.get(), &ptr));
-    else
+    else if (!proj4.empty())
         check(OSRImportFromProj4(ret.get(), proj4.data()));
+    else
+        throw std::runtime_error("no spatial reference");
     return ret;
 }
 
@@ -104,11 +107,6 @@ inline std::string get_wkt(OGRSpatialReferenceH crs)
     return {ptr};
 }
 
-inline layer_ptr execute(GDALDatasetH ds, char const* sql, char const* dialect)
-{
-    return {GDALDatasetExecuteSQL(ds, sql, 0, dialect), layer_deleter{ds}};
-}
-
 inline auto subdatasets(GDALDatasetH ds)
     -> std::generator<std::pair<char const*, char const*>>
 {
@@ -124,6 +122,27 @@ inline auto subdatasets(GDALDatasetH ds)
             co_return;
         co_yield {desc, name};
     }
+}
+
+inline layer_ptr execute(GDALDatasetH ds, char const* sql, char const* dialect)
+{
+    return {GDALDatasetExecuteSQL(ds, sql, 0, dialect), layer_deleter{ds}};
+}
+
+inline void set_autocommit(GDALDatasetH ds, bool on)
+{
+    if (!GDALDatasetTestCapability(ds, ODsCTransactions))
+        return;
+    check(on ? GDALDatasetRollbackTransaction(ds)
+             : GDALDatasetStartTransaction(ds, false));
+}
+
+inline void commit(GDALDatasetH ds)
+{
+    if (!GDALDatasetTestCapability(ds, ODsCTransactions))
+        return;
+    check(GDALDatasetCommitTransaction(ds));
+    check(GDALDatasetStartTransaction(ds, false));
 }
 
 }  // namespace boat::gdal

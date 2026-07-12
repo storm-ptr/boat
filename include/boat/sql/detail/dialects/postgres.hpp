@@ -18,8 +18,9 @@ struct postgres : dialect {
                "\n from public.geometry_columns";
     }
 
-    db::query columns(std::string_view schema_name,
-                      std::string_view table_name) const override
+    db::query columns(  //
+        std::string_view schema_name,
+        std::string_view table_name) const override
     {
         return {
             "\n with l (table_schema, table_name, column_name, srid) as ("
@@ -48,8 +49,9 @@ struct postgres : dialect {
             db::variant(table_name)};
     }
 
-    db::query index_keys(std::string_view schema_name,
-                         std::string_view table_name) const override
+    db::query index_keys(  //
+        std::string_view schema_name,
+        std::string_view table_name) const override
     {
         return {
             "\n with indices as ("

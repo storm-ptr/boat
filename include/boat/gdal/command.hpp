@@ -16,25 +16,17 @@ struct command : db::command {
     {
         auto txt = qry.text(id_quote(), param_mark());
         if (auto lyr = execute(dataset.get(), txt.data(), dialect.data()))
-            return select(  //
-                lyr.get(),
-                fields::make(OGR_L_GetLayerDefn(lyr.get())),
-                INT_MAX);
+            return select(lyr.get(), fields::make(lyr.get()), INT_MAX);
         auto err = error_or("");
         return err.empty() ? db::rowset{} : throw std::runtime_error(err);
     }
 
     void set_autocommit(bool on) override
     {
-        check(on ? GDALDatasetRollbackTransaction(dataset.get())
-                 : GDALDatasetStartTransaction(dataset.get(), true));
+        gdal::set_autocommit(dataset.get(), on);
     }
 
-    void commit() override
-    {
-        check(GDALDatasetCommitTransaction(dataset.get()));
-    }
-
+    void commit() override { gdal::commit(dataset.get()); }
     char id_quote() override { return '"'; }
     std::string param_mark() override { return {}; }
     std::string dbms() override { return to_lower(dialect); }

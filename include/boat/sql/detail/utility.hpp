@@ -51,7 +51,8 @@ constexpr auto constructible = [](range_of<db::index_key> auto&& idx) {
 
 constexpr auto orderable = [](range_of<db::index_key> auto&& idx) {
     return std::ranges::all_of(idx, [](auto& key) {
-        return !key.partial && !key.column_name.empty() && key.unique;
+        return !key.partial && !key.column_name.empty() &&
+               (key.primary || key.unique);
     });
 };
 

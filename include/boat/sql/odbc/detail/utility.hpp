@@ -18,8 +18,10 @@ template <SQLSMALLINT type>
 struct deleter {
     void operator()(SQLHANDLE h) const
     {
-        if constexpr (SQL_HANDLE_DBC == type)
+        if constexpr (SQL_HANDLE_DBC == type) {
+            SQLEndTran(SQL_HANDLE_DBC, h, SQL_ROLLBACK);
             SQLDisconnect(h);
+        }
         if constexpr (SQL_HANDLE_STMT == type)
             SQLFreeStmt(h, SQL_CLOSE);
         SQLFreeHandle(type, h);

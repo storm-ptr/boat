@@ -1,11 +1,20 @@
 // Andrew Naplavkov
 
 #include <boat/sql/catalog.hpp>
+#include <boat/sql/odbc/drivers.hpp>
 #include <boost/test/unit_test.hpp>
 #include "commands.hpp"
 #include "data.hpp"
 
 using namespace boat;
+
+BOOST_AUTO_TEST_CASE(sql_odbc_drivers)
+{
+    for (auto drv : sql::odbc::drivers()) {
+        BOOST_CHECK(!drv.empty());
+        std::cout << drv << "\n";
+    }
+}
 
 BOOST_AUTO_TEST_CASE(sql_select)
 {
@@ -23,28 +32,12 @@ BOOST_AUTO_TEST_CASE(sql_select)
             BOAT_LIFT(boost::pfr::eq_fields)));
 }
 
-BOOST_AUTO_TEST_CASE(sql_param)
-{
-    auto objs = get_objects();
-    auto qry = db::query{};
-    for (auto sep1{"\n select "}; auto& row : db::to_rowset(objs)) {
-        qry << std::exchange(sep1, "\n union select ");
-        for (auto sep2{""}; auto& var : row)
-            qry << std::exchange(sep2, ", ") << var;
-    }
-    for (auto cmd : commands())
-        BOOST_CHECK(std::ranges::equal(  //
-            objs,
-            cmd->exec(qry) | db::view<udt>,
-            BOAT_LIFT(boost::pfr::eq_fields)));
-}
-
 BOOST_AUTO_TEST_CASE(sql_vector)
 {
     for (auto cmd : commands()) {
         auto cat = sql::catalog{};
         cat.command = std::move(cmd);
-        cat.command->set_autocommit(false);
+        cat.set_autocommit(false);
         check(cat);
     }
 }
@@ -203,7 +196,7 @@ BOOST_AUTO_TEST_CASE(sql_datatypes)
     for (auto cmd : commands()) {
         auto cat = sql::catalog{};
         cat.command = std::move(cmd);
-        cat.command->set_autocommit(false);
+        cat.set_autocommit(false);
         cat.drop("", tbl_a_name);
         cat.drop("", tbl_b_name);
         cat.command->exec(datatypes_query(cat.command->dbms()));

@@ -20,6 +20,8 @@ struct layer {
     std::string table_name;
     std::string column_name;
     bool raster;
+
+    friend bool operator==(layer const&, layer const&) = default;
 };
 
 struct column {
@@ -46,7 +48,7 @@ struct index_key {
     bool partial;
     bool primary;
     bool unique;
-    int ordinal;
+    int ordinal;  //< one-based
 };
 
 struct table {

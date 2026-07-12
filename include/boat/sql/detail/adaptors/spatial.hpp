@@ -11,12 +11,12 @@ namespace boat::sql::adaptors {
 struct spatial : impl<geometry::geographic::variant> {
     std::string_view parse() const override { return geo(*col_) ? kind_ : ""; }
 
-    db::column migrate(std::string_view dbms) const override
+    db::column migrate(std::string_view) const override
     {
         return {.kind{kind_},
                 .column_name{col_->column_name},
-                .type_name{is_mssql(dbms) ? "geography" : "geometry"},
-                .epsg = is_mssql(dbms) ? 4326 : col_->epsg};
+                .type_name = "geometry",
+                .epsg = col_->epsg};
     }
 
     void select(db::query& qry) const override

@@ -5,6 +5,7 @@
 
 #include <boat/db/command.hpp>
 #include <boat/sql/sqlite/detail/utility.hpp>
+#include <filesystem>
 
 namespace boat::sql::sqlite {
 
@@ -17,11 +18,18 @@ public:
     {
         constexpr int flags =
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
+        auto exists = std::filesystem::exists(file);
         sqlite3* dbc;
         check(sqlite3_open_v2(file, &dbc, flags, 0), dbc_);
         dbc_.reset(dbc);
         spatial_.reset(spatialite_alloc_connection());
         spatialite_init_ex(dbc_.get(), spatial_.get(), 0);
+        if (!exists)
+            try {
+                exec("SELECT InitSpatialMetaData(1)");
+            }
+            catch (std::exception const&) {
+            }
     }
 
     db::rowset exec(db::query const& qry) override

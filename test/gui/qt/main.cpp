@@ -26,7 +26,8 @@ BOOST_AUTO_TEST_CASE(qt_draw)
             for (auto var : pvd.variants())
                 std::visit(drw, var);
         }
-        auto path = boat::concat(std::setfill('0'), std::setw(2), i, ".png");
+        auto path =
+            boat::concat("drop.", std::setfill('0'), std::setw(2), i, ".png");
         img.save(path.data());
         auto rgb = reinterpret_cast<QRgb*>(img.bits());
         auto num_pixels = ctx.width * ctx.height;

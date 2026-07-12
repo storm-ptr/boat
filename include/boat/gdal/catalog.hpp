@@ -45,10 +45,10 @@ struct catalog : db::catalog {
               << (key.descending ? " desc" : "");
         q << "\n limit " << to_chars(rq.limit) << "\n offset "
           << to_chars(rq.offset);
-        auto lyr = execute(dataset.get(), q.text('"', {}).data(), 0);
-        auto fd = OGR_L_GetLayerDefn(lyr.get());
-        return gdal::select(
-            lyr.get(), fields::make(fd, rq.select_list), rq.limit);
+        if (auto lyr = execute(dataset.get(), q.text('"', {}).data(), "OGRSQL"))
+            return gdal::select(
+                lyr.get(), fields::make(lyr.get(), rq.select_list), rq.limit);
+        return {};
     }
 
     db::rowset select(db::table const& tbl, db::bbox const& rq) override
@@ -63,14 +63,17 @@ struct catalog : db::catalog {
             rq.ymin,
             rq.xmax,
             rq.ymax);
-        return gdal::select(lyr, fields::make(fd, rq.select_list), rq.limit);
+        return gdal::select(lyr, fields::make(lyr, rq.select_list), rq.limit);
     }
 
-    void insert(db::table const& tbl, db::rowset const& rs) override
+    void insert(  //
+        db::table const& tbl,
+        db::rowset const& rs,
+        std::stop_token tok = {}) override
     {
-        gdal::insert(
-            GDALDatasetGetLayerByName(dataset.get(), tbl.table_name.data()),
-            rs);
+        auto lyr =
+            GDALDatasetGetLayerByName(dataset.get(), tbl.table_name.data());
+        gdal::insert(lyr, rs, tok);
     }
 
     db::table create(db::table const& tbl) override
@@ -103,6 +106,13 @@ struct catalog : db::catalog {
     {
         gdal::write(dataset.get(), rast, rect, img);
     }
+
+    void set_autocommit(bool on) override
+    {
+        gdal::set_autocommit(dataset.get(), on);
+    }
+
+    void commit() override { gdal::commit(dataset.get()); }
 };
 
 }  // namespace boat::gdal

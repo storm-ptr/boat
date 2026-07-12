@@ -50,7 +50,7 @@ inline void set_date_time(OGRFeatureH feat, int index, time_point tp)
         hms.hours().count(),
         hms.minutes().count(),
         static_cast<float>(hms.seconds().count() + hms.subseconds().count()),
-        100);
+        0);  // mysql doesn't support 100
 }
 
 }  // namespace boat::gdal

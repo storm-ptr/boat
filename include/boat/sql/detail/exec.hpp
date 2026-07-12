@@ -4,6 +4,7 @@
 #define BOAT_SQL_EXEC_HPP
 
 #include <boat/db/command.hpp>
+#include <boat/detail/string.hpp>
 #include <boat/sql/detail/dialects/dialects.hpp>
 
 namespace boat::sql {
@@ -33,6 +34,21 @@ inline db::table migrate(db::command& cmd, db::table const& tbl)
                                  .value())
                        : 0;
         ret.columns.push_back(std::move(out));
+    }
+    for (auto& col : ret.columns) {
+        if (!col.has_coord_sys())
+            continue;
+        if (std::ranges::any_of(ret.indices(), [&](auto idx) {
+                auto key = std::ranges::begin(idx);
+                return key != std::ranges::end(idx) &&
+                       key->column_name == col.column_name;
+            }))
+            continue;
+        ret.index_keys.push_back({
+            .index_name = concat("idx_", col.column_name),
+            .column_name = col.column_name,
+            .ordinal = 1,
+        });
     }
     return ret;
 }

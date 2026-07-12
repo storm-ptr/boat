@@ -43,7 +43,7 @@ auto& operator<<(ostream auto& out, table const& in)
     for (auto idx : in.indices()) {
         auto key = std::ranges::begin(idx);
         auto spatial = std::ranges::any_of(in.columns, [&](auto& col) {
-            return col.epsg > 0 && col.column_name == key->column_name;
+            return col.has_coord_sys() && col.column_name == key->column_name;
         });
         rs.columns.push_back(concat(  //
             key->partial   ? "part:"
@@ -66,7 +66,7 @@ auto& operator<<(ostream auto& out, table const& in)
 
 auto& operator<<(ostream auto& out, raster const& in)
 {
-    out << "{ name: " << in.schema_name << (in.schema_name.empty() ? "" : ".")
+    out << "\n{ name: " << in.schema_name << (in.schema_name.empty() ? "" : ".")
         << in.table_name << "." << in.column_name << "\n, bands: {";
     for (auto sep = ""; auto& band : in.bands)
         out << std::exchange(sep, ", ") << band.color_name << ":"

@@ -16,8 +16,9 @@ struct mssql : dialect {
                "\n where data_type in ('geography','geometry')";
     }
 
-    db::query columns(std::string_view schema_name,
-                      std::string_view table_name) const override
+    db::query columns(  //
+        std::string_view schema_name,
+        std::string_view table_name) const override
     {
         return {
             "\n declare @scm nvarchar(128), @tbl nvarchar(128)"
@@ -41,11 +42,10 @@ struct mssql : dialect {
             "\n  + ' , well_known_text, null'"
             "\n  + ' from (values (null, null, 0)'"
             "\n declare cur cursor for"
-            "\n  select column_name, data_type"
-            "\n  from information_schema.columns"
+            "\n  select column_name, data_type from information_schema.columns"
             "\n  where table_schema = @scm"
             "\n  and table_name = @tbl"
-            "\n  and data_type in ('geography', 'geometry')"
+            "\n  and data_type in ('geography','geometry')"
             "\n open cur"
             "\n fetch next from cur into @col, @typ"
             "\n while @@FETCH_STATUS = 0 begin"
@@ -73,8 +73,9 @@ struct mssql : dialect {
             "\n exec(@qry)"};
     }
 
-    db::query index_keys(std::string_view schema_name,
-                         std::string_view table_name) const override
+    db::query index_keys(  //
+        std::string_view schema_name,
+        std::string_view table_name) const override
     {
         return {
             "\n select null, name, col_name(c.object_id, column_id)"
@@ -147,8 +148,20 @@ struct mssql : dialect {
               << "\n , @level1type = 'table'"
               << "\n , @level1name = " << db::variant(tbl.table_name)
               << "\n , @level2type = 'column'"
-              << "\n , @level2name = " << db::variant(col.column_name);
-        return q << "\n ;" << create_indices{tbl};
+              << "\n , @level2name = " << db::variant(col.column_name) << ";";
+        int i{};
+        for (auto idx : tbl.indices() | std::views::filter(constructible)) {
+            auto key = std::ranges::begin(idx);
+            if (geo(tbl.columns, key->column_name))
+                continue;
+            if (key->primary)
+                q << "\n alter table " << id{tbl} << " add primary key ";
+            else
+                q << "\n create " << (key->unique ? "unique " : "")
+                  << " index _" << to_chars(++i) << " on " << id{tbl} << " ";
+            q << index_spec{idx} << ";";
+        }
+        return q;
     }
 };
 

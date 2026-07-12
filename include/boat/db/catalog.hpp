@@ -8,6 +8,7 @@
 #include <boat/gil.hpp>
 #include <boat/tile.hpp>
 #include <generator>
+#include <stop_token>
 
 namespace boat::db {
 
@@ -26,7 +27,7 @@ struct catalog {
 
     virtual rowset select(table const&, bbox const&) = 0;
 
-    virtual void insert(table const&, rowset const&) = 0;
+    virtual void insert(table const&, rowset const&, std::stop_token = {}) = 0;
 
     virtual table create(table const&) = 0;
 
@@ -41,6 +42,10 @@ struct catalog {
         std::vector<tile>) = 0;
 
     virtual void write(raster const&, rect const&, gil::any_image_view) = 0;
+
+    virtual void set_autocommit(bool) = 0;
+
+    virtual void commit() = 0;
 };
 
 }  // namespace boat::db
