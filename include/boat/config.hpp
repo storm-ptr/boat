@@ -135,7 +135,7 @@ inline std::string mssql_gdal_address()
             return boat::concat(  //
                 "mssql:driver={",
                 drv,
-                "};Encrypt=no;TrustServerCertificate=yes;server=",
+                "};Encrypt=no;server=",
                 mssql_host,
                 ";database=master;uid=sa;pwd=",
                 password);
