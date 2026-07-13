@@ -75,11 +75,12 @@ inline auto odbc_drivers(std::initializer_list<std::string> servers)
     static auto const regex = std::regex(R"(\b\d+(?:\.\d+)?\b)");
     constexpr auto priority = [](std::string const& lo) {
         auto match = std::cmatch{};
-        auto ver =
+        return std::tuple{
+            lo.contains("x64"),
+            lo.contains("unicode"),
             std::regex_search(lo.data(), lo.data() + lo.size(), match, regex)
                 ? std::stod(match.str())
-                : 0.;
-        return std::tuple{lo.contains("x64"), lo.contains("unicode"), ver};
+                : 0.};
     };
     auto ret = std::unordered_map<std::string, std::string>{};
     for (auto drv : sql::odbc::drivers()) {
