@@ -11,7 +11,9 @@ namespace boat::gdal {
 inline dataset_ptr open(char const* file)
 {
     init();
-    auto ret = dataset_ptr{GDALOpenEx(file, 0, 0, 0, 0)};
+    char const* opts[] = {"MSSQLSPATIAL_USE_BCP=NO", nullptr};
+    auto ret = dataset_ptr{
+        GDALOpenEx(file, 0, 0, 0, to_lower(file) == "mssql:" ? opts : nullptr)};
     boat::check(!!ret, error_or(concat("GDALOpenEx ", file)));
     return ret;
 }

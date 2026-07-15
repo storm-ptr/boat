@@ -38,9 +38,7 @@ BOOST_AUTO_TEST_CASE(gdal_vector)
         {"", "MEM"},
         {"./drop.gdal_vector.gpkg", "GPKG"},
         {"./drop.gdal_vector.sqlite", "SQLite"},
-
-        // [ODBC Driver 17 for SQL Server]Connection is not enabled for BCP
-        // {boat::config::mssql_gdal_address(), ""},
+        {boat::config::mssql_gdal_address(), ""},
 
         // OFTDateTime is created without ms
         // {boat::config::mysql_gdal_address, ""},

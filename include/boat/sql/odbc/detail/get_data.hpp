@@ -12,7 +12,7 @@ template <arithmetic T, SQLSMALLINT type>
 db::variant get(stmt_ptr const& stmt, SQLUSMALLINT col)
 {
     T val;
-    SQLLEN ind = 0;
+    SQLLEN ind;
     check(SQLGetData(stmt.get(), col, type, &val, sizeof val, &ind), stmt);
     boat::check(ind != SQL_NO_TOTAL, "SQL_NO_TOTAL");
     if (ind == SQL_NULL_DATA)
@@ -23,9 +23,9 @@ db::variant get(stmt_ptr const& stmt, SQLUSMALLINT col)
 inline db::variant get_text(stmt_ptr const& stmt, SQLUSMALLINT col)
 {
     thread_local std::vector<SQLWCHAR> buf(2048);
-    std::vector<SQLWCHAR> val;
     SQLLEN num_bytes = buf.size() * sizeof(SQLWCHAR);
-    SQLLEN ind = 0;
+    std::vector<SQLWCHAR> val;
+    SQLLEN ind;
     SQLRETURN ec;
     do {
         ec = SQLGetData(
@@ -45,7 +45,7 @@ inline db::variant get_blob(stmt_ptr const& stmt, SQLUSMALLINT col)
 {
     thread_local blob buf(4096, {});
     blob val;
-    SQLLEN ind = 0;
+    SQLLEN ind;
     SQLRETURN ec;
     do {
         ec = SQLGetData(
