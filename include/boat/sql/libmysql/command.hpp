@@ -4,6 +4,7 @@
 #define BOAT_SQL_LIBMYSQL_COMMAND_HPP
 
 #include <boat/db/command.hpp>
+#include <boat/detail/config.hpp>
 #include <boat/sql/libmysql/detail/fetch.hpp>
 
 namespace boat::sql::libmysql {
@@ -18,7 +19,8 @@ public:
             int port,
             char const* database)
     {
-        auto seconds = 30u;
+        auto seconds =
+            static_cast<unsigned>(std::chrono::seconds{timeout}.count());
         dbc_.reset(mysql_init(0));
         check(!!dbc_, dbc_);
         for (auto opt : {MYSQL_OPT_CONNECT_TIMEOUT,

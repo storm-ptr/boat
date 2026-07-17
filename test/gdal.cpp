@@ -1,6 +1,6 @@
 // Andrew Naplavkov
 
-#include <boat/config.hpp>
+#include <boat/address.hpp>
 #include <boat/gdal/catalog.hpp>
 #include <boat/gdal/command.hpp>
 #include <boat/gdal/detail/image_io.hpp>
@@ -39,12 +39,10 @@ BOOST_AUTO_TEST_CASE(gdal_vector)
         {"./drop.gdal_vector.gpkg", "GPKG"},
         {"./drop.gdal_vector.sqlite", "SQLite"},
         {boat::config::mssql_gdal_address(), ""},
+        {boat::config::postgres_gdal_address, ""},
 
         // OFTDateTime is created without ms
         // {boat::config::mysql_gdal_address, ""},
-
-        // ERROR 6: CreateLayer() not supported by this dataset
-        // {boat::config::postgresql_gdal_address, ""},
     };
     for (auto [path, driver] : tests) {
         auto cat = boat::gdal::catalog{};
@@ -52,7 +50,6 @@ BOOST_AUTO_TEST_CASE(gdal_vector)
             cat.dataset = boat::gdal::open(path.data());
         else
             cat.dataset = boat::gdal::create(path.data(), driver.data());
-        cat.set_autocommit(false);
         check(cat);
     }
 }

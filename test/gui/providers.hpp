@@ -19,7 +19,6 @@ inline std::generator<std::shared_ptr<boat::db::catalog>> catalogs()
     for (auto cmd : commands()) {
         auto cat = std::make_shared<sql::catalog>();
         cat->command = std::move(cmd);
-        cat->set_autocommit(false);
         cat->drop(tbl.schema_name, tbl.table_name);
         cat->insert(cat->create(tbl), db::to_rowset(objs));
         co_yield std::move(cat);

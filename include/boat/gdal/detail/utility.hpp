@@ -7,6 +7,7 @@
 #include <cpl_string.h>
 #include <gdal.h>
 #include <ogr_srs_api.h>
+#include <boat/detail/config.hpp>
 #include <boat/detail/string.hpp>
 #include <cstring>
 #include <generator>
@@ -14,30 +15,21 @@
 
 namespace boat::gdal {
 
-struct layer_deleter {
-    GDALDatasetH dataset;
-
-    void operator()(OGRLayerH lyr) const
-    {
-        GDALDatasetReleaseResultSet(dataset, lyr);
-    }
-};
-
 using dataset_ptr = unique_ptr<void, GDALClose>;
 using feature_ptr = unique_ptr<void, OGR_F_Destroy>;
-using layer_ptr = std::unique_ptr<void, layer_deleter>;
-using srs_ptr = unique_ptr<void, OSRRelease>;
 using string_ptr = unique_ptr<char, CPLFree>;
 
 inline void init()
 {
     static auto flag = std::once_flag{};
-    std::call_once(flag, [] {
+    constexpr auto fn = [] {
+        auto sec = std::to_string(std::chrono::seconds{timeout}.count());
         CPLSetConfigOption("GDAL_FILENAME_IS_UTF8", "YES");
-        CPLSetConfigOption("GDAL_HTTP_TIMEOUT", "30");
-        CPLSetConfigOption("SHAPE_ENCODING", "UTF-8");
+        CPLSetConfigOption("GDAL_HTTP_CONNECTTIMEOUT", sec.data());
+        CPLSetConfigOption("GDAL_HTTP_TIMEOUT", sec.data());
         GDALAllRegister();
-    });
+    };
+    std::call_once(flag, fn);
 }
 
 inline std::string error_or(std::string_view default_value)
@@ -60,12 +52,9 @@ inline void check(OGRErr ec)
         throw std::runtime_error(error_or(concat("gdal OGRErr ", ec)));
 }
 
-inline srs_ptr make_srs(  //
-    int epsg,
-    std::string const& wkt,
-    std::string const& proj4)
+inline auto make_srs(int epsg, std::string const& wkt, std::string const& proj4)
 {
-    auto ret = srs_ptr{OSRNewSpatialReference(0)};
+    auto ret = unique_ptr<void, OSRRelease>{OSRNewSpatialReference(0)};
     boat::check(!!ret, "OSRNewSpatialReference");
     if (epsg > 0)
         check(OSRImportFromEPSG(ret.get(), epsg));
@@ -74,7 +63,7 @@ inline srs_ptr make_srs(  //
     else if (!proj4.empty())
         check(OSRImportFromProj4(ret.get(), proj4.data()));
     else
-        throw std::runtime_error("no spatial reference");
+        throw std::runtime_error("no SRS");
     return ret;
 }
 
@@ -89,7 +78,7 @@ inline int get_epsg(OGRSpatialReferenceH crs)
 
 inline std::string get_proj4(OGRSpatialReferenceH crs)
 {
-    char* ptr = nullptr;
+    char* ptr;
     check(OSRExportToProj4(crs, &ptr));
     auto str = string_ptr{ptr};
     if (!ptr)
@@ -99,8 +88,8 @@ inline std::string get_proj4(OGRSpatialReferenceH crs)
 
 inline std::string get_wkt(OGRSpatialReferenceH crs)
 {
-    char* ptr = nullptr;
-    check(OSRExportToWktEx(crs, &ptr, nullptr));
+    char* ptr;
+    check(OSRExportToWktEx(crs, &ptr, 0));
     auto str = string_ptr{ptr};
     if (!ptr)
         return {};
@@ -124,9 +113,18 @@ inline auto subdatasets(GDALDatasetH ds)
     }
 }
 
-inline layer_ptr execute(GDALDatasetH ds, char const* sql, char const* dialect)
+inline auto execute(GDALDatasetH ds, char const* sql, char const* dialect)
 {
-    return {GDALDatasetExecuteSQL(ds, sql, 0, dialect), layer_deleter{ds}};
+    struct del {
+        GDALDatasetH ds;
+
+        void operator()(OGRLayerH lyr) const
+        {
+            GDALDatasetReleaseResultSet(ds, lyr);
+        }
+    };
+    return std::unique_ptr<void, del>{
+        GDALDatasetExecuteSQL(ds, sql, 0, dialect), del{ds}};
 }
 
 inline void set_autocommit(GDALDatasetH ds, bool on)
@@ -134,7 +132,7 @@ inline void set_autocommit(GDALDatasetH ds, bool on)
     if (!GDALDatasetTestCapability(ds, ODsCTransactions))
         return;
     check(on ? GDALDatasetRollbackTransaction(ds)
-             : GDALDatasetStartTransaction(ds, false));
+             : GDALDatasetStartTransaction(ds, 0));
 }
 
 inline void commit(GDALDatasetH ds)
@@ -142,7 +140,7 @@ inline void commit(GDALDatasetH ds)
     if (!GDALDatasetTestCapability(ds, ODsCTransactions))
         return;
     check(GDALDatasetCommitTransaction(ds));
-    check(GDALDatasetStartTransaction(ds, false));
+    check(GDALDatasetStartTransaction(ds, 0));
 }
 
 }  // namespace boat::gdal

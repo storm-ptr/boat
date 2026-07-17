@@ -148,7 +148,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     }
     else if (act == act_paste) {
         auto ok = false;
-        auto name = QInputDialog::getText(
+        auto name = QInputDialog::getText(  //
             this,
             "paste layer",
             "table name",

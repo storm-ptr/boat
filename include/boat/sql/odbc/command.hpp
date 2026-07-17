@@ -4,6 +4,7 @@
 #define BOAT_SQL_ODBC_COMMAND_HPP
 
 #include <boat/db/command.hpp>
+#include <boat/detail/config.hpp>
 #include <boat/sql/odbc/detail/get_data.hpp>
 #include <boat/sql/odbc/detail/params.hpp>
 
@@ -20,15 +21,17 @@ class command : public db::command {
 public:
     explicit command(std::string_view connection)
     {
-        auto seconds = 30;
         env_ = alloc<SQL_HANDLE_ENV>(env_);
         check(
             SQLSetEnvAttr(
                 env_.get(), SQL_ATTR_ODBC_VERSION, SQLPOINTER(SQL_OV_ODBC3), 0),
             env_);
         dbc_ = alloc<SQL_HANDLE_DBC>(env_);
-        check(SQLSetConnectAttr(
-                  dbc_.get(), SQL_ATTR_LOGIN_TIMEOUT, SQLPOINTER(seconds), 0),
+        check(SQLSetConnectAttr(  //
+                  dbc_.get(),
+                  SQL_ATTR_LOGIN_TIMEOUT,
+                  SQLPOINTER(std::chrono::seconds{timeout}.count()),
+                  0),
               dbc_);
         SQLSMALLINT len;
         check(SQLDriverConnectW(  //
@@ -42,9 +45,6 @@ public:
                   SQL_DRIVER_NOPROMPT),
               dbc_);
         stmt_ = alloc<SQL_HANDLE_STMT>(dbc_);
-        check(SQLSetStmtAttr(
-                  stmt_.get(), SQL_ATTR_QUERY_TIMEOUT, SQLPOINTER(seconds), 0),
-              stmt_);
         id_quote_ = info(dbc_, SQL_IDENTIFIER_QUOTE_CHAR).at(0);
         dbms_ = to_lower(info(dbc_, SQL_DBMS_NAME));
     }
@@ -64,6 +64,12 @@ public:
             ps.push_back(params::make(var));
         for (size_t i{}; i < ps.size(); ++i)
             params::bind(stmt_, SQLUSMALLINT(i + 1), ps[i]);
+        check(SQLSetStmtAttr(  //
+                  stmt_.get(),
+                  SQL_ATTR_QUERY_TIMEOUT,
+                  SQLPOINTER(std::chrono::seconds{timeout}.count()),
+                  0),
+              stmt_);
         auto ec = SQLExecute(stmt_.get());
         for (; SQL_NO_DATA != ec; ec = SQLMoreResults(stmt_.get())) {
             check(ec, stmt_);

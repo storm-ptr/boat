@@ -3,37 +3,74 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFileDialog>
+#include <QFont>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QStandardItemModel>
 #include <QVBoxLayout>
-#include <boat/config.hpp>
+#include <boat/address.hpp>
+#include <boat/sql/commands.hpp>
 #include "formats.h"
 #include "select_source_dialog.h"
 
 namespace {
 
-QStringList preset_address()
+struct preset_address {
+    QStringList gdal;
+    QStringList slippy;
+    QStringList sql;
+};
+
+preset_address make_preset_address()
 {
-    auto ret = QStringList{
+    auto all = QStringList{
         boat::config::mysql_address.data(),
         boat::config::mysql_gdal_address.data(),
-        boat::config::postgresql_address.data(),
-        boat::config::postgresql_gdal_address.data(),
+        boat::config::postgres_address.data(),
+        boat::config::postgres_gdal_address.data(),
         "http://ugis@basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         "http://ugis@mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}?zmax=19",
         "https://ugis@tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "sqlite:///C:/home/gis_data/sqlite/Mexico.sqlite",
+        "sqlite:///C:/home/gis_data/sqlite/california_roads.sqlite",
         "wms:https://wms.gebco.net/mapserv?request=GetCapabilities&service=WMS",
         "/vsicurl/https://download.osgeo.org/gdal/data/gtiff/small_world.tif",
     };
     for (auto adr : boat::config::odbc_address())
-        ret.push_back(adr.data());
+        all.push_back(adr.data());
     if (auto adr = boat::config::mssql_gdal_address(); !adr.empty())
-        ret.push_back(adr.data());
-    ret.sort();
+        all.push_back(adr.data());
+    auto ret = preset_address{};
+    for (auto& adr : all) {
+        auto std_adr = adr.toStdString();
+        if (std_adr.starts_with("http://") || std_adr.starts_with("https://"))
+            ret.slippy.push_back(adr);
+        else if (boat::sql::supported_url(std_adr))
+            ret.sql.push_back(adr);
+        else
+            ret.gdal.push_back(adr);
+    }
+    ret.gdal.sort();
+    ret.slippy.sort();
+    ret.sql.sort();
     return ret;
+}
+
+void add_group(QComboBox* box, QString const& header, QStringList const& items)
+{
+    if (items.isEmpty())
+        return;
+    box->insertSeparator(box->count());
+    box->addItem(header);
+    auto sep =
+        qobject_cast<QStandardItemModel*>(box->model())->item(box->count() - 1);
+    auto font = box->font();
+    font.setBold(true);
+    sep->setFont(font);
+    sep->setFlags(Qt::NoItemFlags);
+    for (auto& item : items)
+        box->addItem(item);
 }
 
 }  // namespace
@@ -46,7 +83,10 @@ select_source_dialog::select_source_dialog(QWidget* parent) : QDialog(parent)
     address_ = new QComboBox{this};
     address_->setEditable(true);
     address_->setInsertPolicy(QComboBox::NoInsert);
-    address_->addItems(preset_address());
+    auto preset = make_preset_address();
+    add_group(address_, "gdal", preset.gdal);
+    add_group(address_, "slippy", preset.slippy);
+    add_group(address_, "sql", preset.sql);
     address_->setCurrentIndex(-1);
     address_->clearEditText();
     address_->setSizeAdjustPolicy(

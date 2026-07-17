@@ -1,7 +1,7 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_CONFIG_HPP
-#define BOAT_CONFIG_HPP
+#ifndef BOAT_ADDRESS_HPP
+#define BOAT_ADDRESS_HPP
 
 #include <boat/sql/odbc/drivers.hpp>
 #include <boost/preprocessor/stringize.hpp>
@@ -36,9 +36,9 @@ constexpr auto mysql_host =
 #endif
         ;
 
-constexpr auto postgresql_host =
-#if defined(BOAT_TEST_POSTGRESQL_HOST)
-    BOOST_PP_STRINGIZE(BOAT_TEST_POSTGRESQL_HOST)
+constexpr auto postgres_host =
+#if defined(BOAT_TEST_POSTGRES_HOST)
+    BOOST_PP_STRINGIZE(BOAT_TEST_POSTGRES_HOST)
 #else
     host
 #endif
@@ -54,19 +54,19 @@ inline static auto const mysql_gdal_address = boat::concat(  //
     mysql_host,
     ",port=3306");
 
-inline static auto const postgresql_address = boat::concat(  //
+inline static auto const postgres_address = boat::concat(  //
+    "postgres://postgres:",
+    password,
+    "@",
+    postgres_host,
+    "/postgres?client_encoding=UTF8");
+
+inline static auto const postgres_gdal_address = boat::concat(  //
     "postgresql://postgres:",
     password,
     "@",
-    postgresql_host,
-    "/postgres?client_encoding=UTF8");
-
-inline static auto const postgresql_gdal_address = boat::concat(  //
-    "pg:host='",
-    postgresql_host,
-    "' dbname='postgres' user='postgres' password='",
-    password,
-    "'");
+    postgres_host,
+    "/postgres");
 
 namespace detail {
 
@@ -100,7 +100,7 @@ inline std::vector<std::string> odbc_address()
 {
     auto ret = std::vector<std::string>{};
     for (auto [srv, drv] :
-         detail::odbc_drivers({"mysql", "postgresql", "sql server"})) {
+         detail::odbc_drivers({"mysql", "postgres", "sql server"})) {
         if (srv == "mysql")
             ret.push_back(boat::concat(  //
                 "odbc://root:",
@@ -109,12 +109,12 @@ inline std::vector<std::string> odbc_address()
                 mysql_host,
                 "/mysql?MULTI_STATEMENTS=1&DRIVER=",
                 drv));
-        else if (srv == "postgresql")
+        else if (srv == "postgres")
             ret.push_back(boat::concat(  //
                 "odbc://postgres:",
                 password,
                 "@",
-                postgresql_host,
+                postgres_host,
                 "/postgres?BoolsAsChar=0&DRIVER=",
                 drv));
         else if (srv == "sql server")
@@ -145,4 +145,4 @@ inline std::string mssql_gdal_address()
 
 }  // namespace boat::config
 
-#endif  // BOAT_CONFIG_HPP
+#endif  // BOAT_ADDRESS_HPP

@@ -37,7 +37,6 @@ BOOST_AUTO_TEST_CASE(sql_vector)
     for (auto cmd : commands()) {
         auto cat = sql::catalog{};
         cat.command = std::move(cmd);
-        cat.set_autocommit(false);
         check(cat);
     }
 }
@@ -196,7 +195,6 @@ BOOST_AUTO_TEST_CASE(sql_datatypes)
     for (auto cmd : commands()) {
         auto cat = sql::catalog{};
         cat.command = std::move(cmd);
-        cat.set_autocommit(false);
         cat.drop("", tbl_a_name);
         cat.drop("", tbl_b_name);
         cat.command->exec(datatypes_query(cat.command->dbms()));

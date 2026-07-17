@@ -5,6 +5,7 @@
 
 #include <curl/curl.h>
 #include <boat/blob.hpp>
+#include <boat/detail/config.hpp>
 #include <unordered_map>
 
 namespace boat {
@@ -13,9 +14,9 @@ class curl {
 public:
     using value_type = std::pair<std::string, blob>;
 
-    explicit curl(std::string useragent) : useragent_{std::move(useragent)}
+    explicit curl(std::string user) : user_{std::move(user)}
     {
-        static auto const ec = curl_global_init(CURL_GLOBAL_ALL);
+        static auto ec = curl_global_init(CURL_GLOBAL_ALL);
         check(ec);
         multi_.reset(curl_multi_init());
         boat::check(!!multi_, "curl_multi_init");
@@ -25,15 +26,14 @@ public:
 
     void push(std::string url)
     {
+        constexpr auto ms = std::chrono::milliseconds{timeout}.count();
         auto h = curl_easy_init();
         boat::check(h, "curl_easy_init");
         auto easy = easy_ptr{h};
         auto val = std::make_unique<value_type>(std::move(url), blob{});
-        check(curl_easy_setopt(h, CURLOPT_SSL_VERIFYHOST, 0));
-        check(curl_easy_setopt(h, CURLOPT_SSL_VERIFYPEER, 0));
-        check(curl_easy_setopt(h, CURLOPT_TIMEOUT_MS, 30'000));
+        check(curl_easy_setopt(h, CURLOPT_TIMEOUT_MS, ms));
         check(curl_easy_setopt(h, CURLOPT_URL, val->first.data()));
-        check(curl_easy_setopt(h, CURLOPT_USERAGENT, useragent_.data()));
+        check(curl_easy_setopt(h, CURLOPT_USERAGENT, user_.data()));
         check(curl_easy_setopt(h, CURLOPT_WRITEDATA, &val->second));
         check(curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, &callback));
         check(curl_multi_add_handle(multi_.get(), h));
@@ -44,17 +44,17 @@ public:
     value_type pop()
     {
         int count;
-        CURLMsg* m;
         do {
             check(curl_multi_perform(multi_.get(), &count));
         } while (count == int(jobs_.size()));
+        CURLMsg* m;
         do {
             m = curl_multi_info_read(multi_.get(), &count);
             boat::check(m, "curl_multi_info_read");
         } while (m->msg != CURLMSG_DONE);
         check(m->data.result);
         auto it = jobs_.find(m->easy_handle);
-        boat::check(it != jobs_.end(), "out of curl easy handles");
+        boat::check(it != jobs_.end(), "curl easy handle");
         return std::move(*jobs_.extract(it).mapped().second);
     }
 
@@ -72,7 +72,7 @@ private:
     using easy_ptr = std::unique_ptr<CURL, easy_deleter>;
     using value_ptr = std::unique_ptr<value_type>;
 
-    std::string useragent_;
+    std::string user_;
     unique_ptr<CURLM, curl_multi_cleanup> multi_;
     std::unordered_map<CURL*, std::pair<easy_ptr, value_ptr>> jobs_;
 

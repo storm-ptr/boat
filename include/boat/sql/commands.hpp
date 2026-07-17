@@ -30,7 +30,7 @@ namespace boat::sql {
 
 inline bool supported_url(std::string_view url)
 {
-    return any({"mysql://", "odbc://", "postgresql://", "sqlite://"},
+    return any({"mysql://", "odbc://", "postgres://", "sqlite://"},
                prefix(url));
 }
 
@@ -77,7 +77,7 @@ inline std::unique_ptr<db::command> make_command(std::string_view url)
 #else
         throw std::runtime_error("compiled without odbc");
 #endif
-    if (url.starts_with("postgresql://"))
+    if (url.starts_with("postgres://"))
 #if __has_include(<libpq-fe.h>)
         return std::make_unique<libpq::command>(std::string{url}.data());
 #else

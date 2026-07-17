@@ -12,8 +12,7 @@ inline dataset_ptr open(char const* file)
 {
     init();
     char const* opts[] = {"MSSQLSPATIAL_USE_BCP=NO", nullptr};
-    auto ret = dataset_ptr{
-        GDALOpenEx(file, 0, 0, 0, to_lower(file) == "mssql:" ? opts : nullptr)};
+    auto ret = dataset_ptr{GDALOpenEx(file, 0, 0, 0, opts)};
     boat::check(!!ret, error_or(concat("GDALOpenEx ", file)));
     return ret;
 }
@@ -24,14 +23,7 @@ inline dataset_ptr create(char const* file, char const* driver)
     char const* opts[] = {"SPATIALITE=YES", nullptr};
     auto drv = GDALGetDriverByName(driver);
     boat::check(!!drv, error_or(concat("GDALGetDriverByName ", driver)));
-    auto ret = dataset_ptr{GDALCreate(  //
-        drv,
-        file,
-        0,
-        0,
-        0,
-        GDT_Unknown,
-        to_lower(driver) == "sqlite" ? opts : nullptr)};
+    auto ret = dataset_ptr{GDALCreate(drv, file, 0, 0, 0, GDT_Unknown, opts)};
     boat::check(!!ret, error_or(concat("GDALCreate ", file)));
     return ret;
 }
