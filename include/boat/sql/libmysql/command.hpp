@@ -11,6 +11,8 @@ namespace boat::sql::libmysql {
 
 class command : public db::command {
     unique_ptr<MYSQL, mysql_close> dbc_;
+    unique_ptr<MYSQL_STMT, mysql_stmt_close> stmt_;
+    std::string prepared_;
 
 public:
     command(char const* user,
@@ -47,6 +49,8 @@ public:
         auto params = qry.params() | std::views::transform(to_bind) |
                       std::ranges::to<std::vector>();
         if (params.empty()) {
+            stmt_.reset();
+            prepared_.clear();
             check(!mysql_query(dbc_.get(), txt.data()), dbc_);
             for (int ec{}; ec >= 0; ec = mysql_next_result(dbc_.get())) {
                 check(!ec, dbc_);
@@ -54,19 +58,21 @@ public:
             }
         }
         else {
-            auto stmt = unique_ptr<MYSQL_STMT, mysql_stmt_close>{
-                mysql_stmt_init(dbc_.get())};
-            check(!!stmt, dbc_);
-            check(!mysql_stmt_prepare(  //
-                      stmt.get(),
-                      txt.data(),
-                      static_cast<unsigned long>(txt.size())),
-                  stmt);
-            check(!mysql_stmt_bind_param(stmt.get(), params.data()), stmt);
-            check(!mysql_stmt_execute(stmt.get()), stmt);
-            for (int ec{}; ec >= 0; ec = mysql_stmt_next_result(stmt.get())) {
-                check(!ec, stmt);
-                ret = fetch(stmt.get());
+            if (prepared_ != txt) {
+                stmt_.reset(mysql_stmt_init(dbc_.get()));
+                check(!!stmt_, dbc_);
+                check(!mysql_stmt_prepare(  //
+                          stmt_.get(),
+                          txt.data(),
+                          static_cast<unsigned long>(txt.size())),
+                      stmt_);
+                prepared_ = txt;
+            }
+            check(!mysql_stmt_bind_param(stmt_.get(), params.data()), stmt_);
+            check(!mysql_stmt_execute(stmt_.get()), stmt_);
+            for (int ec{}; ec >= 0; ec = mysql_stmt_next_result(stmt_.get())) {
+                check(!ec, stmt_);
+                ret = fetch(stmt_.get());
             }
         }
         return ret;
