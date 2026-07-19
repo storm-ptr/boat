@@ -73,7 +73,7 @@ leaf copy_vector(  //
     qInfo() << "copying rows";
     for (size_t done{};;) {
         auto rs =
-            cat1->select(tbl1, boat::db::page{.offset = done, .limit = 10'000});
+            cat1->select(tbl1, boat::db::page{.offset = done, .limit = 20'000});
         if (rs.empty())
             break;
         cat2->insert(tbl2, rs, tok);

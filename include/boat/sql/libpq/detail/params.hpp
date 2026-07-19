@@ -8,60 +8,69 @@
 
 namespace boat::sql::libpq::params {
 
-struct param {
-    virtual ~param() = default;
-    virtual Oid type() = 0;
-    virtual char const* value() = 0;
-    virtual int length() = 0;
-    virtual int format() = 0;
-};
-
 template <arithmetic T, Oid oid>
     requires(!mixed(std::endian::native))
-class scalar : public param {
-    T val_;
+struct scalar {
+    T val;
 
-public:
-    explicit scalar(T val) : val_(val)
+    explicit scalar(T val_) : val(val_)
     {
         if constexpr (std::endian::native != std::endian::big)
-            val_ = byteswap(val_);
+            val = byteswap(val);
     }
 
-    Oid type() override { return oid; }
-    char const* value() override { return as_chars(&val_); }
-    int length() override { return sizeof val_; }
-    int format() override { return binary_fmt; }
+    Oid type() const { return oid; }
+    char const* value() const { return as_chars(&val); }
+    int length() const { return sizeof val; }
+    int format() const { return binary_fmt; }
 };
 
 template <class T, Oid oid, int fmt>
-class array : public param {
-    T view_;
+struct array {
+    T view;
 
-public:
-    explicit array(T view) : view_(view) {}
-    Oid type() override { return oid; }
-    char const* value() override { return as_chars(view_.data()); }
-    int length() override { return int(view_.size()); }
-    int format() override { return fmt; }
+    Oid type() const { return oid; }
+    char const* value() const { return as_chars(view.data()); }
+    int length() const { return int(view.size()); }
+    int format() const { return fmt; }
 };
 
-inline std::unique_ptr<param> make(db::variant const& var)
+using integer = scalar<int64_t, int8_oid>;
+using real = scalar<double, float8_oid>;
+using text = array<std::string_view, text_oid, text_fmt>;
+using binary = array<blob_view, bytea_oid, binary_fmt>;
+using param = std::variant<integer, real, text, binary>;
+
+inline param make(db::variant const& var)
 {
-    using integer = scalar<int64_t, int8_oid>;
-    using real = scalar<double, float8_oid>;
-    using text = array<std::string_view, text_oid, text_fmt>;
-    using binary = array<blob_view, bytea_oid, binary_fmt>;
-    auto ret = std::unique_ptr<param>{};
-    auto vis = overloaded{
-        [](db::null) { throw std::runtime_error{"null param"}; },
-        [&](int64_t v) { ret = std::make_unique<integer>(v); },
-        [&](double v) { ret = std::make_unique<real>(v); },
-        [&](std::string_view v) { ret = std::make_unique<text>(v); },
-        [&](blob_view v) { ret = std::make_unique<binary>(v); },
+    constexpr auto vis = overloaded{
+        [](db::null) -> param { throw std::logic_error("null param"); },
+        [](int64_t v) { return param(std::in_place_type<integer>, v); },
+        [](double v) { return param(std::in_place_type<real>, v); },
+        [](std::string_view v) { return param(std::in_place_type<text>, v); },
+        [](blob_view v) { return param(std::in_place_type<binary>, v); },
     };
-    std::visit(vis, var);
-    return ret;
+    return std::visit(vis, var);
+}
+
+inline Oid type(param const& p)
+{
+    return std::visit([](auto& v) { return v.type(); }, p);
+}
+
+inline char const* value(param const& p)
+{
+    return std::visit([](auto& v) { return v.value(); }, p);
+}
+
+inline int length(param const& p)
+{
+    return std::visit([](auto& v) { return v.length(); }, p);
+}
+
+inline int format(param const& p)
+{
+    return std::visit([](auto& v) { return v.format(); }, p);
 }
 
 }  // namespace boat::sql::libpq::params
