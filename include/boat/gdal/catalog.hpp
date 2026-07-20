@@ -39,7 +39,13 @@ struct catalog : db::catalog {
 
     db::rowset select(db::table const& tbl, db::page const& rq) override
     {
-        auto q = db::query{"\n select * from ", db::id{tbl.table_name}};
+        auto q = db::query{};
+        q << "\n select";
+        if (auto col = OGR_L_GetFIDColumn(GDALDatasetGetLayerByName(
+                dataset.get(), tbl.table_name.data()));
+            col && std::strlen(col))
+            q << " FID as \"" << col << "\",";
+        q << " * from " << db::id{tbl.table_name};
         for (auto sep{"\n order by "}; auto& key : rq.order_by)
             q << std::exchange(sep, ", ") << db::id{key.column_name}
               << (key.descending ? " desc" : "");
