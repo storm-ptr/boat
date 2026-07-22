@@ -14,11 +14,11 @@ constexpr auto password =
 #if defined(BOAT_TEST_PASSWORD)
     BOOST_PP_STRINGIZE(BOAT_TEST_PASSWORD)
 #else
-    "E207cGYM"
+    "E207cGYM!"
 #endif
         ;
 
-constexpr auto host = "192.168.31.129";
+constexpr auto host = "192.168.31.131";
 
 constexpr auto mssql_host =
 #if defined(BOAT_TEST_MSSQL_HOST)

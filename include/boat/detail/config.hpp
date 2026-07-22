@@ -8,7 +8,7 @@
 namespace boat {
 
 /// common timeout for network and database operations
-constexpr auto timeout = std::chrono::seconds{15};
+constexpr auto timeout = std::chrono::seconds{30};
 
 }  // namespace boat
 

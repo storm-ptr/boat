@@ -41,6 +41,7 @@ void tree_model::copy_as(  //
                             std::filesystem::path(adr).filename().string(),
                         .address = adr,
                     });
+                    qInfo() << "copy_as completed";
                 },
                 Qt::QueuedConnection);
         }

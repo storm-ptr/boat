@@ -1,9 +1,9 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_SQL_LIBPQ_GET_VALUE_HPP
-#define BOAT_SQL_LIBPQ_GET_VALUE_HPP
+#ifndef BOAT_SQL_LIBPQ_FETCH_HPP
+#define BOAT_SQL_LIBPQ_FETCH_HPP
 
-#include <boat/db/adapted/adapted.hpp>
+#include <boat/db/rowset.hpp>
 #include <boat/detail/string.hpp>
 #include <boat/sql/libpq/detail/utility.hpp>
 
@@ -55,6 +55,24 @@ inline db::variant get_value(PGresult* res, int row, int col)
     throw std::runtime_error{concat(PQfname(res, col), " ", type)};
 }
 
+inline db::rowset fetch(PGresult* res)
+{
+    auto ec = PQresultStatus(res);
+    check(ec == PGRES_COMMAND_OK || ec == PGRES_TUPLES_OK, res);
+    int cols = PQnfields(res);
+    int rows = PQntuples(res);
+    auto ret = db::rowset{.columns{static_cast<size_t>(cols)},
+                          .rows{static_cast<size_t>(rows)}};
+    for (int col{}; col < cols; ++col)
+        ret.columns[col] = PQfname(res, col);
+    for (int row{}; row < rows; ++row) {
+        ret.rows[row].resize(cols);
+        for (int col{}; col < cols; ++col)
+            ret.rows[row][col] = get_value(res, row, col);
+    }
+    return ret;
+}
+
 }  // namespace boat::sql::libpq
 
-#endif  // BOAT_SQL_LIBPQ_GET_VALUE_HPP
+#endif  // BOAT_SQL_LIBPQ_FETCH_HPP

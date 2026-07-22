@@ -43,11 +43,12 @@ inline db::rowset fetch(MYSQL_STMT* stmt)
         mysql_stmt_result_metadata(stmt)};
     if (!res)
         return ret;
-    ret.columns.resize(mysql_num_fields(res.get()));
-    auto binds = std::vector<MYSQL_BIND>(ret.columns.size());
-    auto bufs = std::vector<buffer>(ret.columns.size());
+    auto cols = mysql_num_fields(res.get());
+    ret.columns.resize(cols);
+    auto binds = std::vector<MYSQL_BIND>(cols);
+    auto bufs = std::vector<buffer>(cols);
     auto fields = mysql_fetch_fields(res.get());
-    for (size_t col = 0; col < ret.columns.size(); ++col) {
+    for (size_t col{}; col < cols; ++col) {
         ret.columns[col] = fields[col].name;
         bufs[col].str.resize(fields[col].max_length);
         binds[col].buffer = bufs[col].str.data();
@@ -57,11 +58,12 @@ inline db::rowset fetch(MYSQL_STMT* stmt)
         binds[col].length = &bufs[col].len;
     }
     check(!mysql_stmt_bind_result(stmt, binds.data()), stmt);
-    ret.rows.resize(static_cast<size_t>(mysql_stmt_num_rows(stmt)));
-    for (size_t row = 0; row < ret.rows.size(); ++row) {
+    auto rows = mysql_stmt_num_rows(stmt);
+    ret.rows.resize(rows);
+    for (size_t row{}; row < rows; ++row) {
         check(!mysql_stmt_fetch(stmt), stmt);
-        ret.rows[row].resize(ret.columns.size());
-        for (size_t col{}; col < ret.columns.size(); ++col)
+        ret.rows[row].resize(cols);
+        for (size_t col{}; col < cols; ++col)
             if (!bufs[col].null)
                 ret.rows[row][col] =
                     get_value(fields[col], bufs[col].str.data(), bufs[col].len);

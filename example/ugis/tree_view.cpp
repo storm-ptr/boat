@@ -14,16 +14,6 @@
 
 namespace {
 
-constexpr auto workspace_filter = "ugis workspace (*.ugis)";
-
-QString ensure_ext(QString path, char const* ext)
-{
-    auto suffix = QString::fromLatin1(ext);
-    if (!path.endsWith(suffix, Qt::CaseInsensitive))
-        path += suffix;
-    return path;
-}
-
 template <class Get, class Set>
 void pick_color(  //
     tree_view* self,
@@ -136,15 +126,33 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     else if (act == act_copy_as) {
         if (!opt)
             return;
-        auto selected = QString{};
-        auto path = QFileDialog::getSaveFileName(
-            this, {}, {}, copy_as_filter(opt->layer.raster), &selected);
+        auto dlg = QFileDialog{this};
+        dlg.setAcceptMode(QFileDialog::AcceptSave);
+        dlg.setNameFilter(copy_as_filter(opt->layer.raster));
+        dlg.setOption(QFileDialog::DontUseNativeDialog);
+        if (dlg.exec() != QDialog::Accepted)
+            return;
+        auto selected = dlg.selectedNameFilter();
+        auto path = dlg.selectedFiles().value(0);
         if (path.isEmpty())
             return;
         auto fmt = copy_as_format(opt->layer.raster, selected);
-        if (!fmt)
+        if (fmt) {
+            model_.copy_as(
+                idx, ensure_ext(std::move(path), fmt->ext), fmt->driver);
             return;
-        model_.copy_as(idx, ensure_ext(std::move(path), fmt->ext), fmt->driver);
+        }
+        auto ok = false;
+        auto driver = QInputDialog::getText(  //
+            this,
+            "copy as",
+            "driver",
+            QLineEdit::Normal,
+            {},
+            &ok);
+        if (!ok || driver.isEmpty())
+            return;
+        model_.copy_as(idx, std::move(path), driver);
     }
     else if (act == act_paste) {
         auto ok = false;

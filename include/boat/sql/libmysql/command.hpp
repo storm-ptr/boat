@@ -46,9 +46,9 @@ public:
     {
         auto ret = db::rowset{};
         auto txt = qry.text(id_quote(), param_mark());
-        auto params = qry.params() | std::views::transform(to_bind) |
-                      std::ranges::to<std::vector>();
-        if (params.empty()) {
+        auto ps = qry.params() | std::views::transform(to_bind) |
+                  std::ranges::to<std::vector>();
+        if (ps.empty()) {
             stmt_.reset();
             prepared_.clear();
             check(!mysql_query(dbc_.get(), txt.data()), dbc_);
@@ -68,7 +68,7 @@ public:
                       stmt_);
                 prepared_ = txt;
             }
-            check(!mysql_stmt_bind_param(stmt_.get(), params.data()), stmt_);
+            check(!mysql_stmt_bind_param(stmt_.get(), ps.data()), stmt_);
             check(!mysql_stmt_execute(stmt_.get()), stmt_);
             for (int ec{}; ec >= 0; ec = mysql_stmt_next_result(stmt_.get())) {
                 check(!ec, stmt_);

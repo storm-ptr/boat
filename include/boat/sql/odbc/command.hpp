@@ -16,7 +16,7 @@ class command : public db::command {
     stmt_ptr stmt_;
     char id_quote_;
     std::string dbms_;
-    std::basic_string<SQLWCHAR> sql_;
+    std::basic_string<SQLWCHAR> prepared_;
 
 public:
     explicit command(std::string_view connection)
@@ -54,14 +54,12 @@ public:
         check(SQLFreeStmt(stmt_.get(), SQL_RESET_PARAMS), stmt_);
         auto ret = db::rowset{};
         auto txt = qry.text(id_quote_, param_mark()) | unicode::utf<SQLWCHAR>;
-        if (txt != sql_) {
+        if (txt != prepared_) {
             check(SQLPrepareW(stmt_.get(), txt.data(), SQL_NTS), stmt_);
-            sql_ = std::move(txt);
+            prepared_ = std::move(txt);
         }
-        auto ps = std::vector<params::param>{};
-        ps.reserve(std::ranges::distance(qry.params()));
-        for (auto var : qry.params())
-            ps.push_back(params::make(var));
+        auto ps = qry.params() | std::views::transform(params::make) |
+                  std::ranges::to<std::vector>();
         for (size_t i{}; i < ps.size(); ++i)
             params::bind(stmt_, SQLUSMALLINT(i + 1), ps[i]);
         check(SQLSetStmtAttr(  //
@@ -74,16 +72,16 @@ public:
         for (; SQL_NO_DATA != ec; ec = SQLMoreResults(stmt_.get())) {
             check(ec, stmt_);
             ret = {};
-            SQLSMALLINT num_cols;
-            check(SQLNumResultCols(stmt_.get(), &num_cols), stmt_);
-            if (num_cols) {
-                for (int i{}; i < num_cols; ++i)
+            SQLSMALLINT cols;
+            check(SQLNumResultCols(stmt_.get(), &cols), stmt_);
+            if (cols) {
+                for (int i{}; i < cols; ++i)
                     ret.columns.push_back(name(stmt_, i + 1));
                 ec = SQLFetch(stmt_.get());
                 for (; SQL_NO_DATA != ec; ec = SQLFetch(stmt_.get())) {
                     check(ec, stmt_);
-                    auto& row = ret.rows.emplace_back(num_cols);
-                    for (int i{}; i < num_cols; ++i)
+                    auto& row = ret.rows.emplace_back(cols);
+                    for (int i{}; i < cols; ++i)
                         row[i] = get_data(stmt_, i + 1);
                 }
             }

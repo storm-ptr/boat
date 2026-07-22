@@ -6,6 +6,8 @@
 #include <QString>
 #include <set>
 
+constexpr auto workspace_filter = "ugis workspace (*.ugis)";
+
 struct copy_format {
     char const* filter;
     char const* driver;
@@ -45,6 +47,7 @@ inline QString copy_as_filter(bool raster)
         ret += std::exchange(sep, ";;");
         ret += fmt.filter;
     }
+    ret += ";;All files (*.*)";
     return ret;
 }
 
@@ -62,6 +65,14 @@ inline QString open_filter()
     }
     ret += ";;All files (*.*)";
     return ret;
+}
+
+inline QString ensure_ext(QString path, char const* ext)
+{
+    auto suffix = QString::fromLatin1(ext);
+    if (!path.endsWith(suffix, Qt::CaseInsensitive))
+        path += suffix;
+    return path;
 }
 
 #endif  // FORMATS_H

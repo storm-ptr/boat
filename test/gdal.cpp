@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
 {
     auto cat1 = boat::slippy::catalog{};
     cat1.user = "useragent";
-    cat1.url = "http://mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}";
+    cat1.url = "http://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png";
     cat1.zmax = 2;
     auto rast1 = cat1.get_raster(cat1.layers().at(0));
 

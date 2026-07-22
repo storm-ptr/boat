@@ -38,8 +38,8 @@ public:
         auto const txt = qry.text(id_quote(), param_mark());
         auto first = txt.data();
         auto last = first + txt.size();
-        auto params = qry.params();
-        auto it = params.begin();
+        auto ps = qry.params();
+        auto it = ps.begin();
         while (first != last) {
             ret = {};
             sqlite3_stmt* stmt;
@@ -47,17 +47,18 @@ public:
                       dbc_.get(), first, int(last - first), &stmt, &first),
                   dbc_);
             auto _ = unique_ptr<sqlite3_stmt, sqlite3_finalize>{stmt};
-            int num_params = sqlite3_bind_parameter_count(stmt);
-            for (int i{}; i < num_params && it != params.end(); ++i, ++it)
+            int params = sqlite3_bind_parameter_count(stmt);
+            for (int i{}; i < params && it != ps.end(); ++i, ++it)
                 check(bind_value(stmt, i + 1, *it), dbc_);
-            ret.columns.resize(sqlite3_column_count(stmt));
-            for (int i{}; i < static_cast<int>(ret.columns.size()); ++i)
+            int cols = sqlite3_column_count(stmt);
+            ret.columns.resize(cols);
+            for (int i{}; i < cols; ++i)
                 ret.columns[i] = sqlite3_column_name(stmt, i);
             int ec = sqlite3_step(stmt);
             for (; SQLITE_DONE != ec; ec = sqlite3_step(stmt)) {
                 check(ec, dbc_);
-                auto& row = ret.rows.emplace_back(ret.columns.size());
-                for (int i{}; i < static_cast<int>(ret.columns.size()); ++i)
+                auto& row = ret.rows.emplace_back(cols);
+                for (int i{}; i < cols; ++i)
                     row[i] = column_value(stmt, i);
             }
         }
