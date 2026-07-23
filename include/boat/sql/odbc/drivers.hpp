@@ -31,7 +31,6 @@ inline std::generator<std::string> drivers()
         SQL_MAX_MESSAGE_LENGTH,
         &attr_len)))
         co_yield std::span(desc.data(), desc_len) | unicode::utf8;
-
 #else
     co_return;
 #endif

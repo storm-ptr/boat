@@ -31,6 +31,7 @@ void tree_model::copy_as(  //
                     drv.data(),
                     lyr.layer.table_name.data(),
                     tok);
+            boat::make_catalog(adr);
             QMetaObject::invokeMethod(
                 this,
                 [=] {

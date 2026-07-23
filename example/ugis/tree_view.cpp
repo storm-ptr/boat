@@ -137,22 +137,12 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
         if (path.isEmpty())
             return;
         auto fmt = copy_as_format(opt->layer.raster, selected);
-        if (fmt) {
-            model_.copy_as(
-                idx, ensure_ext(std::move(path), fmt->ext), fmt->driver);
+        if (!fmt)
             return;
-        }
-        auto ok = false;
-        auto driver = QInputDialog::getText(  //
-            this,
-            "copy as",
-            "driver",
-            QLineEdit::Normal,
-            {},
-            &ok);
-        if (!ok || driver.isEmpty())
-            return;
-        model_.copy_as(idx, std::move(path), driver);
+        model_.copy_as(  //
+            idx,
+            ensure_extension(std::move(path), fmt->extension),
+            fmt->driver);
     }
     else if (act == act_paste) {
         auto ok = false;
@@ -208,7 +198,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             this, {}, workspace_path_, workspace_filter);
         if (path.isEmpty())
             return;
-        path = ensure_ext(std::move(path), ".ugis");
+        path = ensure_extension(std::move(path), ".ugis");
         if (!model_.save_workspace(path))
             QMessageBox::warning(this, {}, "save workspace failed");
         else

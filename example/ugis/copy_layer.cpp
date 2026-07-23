@@ -2,7 +2,6 @@
 
 #include <QDebug>
 #include <boat/catalogs.hpp>
-#include <boat/gdal/catalog.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include "copy_layer.h"
 
@@ -38,6 +37,7 @@ void copy_raster(  //
         done += batch.size();
         qInfo() << "copied" << done << "tiles";
     }
+    qInfo() << "copied all tiles";
 }
 
 leaf copy_vector(  //
@@ -84,5 +84,6 @@ leaf copy_vector(  //
         qInfo() << "copied" << done << "rows";
     }
     cat2->set_autocommit(true);
+    qInfo() << "copied all rows";
     return ret;
 }
