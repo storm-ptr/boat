@@ -84,6 +84,7 @@ leaf copy_vector(  //
         qInfo() << "copied" << done << "rows";
     }
     cat2->set_autocommit(true);
-    qInfo() << "copied all rows";
+    if (!tok.stop_requested())
+        qInfo() << "copied all rows";
     return ret;
 }
