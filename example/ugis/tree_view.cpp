@@ -126,14 +126,14 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     else if (act == act_copy_as) {
         if (!opt)
             return;
-        auto dlg = QFileDialog{this};
-        dlg.setAcceptMode(QFileDialog::AcceptSave);
-        dlg.setNameFilter(copy_as_filter(opt->layer.raster));
-        dlg.setOption(QFileDialog::DontUseNativeDialog);
-        if (dlg.exec() != QDialog::Accepted)
-            return;
-        auto selected = dlg.selectedNameFilter();
-        auto path = dlg.selectedFiles().value(0);
+        auto selected = QString{};
+        auto path = QFileDialog::getSaveFileName(  //
+            this,
+            {},
+            {},
+            copy_as_filter(opt->layer.raster),
+            &selected,
+            QFileDialog::DontUseNativeDialog);
         if (path.isEmpty())
             return;
         auto fmt = copy_as_format(opt->layer.raster, selected);
@@ -184,8 +184,13 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
         workspace_path_.clear();
     }
     else if (act == act_open) {
-        auto path =
-            QFileDialog::getOpenFileName(this, {}, {}, workspace_filter);
+        auto path = QFileDialog::getOpenFileName(  //
+            this,
+            {},
+            {},
+            workspace_filter,
+            nullptr,
+            QFileDialog::DontUseNativeDialog);
         if (path.isEmpty())
             return;
         if (!model_.open_workspace(path))
@@ -194,8 +199,13 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             workspace_path_ = path;
     }
     else if (act == act_save) {
-        auto path = QFileDialog::getSaveFileName(
-            this, {}, workspace_path_, workspace_filter);
+        auto path = QFileDialog::getSaveFileName(  //
+            this,
+            {},
+            workspace_path_,
+            workspace_filter,
+            nullptr,
+            QFileDialog::DontUseNativeDialog);
         if (path.isEmpty())
             return;
         path = ensure_extension(std::move(path), ".ugis");

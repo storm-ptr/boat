@@ -127,7 +127,8 @@ QString select_source_dialog::address() const
 
 void select_source_dialog::browse_file()
 {
-    auto path = QFileDialog::getOpenFileName(this, {}, {}, open_filter());
+    auto path = QFileDialog::getOpenFileName(
+        this, {}, {}, open_filter(), nullptr, QFileDialog::DontUseNativeDialog);
     if (!path.isEmpty())
         address_->setEditText(path);
 }
