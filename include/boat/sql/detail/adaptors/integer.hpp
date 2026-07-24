@@ -13,7 +13,6 @@ struct integer : impl<int> {
     {
         if (any({"bigint", "boolean", "int", "integer", "smallint"},
                 same(type())) ||
-            is_mssql(dbms_) && any({"bit", "tinyint"}, same(type())) ||
             is_mysql(dbms_) && any({"mediumint", "tinyint"}, same(type())) ||
             is_postgres(dbms_) && type().contains("serial"))
             return kind_;

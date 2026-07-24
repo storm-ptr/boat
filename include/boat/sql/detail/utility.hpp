@@ -8,7 +8,6 @@
 
 namespace boat::sql {
 
-constexpr auto is_mssql = has("microsoft sql server");
 constexpr auto is_mysql = has("mysql");
 constexpr auto is_postgres = has("postgres");
 constexpr auto is_sqlite = has("sqlite");

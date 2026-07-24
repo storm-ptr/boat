@@ -22,9 +22,7 @@ struct spatial : impl<geometry::geographic::variant> {
     void select(db::query& qry) const override
     {
         auto id = db::id{col_->column_name};
-        if (is_mssql(dbms_))
-            qry << id << ".STAsBinary() " << id;
-        else if (is_mysql(dbms_))
+        if (is_mysql(dbms_))
             qry << "ST_AsBinary(" << id << ", 'axis-order=long-lat') " << id;
         else
             qry << "ST_AsBinary(" << id << ") " << id;
@@ -33,10 +31,7 @@ struct spatial : impl<geometry::geographic::variant> {
     void insert(db::query& qry, db::variant var) const override
     {
         auto srid = to_chars(col_->srid);
-        if (is_mssql(dbms_))
-            qry << type() << "::STGeomFromWKB(" << std::move(var) << ", "
-                << srid << ")";
-        else if (is_mysql(dbms_))
+        if (is_mysql(dbms_))
             qry << "ST_GeomFromWKB(" << std::move(var) << ", " << srid
                 << ", 'axis-order=long-lat')";
         else if (is_postgres(dbms_) && type() == "geography")

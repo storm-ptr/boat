@@ -28,10 +28,7 @@ struct binary : impl<blob> {
     {
         return {.kind{kind_},
                 .column_name{col_->column_name},
-                .type_name{is_mssql(dbms)      ? "varbinary"
-                           : is_postgres(dbms) ? "bytea"
-                                               : "blob"},
-                .length = is_mssql(dbms) ? -1 : 0};
+                .type_name{is_postgres(dbms) ? "bytea" : "blob"}};
     }
 };
 

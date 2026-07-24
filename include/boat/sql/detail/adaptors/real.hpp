@@ -28,7 +28,7 @@ struct real : impl<float> {
     {
         return {.kind{kind_},
                 .column_name{col_->column_name},
-                .type_name{is_mssql(dbms) ? "float" : "double precision"}};
+                .type_name{"double precision"}};
     }
 };
 

@@ -18,19 +18,14 @@ struct timestamp : impl<std::chrono::sys_seconds> {
     {
         return {.kind{kind_},
                 .column_name{col_->column_name},
-                .type_name{is_mssql(dbms)   ? "datetime2"
-                           : is_mysql(dbms) ? "datetime"
-                                            : "timestamp"},
+                .type_name{is_mysql(dbms) ? "datetime" : "timestamp"},
                 .length = is_mysql(dbms) ? 6 : 0};
     }
 
     void select(db::query& qry) const override
     {
         auto id = db::id{col_->column_name};
-        if (is_mssql(dbms_) && type() == "datetimeoffset")
-            qry << "cast(cast(" << id
-                << " at time zone 'UTC' as datetime2) as varchar(50)) " << id;
-        else if (is_mysql(dbms_))
+        if (is_mysql(dbms_))
             qry << "date_format(" << id << ", '%Y-%m-%d %H:%i:%s.%f')" << id;
         else if (is_postgres(dbms_) && type() == "timestamp with time zone")
             qry << "cast(cast(" << id

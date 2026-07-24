@@ -43,44 +43,6 @@ BOOST_AUTO_TEST_CASE(sql_vector)
 
 namespace {
 
-constexpr auto mssql_datatypes = R"(
-create table "datatypes" (
-    "bigint" bigint,
-    "binary" binary(8),
-    "bit" bit,
-    "char" char(8),
-    "datetime2" datetime2(7),
-    "datetimeoffset" datetimeoffset(7),
-    "decimal" decimal(5, 2),
-    "float" float(53),
-    "int" int,
-    "nchar" nchar(8),
-    "numeric" numeric(10, 5),
-    "nvarchar" nvarchar(max),
-    "real" real,
-    "smallint" smallint,
-    "tinyint" tinyint,
-    "varbinary" varbinary(max),
-    "varchar" varchar(max));
-insert into "datatypes" values (
-    9223372036854775807,
-    cast(123456 as binary(4)),
-    1,
-    'abc',
-    '2007-05-08 12:35:29.1234567',
-    '2007-05-08 12:35:29.1234567 +12:15',
-    123.45,
-    1234567.89012345,
-    2147483647,
-    'def',
-    12345.67891,
-    'ghi',
-    123.4567,
-    32767,
-    255,
-    cast(123456 as varbinary(4)),
-    'jkl');)";
-
 constexpr auto mysql_datatypes = R"(
 create table `datatypes` (
     `bigint` bigint,
@@ -178,8 +140,7 @@ insert into "datatypes" values (
 
 auto datatypes_query(std::string_view dbms)
 {
-    return sql::is_mssql(dbms)      ? mssql_datatypes
-           : sql::is_mysql(dbms)    ? mysql_datatypes
+    return sql::is_mysql(dbms)      ? mysql_datatypes
            : sql::is_postgres(dbms) ? postgres_datatypes
            : sql::is_sqlite(dbms)   ? sqlite_datatypes
                                     : "";

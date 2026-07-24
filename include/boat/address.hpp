@@ -99,8 +99,7 @@ inline auto odbc_drivers(std::initializer_list<std::string> servers)
 inline std::vector<std::string> odbc_address()
 {
     auto ret = std::vector<std::string>{};
-    for (auto [srv, drv] :
-         detail::odbc_drivers({"mysql", "postgres", "sql server"})) {
+    for (auto [srv, drv] : detail::odbc_drivers({"mysql", "postgres"})) {
         if (srv == "mysql")
             ret.push_back(boat::concat(  //
                 "odbc://root:",
@@ -116,14 +115,6 @@ inline std::vector<std::string> odbc_address()
                 "@",
                 postgres_host,
                 "/postgres?BoolsAsChar=0&DRIVER=",
-                drv));
-        else if (srv == "sql server")
-            ret.push_back(boat::concat(  //
-                "odbc://sa:",
-                password,
-                "@",
-                mssql_host,
-                "/master?Encrypt=no&DRIVER=",
                 drv));
     }
     return ret;

@@ -3,7 +3,6 @@
 #ifndef BOAT_SQL_DIALECTS_HPP
 #define BOAT_SQL_DIALECTS_HPP
 
-#include <boat/sql/detail/dialects/mssql.hpp>
 #include <boat/sql/detail/dialects/mysql.hpp>
 #include <boat/sql/detail/dialects/postgres.hpp>
 #include <boat/sql/detail/dialects/sqlite.hpp>
@@ -12,10 +11,6 @@ namespace boat::sql::dialects {
 
 inline dialect const& find(std::string_view dbms)
 {
-    if (is_mssql(dbms)) {
-        static const auto ret = mssql{};
-        return ret;
-    }
     if (is_mysql(dbms)) {
         static const auto ret = mysql{};
         return ret;

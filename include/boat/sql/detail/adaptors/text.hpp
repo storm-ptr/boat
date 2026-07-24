@@ -36,7 +36,7 @@ struct text : impl<std::string> {
     {
         return {.kind{kind_},
                 .column_name{col_->column_name},
-                .type_name{is_mssql(dbms) ? "nvarchar" : "varchar"},
+                .type_name{"varchar"},
                 .length = 250};
     }
 };
