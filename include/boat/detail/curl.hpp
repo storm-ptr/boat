@@ -14,19 +14,21 @@ class curl {
 public:
     using value_type = std::pair<std::string, blob>;
 
-    curl()
+    explicit curl(int connections)
     {
         static auto ec = curl_global_init(CURL_GLOBAL_ALL);
         check(ec);
-        multi_.reset(curl_multi_init());
-        boat::check(!!multi_, "curl_multi_init");
+        auto h = curl_multi_init();
+        boat::check(h, "curl_multi_init");
+        multi_.reset(h);
+        check(
+            curl_multi_setopt(h, CURLMOPT_MAX_TOTAL_CONNECTIONS, connections));
     }
 
     size_t size() const { return jobs_.size(); }
 
-    void push(char const* url, char const* useragent, int ssl)
+    void push(char const* url, char const* agent, int ssl)
     {
-        constexpr auto ms = std::chrono::milliseconds{timeout}.count();
         auto h = curl_easy_init();
         boat::check(h, "curl_easy_init");
         auto easy = easy_ptr{h};
@@ -34,9 +36,10 @@ public:
         check(curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1));
         check(curl_easy_setopt(h, CURLOPT_REFERER, url));
         check(curl_easy_setopt(h, CURLOPT_SSL_VERIFYPEER, ssl));
-        check(curl_easy_setopt(h, CURLOPT_TIMEOUT_MS, ms));
+        check(curl_easy_setopt(
+            h, CURLOPT_TIMEOUT_MS, std::chrono::milliseconds{timeout}.count()));
         check(curl_easy_setopt(h, CURLOPT_URL, url));
-        check(curl_easy_setopt(h, CURLOPT_USERAGENT, useragent));
+        check(curl_easy_setopt(h, CURLOPT_USERAGENT, agent));
         check(curl_easy_setopt(h, CURLOPT_WRITEDATA, &val->second));
         check(curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, &callback));
         check(curl_multi_add_handle(multi_.get(), h));
@@ -67,7 +70,8 @@ private:
 
         void operator()(CURL* easy) const
         {
-            curl_multi_remove_handle(multi, easy);
+            if (multi && easy)
+                curl_multi_remove_handle(multi, easy);
             curl_easy_cleanup(easy);
         }
     };

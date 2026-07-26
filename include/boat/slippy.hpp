@@ -14,10 +14,11 @@ class catalog : public db::catalog {
 
 public:
     std::string url;
+    std::string agent;
+    int connections = 0;
     int epsg = 3857;  //< or 3395
-    int zmax = 19;
-    std::string useragent;
     int ssl = 1;
+    int zmax = 19;
 
     std::vector<db::source> sources() override { return {}; }
 
@@ -78,7 +79,7 @@ public:
         db::raster,
         std::vector<tile> ts) override
     {
-        auto q = curl{};
+        auto q = curl{connections};
         auto m = std::map<std::string, tile>{};
         for (auto& t : ts) {
             auto u = url;
@@ -86,7 +87,7 @@ public:
                     {{"{z}", to_chars(t.z)},
                      {"{y}", to_chars(t.y)},
                      {"{x}", to_chars(t.x)}});
-            q.push(u.data(), useragent.data(), ssl);
+            q.push(u.data(), agent.data(), ssl);
             m.insert({u, t});
         }
         while (q.size()) {

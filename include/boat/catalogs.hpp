@@ -32,16 +32,20 @@ inline std::unique_ptr<db::catalog> make_catalog(std::string_view address)
             if (auto eq = pair.find('='); eq != pair.npos) {
                 auto key = pair.substr(0, eq);
                 auto val = pair.substr(eq + 1);
+                if (key == "agent") {
+                    ret->agent = val;
+                    continue;
+                }
+                if (key == "connections") {
+                    ret->connections = from_chars<int>(val.data(), val.size());
+                    continue;
+                }
                 if (key == "epsg") {
                     ret->epsg = from_chars<int>(val.data(), val.size());
                     continue;
                 }
                 if (key == "zmax") {
                     ret->zmax = from_chars<int>(val.data(), val.size());
-                    continue;
-                }
-                if (key == "useragent") {
-                    ret->useragent = val;
                     continue;
                 }
                 if (key == "ssl") {

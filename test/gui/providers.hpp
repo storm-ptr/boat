@@ -38,7 +38,6 @@ inline std::generator<std::shared_ptr<boat::db::catalog>> catalogs()
     {
         auto cat = std::make_shared<slippy::catalog>();
         cat->url = "http://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png";
-        cat->useragent = "useragent";
         co_yield std::move(cat);
     }
 }
