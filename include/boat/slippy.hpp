@@ -6,7 +6,6 @@
 #include <boat/db/catalog.hpp>
 #include <boat/detail/curl.hpp>
 #include <boat/geometry/raster.hpp>
-#include <boost/algorithm/string.hpp>
 
 namespace boat::slippy {
 
@@ -14,10 +13,11 @@ class catalog : public db::catalog {
     inline static auto err = std::logic_error{"slippy"};
 
 public:
-    std::string user;
     std::string url;
     int epsg = 3857;  //< or 3395
     int zmax = 19;
+    std::string useragent;
+    int ssl = 1;
 
     std::vector<db::source> sources() override { return {}; }
 
@@ -78,14 +78,15 @@ public:
         db::raster,
         std::vector<tile> ts) override
     {
-        auto q = curl{user};
+        auto q = curl{};
         auto m = std::map<std::string, tile>{};
         for (auto& t : ts) {
             auto u = url;
-            u = boost::replace_first_copy(u, "{z}", to_chars(t.z));
-            u = boost::replace_first_copy(u, "{y}", to_chars(t.y));
-            u = boost::replace_first_copy(u, "{x}", to_chars(t.x));
-            q.push(u);
+            replace(u,
+                    {{"{z}", to_chars(t.z)},
+                     {"{y}", to_chars(t.y)},
+                     {"{x}", to_chars(t.x)}});
+            q.push(u.data(), useragent.data(), ssl);
             m.insert({u, t});
         }
         while (q.size()) {

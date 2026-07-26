@@ -6,7 +6,7 @@
 #include <curl/curl.h>
 #include <boat/blob.hpp>
 #include <boat/detail/config.hpp>
-#include <unordered_map>
+#include <map>
 
 namespace boat {
 
@@ -14,7 +14,7 @@ class curl {
 public:
     using value_type = std::pair<std::string, blob>;
 
-    explicit curl(std::string user) : user_{std::move(user)}
+    curl()
     {
         static auto ec = curl_global_init(CURL_GLOBAL_ALL);
         check(ec);
@@ -24,16 +24,19 @@ public:
 
     size_t size() const { return jobs_.size(); }
 
-    void push(std::string url)
+    void push(char const* url, char const* useragent, int ssl)
     {
         constexpr auto ms = std::chrono::milliseconds{timeout}.count();
         auto h = curl_easy_init();
         boat::check(h, "curl_easy_init");
         auto easy = easy_ptr{h};
-        auto val = std::make_unique<value_type>(std::move(url), blob{});
+        auto val = std::make_unique<value_type>(url, blob{});
+        check(curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1));
+        check(curl_easy_setopt(h, CURLOPT_REFERER, url));
+        check(curl_easy_setopt(h, CURLOPT_SSL_VERIFYPEER, ssl));
         check(curl_easy_setopt(h, CURLOPT_TIMEOUT_MS, ms));
-        check(curl_easy_setopt(h, CURLOPT_URL, val->first.data()));
-        check(curl_easy_setopt(h, CURLOPT_USERAGENT, user_.data()));
+        check(curl_easy_setopt(h, CURLOPT_URL, url));
+        check(curl_easy_setopt(h, CURLOPT_USERAGENT, useragent));
         check(curl_easy_setopt(h, CURLOPT_WRITEDATA, &val->second));
         check(curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, &callback));
         check(curl_multi_add_handle(multi_.get(), h));
@@ -54,12 +57,12 @@ public:
         } while (m->msg != CURLMSG_DONE);
         check(m->data.result);
         auto it = jobs_.find(m->easy_handle);
-        boat::check(it != jobs_.end(), "curl easy handle");
+        boat::check(it != jobs_.end(), "curl easy");
         return std::move(*jobs_.extract(it).mapped().second);
     }
 
 private:
-    struct easy_deleter {
+    struct del {
         CURLM* multi;
 
         void operator()(CURL* easy) const
@@ -69,12 +72,10 @@ private:
         }
     };
 
-    using easy_ptr = std::unique_ptr<CURL, easy_deleter>;
-    using value_ptr = std::unique_ptr<value_type>;
+    using easy_ptr = std::unique_ptr<CURL, del>;
 
-    std::string user_;
     unique_ptr<CURLM, curl_multi_cleanup> multi_;
-    std::unordered_map<CURL*, std::pair<easy_ptr, value_ptr>> jobs_;
+    std::map<CURL*, std::pair<easy_ptr, std::unique_ptr<value_type>>> jobs_;
 
     static void check(CURLcode ec)
     {

@@ -10,19 +10,16 @@ BOOST_AUTO_TEST_CASE(uri)
         std::string_view str;
         boat::uri expect;
     } tests[] = {
-        {"http://useragent@basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        {"http://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
          {.scheme = "http",
-          .user = "useragent",
           .host_spec = "basemaps.cartocdn.com",
           .path = "light_all/{z}/{x}/{y}.png"}},
-        {"http://useragent@mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}",
+        {"http://mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}",
          {.scheme = "http",
-          .user = "useragent",
           .host_spec = "mt.google.com",
           .path = "vt/lyrs=s&z={z}&x={x}&y={y}"}},
-        {"http://useragent@tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {"http://tile.openstreetmap.org/{z}/{x}/{y}.png",
          {.scheme = "http",
-          .user = "useragent",
           .host_spec = "tile.openstreetmap.org",
           .path = "{z}/{x}/{y}.png"}},
         {"https://maptiles.p.rapidapi.com/local/osm/v1/"

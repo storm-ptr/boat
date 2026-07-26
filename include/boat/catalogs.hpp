@@ -22,7 +22,6 @@ inline std::unique_ptr<db::catalog> make_catalog(std::string_view address)
     {
         auto ret = std::make_unique<slippy::catalog>();
         auto u = uri::parse(address);
-        ret->user = u.user;
         auto os = std::ostringstream{};
         os << u.scheme << "://" << u.host_spec << '/' << u.path;
         for (auto sep{"?"}; !u.query.empty();) {
@@ -39,6 +38,14 @@ inline std::unique_ptr<db::catalog> make_catalog(std::string_view address)
                 }
                 if (key == "zmax") {
                     ret->zmax = from_chars<int>(val.data(), val.size());
+                    continue;
+                }
+                if (key == "useragent") {
+                    ret->useragent = val;
+                    continue;
+                }
+                if (key == "ssl") {
+                    ret->ssl = from_chars<int>(val.data(), val.size());
                     continue;
                 }
             }
