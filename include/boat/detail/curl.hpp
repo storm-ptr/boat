@@ -33,15 +33,15 @@ public:
         boat::check(h, "curl_easy_init");
         auto easy = easy_ptr{h};
         auto val = std::make_unique<value_type>(url, blob{});
-        check(curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1));
-        check(curl_easy_setopt(h, CURLOPT_REFERER, url));
-        check(curl_easy_setopt(h, CURLOPT_SSL_VERIFYPEER, ssl));
-        check(curl_easy_setopt(
-            h, CURLOPT_TIMEOUT_MS, std::chrono::milliseconds{timeout}.count()));
-        check(curl_easy_setopt(h, CURLOPT_URL, url));
-        check(curl_easy_setopt(h, CURLOPT_USERAGENT, agent));
-        check(curl_easy_setopt(h, CURLOPT_WRITEDATA, &val->second));
-        check(curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, &callback));
+        auto set = [h](auto k, auto v) { check(curl_easy_setopt(h, k, v)); };
+        set(CURLOPT_FOLLOWLOCATION, 1);
+        set(CURLOPT_REFERER, url);
+        set(CURLOPT_SSL_VERIFYPEER, ssl);
+        set(CURLOPT_TIMEOUT_MS, std::chrono::milliseconds{timeout}.count());
+        set(CURLOPT_URL, url);
+        set(CURLOPT_USERAGENT, agent);
+        set(CURLOPT_WRITEDATA, &val->second);
+        set(CURLOPT_WRITEFUNCTION, &callback);
         check(curl_multi_add_handle(multi_.get(), h));
         easy.get_deleter().multi = multi_.get();
         jobs_.insert({h, {std::move(easy), std::move(val)}});
