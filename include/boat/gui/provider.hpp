@@ -44,11 +44,11 @@ private:
             if (bgi::qbegin(voids, bgi::contains(box)) != bgi::qend(voids))
                 continue;
             auto a = box.min_corner(), b = box.max_corner();
-            auto coll = get_or_invoke(
+            auto geoms = get_or_invoke(
                 cache.get(), std::tuple{key, a.x(), a.y(), b.x(), b.y()}, [&] {
                     auto rs = catalog().select(
                         tbl,
-                        db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 1024});
+                        db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 4096});
                     auto wkb = std::vector<blob>{};
                     std::ranges::sample(
                         rs | db::view<blob>, std::back_inserter(wkb), 64, gen);
@@ -63,10 +63,10 @@ private:
                     }
                     return ret;
                 });
-            if (coll.empty())
+            if (geoms.empty())
                 voids.insert(box);
             else
-                co_yield std::move(coll);
+                co_yield std::move(geoms);
         }
     }
 

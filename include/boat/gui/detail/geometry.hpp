@@ -32,21 +32,22 @@ auto boxes(  //
 {
     static auto const antimeridian = geometry::geographic::linestring{
         {-180., 90.}, {-180., 0.}, {-180., -90.}};
-    static std::function<bool(geometry::geographic::point const&)> filters[] = {
-        [](auto& p) { return p.x() < 0.; }, [](auto& p) { return p.x() > 0.; }};
     auto lls = std::vector<geometry::geographic::box>{};
     for (auto& lvl : grid | std::views::reverse) {
         auto r = lvl.first * numbers::inv_sqrt_2;
         if (r >= numbers::earth::sqrt_area / 4)
             continue;
-        for (auto buf = geometry::buffer(r, 16); auto& p : lvl.second)
-            if (auto poly = buf(p); r < distance(p, antimeridian))
-                lls.push_back(geometry::minmax(poly));
-            else
-                for (auto& filter : filters)
+        auto d = {-r, r};
+        for (auto& a : lvl.second) {
+            auto asafe = distance(a, antimeridian) > r;
+            for (auto [dx, dy] : std::views::cartesian_product(d, d)) {
+                auto b = geometry::add_meters(a, dx, dy);
+                auto bsafe = distance(b, antimeridian) > r;
+                if (asafe || bsafe)
                     lls.push_back(geometry::minmax(
-                        poly.outer() | std::views::filter(filter) |
-                        std::ranges::to<geometry::geographic::multi_point>()));
+                        geometry::geographic::multi_point{a, b}));
+            }
+        }
     }
     auto ret = std::vector<geometry::cartesian::box>{};
     auto fwd = geometry::transform(
@@ -69,8 +70,8 @@ inline auto multi_point(int width, int height)
         ret.push_back(a);
         ret.append_range(
             std::views::iota(0, num_per_edge) |
-            std::views::transform([&](auto i) -> geometry::geographic::point {
-                auto t = (i + 1.) / (num_per_edge + 1.);
+            std::views::transform([&](auto n) -> geometry::geographic::point {
+                auto t = (n + 1.) / (num_per_edge + 1.);
                 return {std::lerp(a.x(), b.x(), t), std::lerp(a.y(), b.y(), t)};
             }));
     }

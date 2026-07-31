@@ -80,7 +80,8 @@ void map_view::redraw()
         return;
     auto crs = geo::ortho(center_);
     auto affine = make_affine(w, h, center_, scale_, crs);
-    auto points = (w * h) / (boat::tile::size * boat::tile::size);
+    auto num_points = static_cast<size_t>(
+        (1.1 * w * h) / (boat::tile::size * boat::tile::size) + 1);
     tasks_.run([=, lyrs = layers_](auto tok) {
         auto img = QImage{w, h, QImage::Format_ARGB32_Premultiplied};
         img.fill(Qt::white);
@@ -101,8 +102,8 @@ void map_view::redraw()
                     .layer = l.layer,
                     .cache = cache_,
                     .key = l.cache,
-                    .grid =
-                        geo::geographic_interpolate(w, h, affine, crs, points)};
+                    .grid = geo::geographic_interpolate(
+                        w, h, affine, crs, num_points)};
                 auto drw = boat::gui::draw_variant(art, affine, crs);
                 for (auto var : pvd.variants()) {
                     if (tok.stop_requested())
