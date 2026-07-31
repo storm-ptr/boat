@@ -18,9 +18,6 @@ namespace boat {
 template <class T>
 concept arithmetic = std::is_arithmetic_v<T>;
 
-template <class T, class U>
-concept same_size = sizeof(T) == sizeof(U);
-
 template <template <class...> class Tpl, class... Ts>
 void specialization_test(Tpl<Ts...> const&);
 
@@ -49,9 +46,7 @@ constexpr auto as_chars = [](auto* ptr) {
     return reinterpret_cast<char const*>(ptr);
 };
 
-constexpr auto single_span = [](arithmetic auto& v) {
-    return std::span{&v, 1};
-};
+constexpr auto as_span = [](arithmetic auto& v) { return std::span{&v, 1}; };
 
 template <std::totally_ordered T>
 bool between(T const& v, T const& lo, T const& hi)
@@ -62,17 +57,17 @@ bool between(T const& v, T const& lo, T const& hi)
 constexpr auto byteswap = overloaded{
     [](std::integral auto v) { return std::byteswap(v); },
     [](std::floating_point auto v) {
-        std::ranges::reverse(std::as_writable_bytes(single_span(v)));
+        std::ranges::reverse(std::as_writable_bytes(as_span(v)));
         return v;
     },
 };
 
 constexpr auto frac = [](std::floating_point auto v) {
-    return std::modf(v, &v);
+    return std::fmod(v, 1);
 };
 
-constexpr auto mixed = [](std::endian e) {
-    return std::endian::big != e && std::endian::little != e;
+constexpr auto mixed = [](std::endian v) {
+    return std::endian::big != v && std::endian::little != v;
 };
 
 template <class T>
@@ -84,9 +79,25 @@ void check(bool success, T&& what)
 }
 
 constexpr auto pow2 = []<std::integral T>(T exp) {
-    check(exp >= 0, "pow2");
+    check(exp >= 0 && exp < sizeof(T) * CHAR_BIT, "pow2");
     return static_cast<T>(1uz << exp);
 };
+
+template <std::floating_point T>
+T wrap(T v, T lo, T hi)
+{
+    v = std::fmod(v - lo, hi - lo);
+    return v + (v < 0 ? hi : lo);
+}
+
+template <std::floating_point T>
+std::pair<T, bool> reflect(T v, T lo, T hi)
+{
+    auto two_hi = 2 * hi;
+    v = wrap(v, lo, two_hi - lo);
+    auto reflected = v > hi;
+    return {reflected ? two_hi - v : v, reflected};
+}
 
 template <class... Ts>
 void variant_emplace(std::variant<Ts...>& var, size_t index)

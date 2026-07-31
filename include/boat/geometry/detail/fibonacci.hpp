@@ -15,10 +15,10 @@ template <box T>
 auto box_fibonacci(T const& mbr, size_t num_points)
 {
     auto a = mbr.min_corner(), b = mbr.max_corner();
-    return std::views::iota(0u, num_points) |
-           std::views::transform([=](auto i) -> d2_of<T>::point {
-               return {std::lerp(a.x(), b.x(), frac(i * numbers::inv_phi)),
-                       std::lerp(a.y(), b.y(), (i + .5) / num_points)};
+    return std::views::iota(0uz, num_points) |
+           std::views::transform([=](auto n) -> d2_of<T>::point {
+               return {std::lerp(a.x(), b.x(), frac(n * numbers::inv_phi)),
+                       std::lerp(a.y(), b.y(), (n + .5) / num_points)};
            });
 }
 
@@ -29,9 +29,9 @@ struct priority_point {
 
     priority_point(  //
         geographic::point const& p,
-        geographic::point const& max,
+        geographic::point const& hi,
         size_t index)
-        : point{p}, priority{-comparable_distance(p, max)}, index{index}
+        : point{p}, priority{-comparable_distance(p, hi)}, index{index}
     {
     }
 
@@ -44,10 +44,10 @@ struct priority_point {
 struct geographic_fibonacci {
     size_t num_points;
 
-    geographic::point operator[](size_t i) const
+    geographic::point operator[](size_t n) const
     {
-        auto azimuth = 2 * numbers::pi * frac(i * numbers::inv_phi);
-        auto polar = std::acos(1 - 2 * (i + .5) / num_points);
+        auto azimuth = 2 * numbers::pi * frac(n * numbers::inv_phi);
+        auto polar = std::acos(1 - 2 * (n + .5) / num_points);
         return {azimuth * numbers::radian - 180, polar * numbers::radian - 90};
     }
 
@@ -84,7 +84,6 @@ struct geographic_fibonacci {
 constexpr auto geographic_fibonacci_levels =
     std::views::iota(0uz) |
     std::views::transform([](auto n) { return pow2(2 * n); }) |
-    std::views::take_while([](auto n) { return !!n; }) |
     std::views::transform([](auto n) { return geographic_fibonacci(n); });
 
 }  // namespace boat::geometry

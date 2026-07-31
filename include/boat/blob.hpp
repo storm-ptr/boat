@@ -42,7 +42,7 @@ template <class O, class I>
 decltype(auto) operator<<(O && out, I const& in)
 {
     if constexpr (arithmetic<I>)
-        out.append_range(std::as_bytes(single_span(in)));
+        out.append_range(std::as_bytes(as_span(in)));
     else
         static_cast<blob&>(out) << in;
     return std::forward<O>(out);

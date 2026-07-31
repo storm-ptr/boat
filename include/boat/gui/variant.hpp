@@ -23,7 +23,7 @@ auto draw_variant(  //
     geometry::srs_variant const& out_crs)
 {
     return overloaded{
-        [&](geometry::geographic::geometry_collection const& in) {
+        [=, &out](geometry::geographic::geometry_collection const& in) {
             auto fwd = std::visit(
                 [&](auto& crs) {
                     return geometry::transform(
@@ -35,7 +35,7 @@ auto draw_variant(  //
             if (auto g = fwd(in))
                 drw(*g);
         },
-        [&](raster const& in) {
+        [=, &out](raster const& in) {
             std::visit(
                 [&](auto& crs1, auto& crs2) {
                     draw_image(  //

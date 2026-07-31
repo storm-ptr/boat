@@ -5,9 +5,11 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QSplitter>
+#include <QStatusBar>
 #include <QTabWidget>
 #include <numbers>
 #include "main_window.h"
+#include "map_view.h"
 #include "tree_view.h"
 
 namespace {
@@ -47,8 +49,11 @@ main_window::main_window()
     log_->setReadOnly(true);
     log_->setMaximumBlockCount(10'000);
 
+    auto map_ = new map_view{this};
+
     auto tabs = new QTabWidget{this};
     tabs->setTabPosition(QTabWidget::East);
+    tabs->addTab(map_, "map");
     tabs->addTab(log_, "log");
 
     auto splitter = new QSplitter{Qt::Horizontal, this};
@@ -57,6 +62,18 @@ main_window::main_window()
     auto tree_width = qRound(width / (std::numbers::phi + 1));
     splitter->setSizes({tree_width, width - tree_width});
     setCentralWidget(splitter);
+
+    statusBar()->showMessage("ready");
+
+    auto model = &tree->model();
+    auto sync = [map_, model] {
+        map_->set_layers(model->checked_leaves());
+    };
+    sync();
+    connect(model, &QAbstractItemModel::dataChanged, map_, sync);
+    connect(model, &QAbstractItemModel::rowsInserted, map_, sync);
+    connect(model, &QAbstractItemModel::rowsRemoved, map_, sync);
+    connect(model, &QAbstractItemModel::modelReset, map_, sync);
 
     qSetMessagePattern("[%{time hh:mm:ss}] %{type}: %{message}");
     log_ptr = log_;

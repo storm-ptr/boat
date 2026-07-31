@@ -3,9 +3,17 @@
 #ifndef BOAT_GEOMETRY_ALGORITHM_HPP
 #define BOAT_GEOMETRY_ALGORITHM_HPP
 
+#include <boat/detail/numbers.hpp>
 #include <boat/geometry/vocabulary.hpp>
 
 namespace boat::geometry {
+
+template <point T>
+T add_value(T geom, double value)
+{
+    boost::geometry::add_value(geom, value);
+    return geom;
+}
 
 inline auto buffer(double distance, size_t num_points)
 {
@@ -61,11 +69,23 @@ polygon auto to_polygon(T const& geom)
     return ret;
 }
 
-template <point T>
-T add_value(T geom, double value)
+inline geographic::point wrap(geographic::point const& p)
 {
-    boost::geometry::add_value(geom, value);
-    return geom;
+    auto [y, reflected] = reflect(p.y(), -90., 90.);
+    auto x = boat::wrap(p.x() + 180 * reflected, -180., 180.);
+    return {x, y};
+}
+
+inline geographic::point add_meters(  //
+    geographic::point const& p,
+    double eastward,
+    double northward)
+{
+    constexpr auto meter = numbers::radian / numbers::earth::mean_radius;
+    auto den = std::cos(p.y() * numbers::degree);
+    auto dx = den ? eastward * meter / den : 0.;
+    auto dy = northward * meter;
+    return wrap(geographic::point{p.x() + dx, p.y() + dy});
 }
 
 }  // namespace boat::geometry

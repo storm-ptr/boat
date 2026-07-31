@@ -15,7 +15,6 @@ class catalog : public db::catalog {
 public:
     std::string url;
     std::string agent;
-    int connections = 0;
     int epsg = 3857;  //< or 3395
     int ssl = 1;
     int zmax = 19;
@@ -79,7 +78,7 @@ public:
         db::raster,
         std::vector<tile> ts) override
     {
-        auto q = curl{connections};
+        auto q = curl{};
         auto m = std::map<std::string, tile>{};
         for (auto& t : ts) {
             auto u = url;

@@ -32,6 +32,21 @@ std::optional<leaf> tree_model::get_leaf(QModelIndex const& idx) const
     return {};
 }
 
+std::vector<leaf> tree_model::checked_leaves() const
+{
+    auto ret = std::vector<leaf>{};
+    auto collect = [&](auto& self, tree* ptr) -> void {
+        if (!ptr)
+            return;
+        if (auto l = std::get_if<leaf>(&ptr->data); l && l->state == Qt::Checked)
+            ret.push_back(*l);
+        for (auto& ch : ptr->children)
+            self(self, ch.get());
+    };
+    collect(collect, root_.get());
+    return ret;
+}
+
 bool tree_model::is_branch(QModelIndex const& idx) const
 {
     return to_branch(idx) && to_tree(idx) != root_.get();

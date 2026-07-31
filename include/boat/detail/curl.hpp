@@ -14,15 +14,12 @@ class curl {
 public:
     using value_type = std::pair<std::string, blob>;
 
-    explicit curl(int connections)
+    curl()
     {
         static auto ec = curl_global_init(CURL_GLOBAL_ALL);
         check(ec);
-        auto h = curl_multi_init();
-        boat::check(h, "curl_multi_init");
-        multi_.reset(h);
-        check(
-            curl_multi_setopt(h, CURLMOPT_MAX_TOTAL_CONNECTIONS, connections));
+        multi_.reset(curl_multi_init());
+        boat::check(!!multi_, "curl_multi_init");
     }
 
     size_t size() const { return jobs_.size(); }
@@ -51,6 +48,7 @@ public:
     {
         int count;
         do {
+            check(curl_multi_wait(multi_.get(), 0, 0, 1, 0));
             check(curl_multi_perform(multi_.get(), &count));
         } while (count == int(jobs_.size()));
         CURLMsg* m;

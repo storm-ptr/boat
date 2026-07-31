@@ -36,10 +36,6 @@ inline std::unique_ptr<db::catalog> make_catalog(std::string_view address)
                     ret->agent = val;
                     continue;
                 }
-                if (key == "connections") {
-                    ret->connections = from_chars<int>(val.data(), val.size());
-                    continue;
-                }
                 if (key == "epsg") {
                     ret->epsg = from_chars<int>(val.data(), val.size());
                     continue;

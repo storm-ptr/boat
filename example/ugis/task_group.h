@@ -6,6 +6,7 @@
 #include <QFuture>
 #include <QtConcurrent/QtConcurrentRun>
 #include <concepts>
+#include <functional>
 #include <stop_token>
 #include <utility>
 #include <vector>
@@ -23,11 +24,10 @@ public:
     void run(F&& fn)
     {
         std::erase_if(futures_, [](auto& fut) { return fut.isFinished(); });
-        if (source_.stop_requested())
-            source_ = std::stop_source{};
-        auto tok = source_.get_token();
-        futures_.push_back(
-            QtConcurrent::run([tok, fn = std::forward<F>(fn)] { fn(tok); }));
+        futures_.push_back(QtConcurrent::run(
+            [tok = source_.get_token(), fn = std::forward<F>(fn)] {
+                std::invoke(fn, tok);
+            }));
     }
 
     bool busy()
@@ -36,7 +36,11 @@ public:
         return !futures_.empty();
     }
 
-    void request_stop() { source_.request_stop(); }
+    void request_stop()
+    {
+        source_.request_stop();
+        source_ = std::stop_source{};
+    }
 
 private:
     std::stop_source source_;

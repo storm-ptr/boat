@@ -12,6 +12,7 @@ class QContextMenuEvent;
 class tree_view : public QTreeView {
 public:
     explicit tree_view(QWidget* parent = nullptr);
+    tree_model& model() { return model_; }
 
 protected:
     void contextMenuEvent(QContextMenuEvent*) override;
