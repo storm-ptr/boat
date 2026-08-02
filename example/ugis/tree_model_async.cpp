@@ -1,10 +1,10 @@
 // Andrew Naplavkov
 
 #include <QDebug>
-#include <boat/catalogs.hpp>
 #include <boat/db/io.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include <filesystem>
+#include "catalog.h"
 #include "copy_layer.h"
 #include "tree_model.h"
 
@@ -31,7 +31,7 @@ void tree_model::copy_as(  //
                     drv.data(),
                     lyr.layer.table_name.data(),
                     tok);
-            boat::make_catalog(adr);
+            make_catalog(adr);
             QMetaObject::invokeMethod(
                 this,
                 [=] {
@@ -91,7 +91,7 @@ void tree_model::drop(QModelIndex const& idx)
         try {
             if (tok.stop_requested())
                 return;
-            boat::make_catalog(adr)->drop(scm, tbl);
+            make_catalog(adr)->drop(scm, tbl);
             qInfo() << "dropped"
                     << boat::concat(scm, scm.empty() ? "" : ".", tbl);
             QMetaObject::invokeMethod(
@@ -114,7 +114,7 @@ void tree_model::fetchMore(QModelIndex const& idx)
         try {
             auto children = std::vector<std::unique_ptr<tree>>{};
             if (!tok.stop_requested()) {
-                auto cat = boat::make_catalog(src.address);
+                auto cat = make_catalog(src.address);
                 for (auto& item : cat->sources())
                     children.push_back(std::make_unique<tree>(branch{item}));
                 for (auto& item : cat->layers())
@@ -158,7 +158,7 @@ void tree_model::describe(QModelIndex const& idx)
         try {
             if (tok.stop_requested())
                 return;
-            auto cat = boat::make_catalog(lyr.address);
+            auto cat = make_catalog(lyr.address);
             if (lyr.layer.raster)
                 qInfo().noquote() << boat::concat(cat->get_raster(lyr.layer));
             else

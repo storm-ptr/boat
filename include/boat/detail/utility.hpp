@@ -48,12 +48,6 @@ constexpr auto as_chars = [](auto* ptr) {
 
 constexpr auto as_span = [](arithmetic auto& v) { return std::span{&v, 1}; };
 
-template <std::totally_ordered T>
-bool between(T const& v, T const& lo, T const& hi)
-{
-    return lo <= v && v <= hi;
-}
-
 constexpr auto byteswap = overloaded{
     [](std::integral auto v) { return std::byteswap(v); },
     [](std::floating_point auto v) {

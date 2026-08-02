@@ -8,12 +8,12 @@
 
 namespace boat::gui {
 
-auto get_pixel(specialized<boost::gil::image_view> auto img)
+auto get_pixel(specialized<boost::gil::image_view> auto image)
 {
-    return [=](geometry::point auto const& p) {
-        return between<int>(p.x(), 0, img.width() - 1) &&
-                       between<int>(p.y(), 0, img.height() - 1)
-                   ? std::optional{img(p.x(), p.y())}
+    return [=](geometry::point auto const& pixel) {
+        auto x = pixel.x(), y = pixel.y();
+        return x >= 0 && x < image.width() && y >= 0 && y < image.height()
+                   ? std::optional{image(x, y)}
                    : std::nullopt;
     };
 }

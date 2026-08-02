@@ -82,10 +82,9 @@ public:
         auto m = std::map<std::string, tile>{};
         for (auto& t : ts) {
             auto u = url;
-            replace(u,
-                    {{"{z}", to_chars(t.z)},
-                     {"{y}", to_chars(t.y)},
-                     {"{x}", to_chars(t.x)}});
+            replace(u, "{z}", to_chars(t.z));
+            replace(u, "{y}", to_chars(t.y));
+            replace(u, "{x}", to_chars(t.x));
             q.push(u.data(), agent.data(), ssl);
             m.insert({u, t});
         }

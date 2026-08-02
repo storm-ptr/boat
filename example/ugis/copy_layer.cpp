@@ -1,8 +1,9 @@
 // Andrew Naplavkov
 
 #include <QDebug>
-#include <boat/catalogs.hpp>
+#include <boat/gdal/catalog.hpp>
 #include <boat/gui/caches/cache.hpp>
+#include "catalog.h"
 #include "copy_layer.h"
 
 void copy_raster(  //
@@ -13,7 +14,7 @@ void copy_raster(  //
 {
     if (tok.stop_requested())
         return;
-    auto cat1 = boat::make_catalog(src.address);
+    auto cat1 = make_catalog(src.address);
     auto rast1 = cat1->get_raster(src.layer);
     if (tok.stop_requested())
         return;
@@ -52,13 +53,13 @@ leaf copy_vector(  //
     ret.cache = boat::gui::caches::next_key();
     if (tok.stop_requested())
         return ret;
-    auto cat1 = boat::make_catalog(src.address);
+    auto cat1 = make_catalog(src.address);
     auto tbl1 = cat1->get_table(src.layer.schema_name, src.layer.table_name);
     if (tok.stop_requested())
         return ret;
     auto cat2 = [&] -> std::unique_ptr<boat::db::catalog> {
         if (!drv)
-            return boat::make_catalog(dst);
+            return make_catalog(dst);
         auto ret = std::make_unique<boat::gdal::catalog>();
         ret->dataset = boat::gdal::create(dst, drv);
         return ret;

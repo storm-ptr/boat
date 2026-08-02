@@ -69,12 +69,12 @@ constexpr auto to_lower = [](std::string_view str) {
     return str | std::views::transform(fn) | std::ranges::to<std::string>();
 };
 
-inline void replace(
-    std::string& str,
-    std::initializer_list<std::pair<std::string_view, std::string_view>> list)
+inline void replace(  //
+    std::string& result,
+    std::string_view in,
+    std::string_view out)
 {
-    for (auto pair : list)
-        str.replace(str.find(pair.first), pair.first.size(), pair.second);
+    result.replace(result.find(in), in.size(), out);
 }
 
 }  // namespace boat

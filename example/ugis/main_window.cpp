@@ -1,7 +1,6 @@
 // Andrew Naplavkov
 
 #include <QFontDatabase>
-#include <QMetaObject>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QSplitter>
@@ -63,12 +62,8 @@ main_window::main_window()
     splitter->setSizes({tree_width, width - tree_width});
     setCentralWidget(splitter);
 
-    statusBar()->showMessage("ready");
-
     auto model = &tree->model();
-    auto sync = [map_, model] {
-        map_->set_layers(model->checked_leaves());
-    };
+    auto sync = [map_, model] { map_->set_layers(model->checked_leaves()); };
     sync();
     connect(model, &QAbstractItemModel::dataChanged, map_, sync);
     connect(model, &QAbstractItemModel::rowsInserted, map_, sync);

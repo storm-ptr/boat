@@ -30,31 +30,31 @@ auto boxes(  //
     geometry::geographic::grid const& grid,
     geometry::srs_params auto const& crs)
 {
-    static auto const antimeridian = geometry::geographic::linestring{
-        {-180., 90.}, {-180., 0.}, {-180., -90.}};
-    auto lls = std::vector<geometry::geographic::box>{};
-    for (auto& lvl : grid | std::views::reverse) {
-        auto r = lvl.first * numbers::inv_sqrt_2;
-        if (r >= numbers::earth::sqrt_area / 4)
-            continue;
-        auto d = {-r, r};
-        for (auto& a : lvl.second) {
-            auto asafe = distance(a, antimeridian) > r;
-            for (auto [dx, dy] : std::views::cartesian_product(d, d)) {
-                auto b = geometry::add_meters(a, dx, dy);
-                auto bsafe = distance(b, antimeridian) > r;
-                if (asafe || bsafe)
-                    lls.push_back(geometry::minmax(
-                        geometry::geographic::multi_point{a, b}));
-            }
-        }
-    }
     auto ret = std::vector<geometry::cartesian::box>{};
     auto fwd = geometry::transform(
         geometry::srs_forward(geometry::transformation(crs)));
-    for (auto& ll : lls)
+    auto push = [&](geometry::geographic::box const& ll) {
+        auto a = ll.min_corner(), b = ll.max_corner();
+        if (a.x() <= -180. || b.x() >= 180.)
+            return;
+        if (a.y() <= -90. || b.y() >= 90.)
+            return;
         if (auto xy = fwd(ll).transform(geometry::cartesian{}))
             ret.push_back(*xy);
+    };
+    for (auto& lvl : grid | std::views::reverse) {
+        auto d = lvl.first * numbers::inv_sqrt_2;
+        if (d >= numbers::earth::sqrt_area / 4)
+            continue;
+        for (auto& p : lvl.second) {
+            auto dx = d * geometry::meter(p.y());
+            auto dy = d * geometry::meter();
+            push({{p.x(), p.y()}, {p.x() + dx, p.y() + dy}});
+            push({{p.x() - dx, p.y()}, {p.x(), p.y() + dy}});
+            push({{p.x(), p.y() - dy}, {p.x() + dx, p.y()}});
+            push({{p.x() - dx, p.y() - dy}, {p.x(), p.y()}});
+        }
+    }
     return ret;
 }
 

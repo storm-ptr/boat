@@ -37,6 +37,14 @@ inline auto buffer(double distance, size_t num_points)
     };
 }
 
+constexpr auto meter = overloaded{
+    [] { return numbers::radian / numbers::earth::mean_radius; },
+    [](this auto&& self, double lat) {
+        auto den = std::cos(lat * numbers::degree);
+        return den ? self() / den : 0.;
+    },
+};
+
 constexpr auto minmax = []<tagged T>(T const& geom) -> box auto {
     double xmin = INFINITY;
     double ymin = INFINITY;
@@ -81,10 +89,8 @@ inline geographic::point add_meters(  //
     double eastward,
     double northward)
 {
-    constexpr auto meter = numbers::radian / numbers::earth::mean_radius;
-    auto den = std::cos(p.y() * numbers::degree);
-    auto dx = den ? eastward * meter / den : 0.;
-    auto dy = northward * meter;
+    auto dx = eastward * meter(p.y());
+    auto dy = northward * meter();
     return wrap(geographic::point{p.x() + dx, p.y() + dy});
 }
 
