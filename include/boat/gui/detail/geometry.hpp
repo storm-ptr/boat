@@ -58,22 +58,13 @@ auto boxes(  //
 
 inline auto multi_point(int width, int height)
 {
-    auto hi = std::max<>(width, height);
-    auto num_inners = std::max<>(hi / 4, 1);
-    auto num_per_edge = std::max<>(std::sqrt(hi), 1.);
-    auto ret = geometry::box_interpolate<geometry::geographic::multi_point>(
-        width, height, num_inners);
+    auto size = std::max<>(width, height);
+    auto num_border_points =
+        static_cast<int>(4 * std::max<>(std::sqrt(size), 1.));
+    auto num_area_points = std::max<>(size / 4, 1);
     auto mbr = geometry::geographic::box{{}, {width * 1., height * 1.}};
-    for (auto tup : boost::geometry::box_view{mbr} | std::views::pairwise) {
-        auto a = std::get<0>(tup), b = std::get<1>(tup);
-        ret.push_back(a);
-        ret.append_range(
-            std::views::iota(0, static_cast<int>(num_per_edge)) |
-            std::views::transform([&](auto n) -> geometry::geographic::point {
-                auto t = (n + 1.) / (num_per_edge + 1.);
-                return {std::lerp(a.x(), b.x(), t), std::lerp(a.y(), b.y(), t)};
-            }));
-    }
+    auto ret = geometry::box_border_interpolate(mbr, num_border_points);
+    ret.append_range(geometry::box_area_interpolate(mbr, num_area_points));
     return ret;
 }
 

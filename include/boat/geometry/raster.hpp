@@ -10,13 +10,6 @@
 
 namespace boat::geometry {
 
-template <multi_point T>
-T box_interpolate(int width, int height, size_t num_points)
-{
-    auto mbr = typename d2_of<T>::box{{}, {width * 1., height * 1.}};
-    return box_fibonacci(mbr, num_points) | std::ranges::to<T>();
-}
-
 geographic::grid geographic_interpolate(  //
     int width,
     int height,
@@ -27,13 +20,15 @@ geographic::grid geographic_interpolate(  //
     auto tf = transformation(crs);
     auto fwd = transform(srs_forward(tf), mat_inverse(mat));
     auto inv = transform(mat_forward(mat), srs_inverse(tf));
-    auto mbr = cartesian::box{{}, {width * 1., height * 1.}};
     auto sentinel = [&](auto& ll) {
         auto xy = fwd(ll).transform(cartesian{});
-        return !xy || !boost::geometry::covered_by(*xy, mbr);
+        return !xy || !boost::geometry::covered_by(
+                          *xy, cartesian::box{{}, {width * 1., height * 1.}});
     };
     auto points =
-        inv(box_interpolate<geographic::multi_point>(width, height, num_points))
+        inv(box_area_interpolate(geographic::box{{}, {width * 1., height * 1.}},
+                                 num_points) |
+            std::ranges::to<geographic::multi_point>())
             .value_or(geographic::multi_point{});
     auto ret = geographic::grid{};
     for (auto fib : geographic_fibonacci_levels) {
@@ -55,13 +50,10 @@ geographic::grid geographic_interpolate(  //
     return ret;
 }
 
-inline matrix affine(  //
-    int width,
-    int height,
-    cartesian::segment const& central_pixel)
+inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
 {
     namespace qvm = boost::qvm;
-    auto const& [a, b] = central_pixel;
+    auto const& [a, b] = mid_pixel;
     auto scale = boost::geometry::distance(a, b);
     return qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
            qvm::rotz_mat<3>(.5 * numbers::pi - boost::geometry::azimuth(a, b)) *

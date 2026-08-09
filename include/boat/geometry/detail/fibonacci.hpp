@@ -11,17 +11,6 @@
 
 namespace boat::geometry {
 
-template <box T>
-auto box_fibonacci(T const& mbr, size_t num_points)
-{
-    auto a = mbr.min_corner(), b = mbr.max_corner();
-    return std::views::iota(0uz, num_points) |
-           std::views::transform([=](auto n) -> d2_of<T>::point {
-               return {std::lerp(a.x(), b.x(), frac(n * numbers::inv_phi)),
-                       std::lerp(a.y(), b.y(), (n + .5) / num_points)};
-           });
-}
-
 struct priority_point {
     geographic::point point;
     double priority;

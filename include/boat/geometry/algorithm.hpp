@@ -15,6 +15,34 @@ T add_value(T geom, double value)
     return geom;
 }
 
+template <box T>
+auto box_area_interpolate(T const& mbr, size_t num_points)
+{
+    auto a = mbr.min_corner(), b = mbr.max_corner();
+    return std::views::iota(0uz, num_points) |
+           std::views::transform([=](auto n) -> d2_of<T>::point {
+               return {std::lerp(a.x(), b.x(), frac(n * numbers::inv_phi)),
+                       std::lerp(a.y(), b.y(), (n + .5) / num_points)};
+           });
+}
+
+template <box T>
+multi_point auto box_border_interpolate(T const& mbr, size_t num_points)
+{
+    auto ret = typename d2_of<T>::multi_point{};
+    auto num_per_edge = num_points >= 4 ? (num_points / 4 - 1) : 0;
+    for (auto tup : boost::geometry::box_view{mbr} | std::views::pairwise) {
+        auto a = std::get<0>(tup), b = std::get<1>(tup);
+        ret.push_back(a);
+        for (auto n : std::views::iota(0uz, num_per_edge)) {
+            auto t = (n + 1.) / (num_per_edge + 1.);
+            ret.emplace_back(std::lerp(a.x(), b.x(), t),
+                             std::lerp(a.y(), b.y(), t));
+        }
+    }
+    return ret;
+}
+
 inline auto buffer(double distance, size_t num_points)
 {
     return [=]<single T>(T const& geom) -> polygon auto {

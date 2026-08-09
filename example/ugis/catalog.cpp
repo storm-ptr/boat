@@ -11,23 +11,6 @@ auto const column_name = "box";
 auto const err = std::logic_error{"echo"};
 auto const table_name = "echo";
 
-auto make_perimeter_points(boat::db::bbox const& rq)
-{
-    using cartesian = boat::geometry::cartesian;
-    constexpr auto num_per_edge = 23;
-    auto ret = cartesian::multi_point{};
-    auto mbr = cartesian::box{{rq.xmin, rq.ymin}, {rq.xmax, rq.ymax}};
-    for (auto [a, b] : boost::geometry::box_view{mbr} | std::views::pairwise) {
-        ret.push_back(a);
-        for (auto n : std::views::iota(0, num_per_edge)) {
-            auto t = (n + 1.) / (num_per_edge + 1.);
-            ret.push_back(
-                {std::lerp(a.x(), b.x(), t), std::lerp(a.y(), b.y(), t)});
-        }
-    }
-    return ret;
-}
-
 class echo : public boat::db::catalog {
 public:
     std::vector<boat::db::source> sources() override { return {}; }
@@ -57,7 +40,12 @@ public:
         boat::db::bbox const& rq) override
     {
         auto ret = boat::db::rowset{.columns{column_name}};
-        auto wkb = boat::blob{} << make_perimeter_points(rq);
+        auto mbr = boat::geometry::cartesian::box{
+            {rq.xmin, rq.ymin},
+            {rq.xmax, rq.ymax},
+        };
+        auto points = boat::geometry::box_border_interpolate(mbr, 92);
+        auto wkb = boat::blob{} << points;
         ret.rows.push_back({std::move(wkb)});
         return ret;
     }
