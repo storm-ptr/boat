@@ -11,6 +11,7 @@
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/provider.hpp>
 #include <memory>
+#include <optional>
 #include "task_group.h"
 #include "tree.h"
 
@@ -24,28 +25,30 @@ public slots:
     void set_layers(std::vector<leaf>);
 
 protected:
+    void leaveEvent(QEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void paintEvent(QPaintEvent*) override;
-    void resizeEvent(QResizeEvent*) override { schedule_redraw(); }
+    void resizeEvent(QResizeEvent*) override;
     void timerEvent(QTimerEvent*) override;
     void wheelEvent(QWheelEvent*) override;
 
 private:
     void redraw();
-    void schedule_redraw() { redraw_timer_.start(100, this); }
-    void update_status(QPoint cursor);
+    void schedule_redraw() { redraw_timer_.start(250, this); }
+    void update_status(QPointF cursor);
 
     std::shared_ptr<boat::gui::caches::lru> cache_;
-    boat::geometry::geographic::point center_;
     QImage img_;
-    QPoint last_pos_;
+    boat::geometry::geographic::point img_mid_;
+    double img_scale_;
     std::vector<leaf> layers_;
-    bool panning_ = false;
+    boat::geometry::geographic::point map_mid_;
+    double map_scale_ = 1e4;  //< meters per pixel
+    std::optional<QPoint> panning_pos_;
     QBasicTimer redraw_timer_;
-    double scale_ = 1e4;  //< meters per pixel
-    task_group tasks_;
+    task_group tasks_{1};
 };
 
 #endif  // MAP_VIEW_H

@@ -16,9 +16,9 @@ struct raster {
 
 using variant = std::variant<geometry::geographic::geometry_collection, raster>;
 
-template <class T>
 auto draw_variant(  //
-    T& out,
+    execution_policy auto policy,
+    auto& out,
     geometry::matrix const& out_affine,
     geometry::srs_variant const& out_crs)
 {
@@ -39,6 +39,7 @@ auto draw_variant(  //
             std::visit(
                 [&](auto& crs1, auto& crs2) {
                     draw_image(  //
+                        policy,
                         const_view(in.rgba),
                         in.affine,
                         crs1,

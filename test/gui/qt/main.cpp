@@ -12,15 +12,15 @@ BOOST_AUTO_TEST_CASE(qt_draw)
     auto pixels_sum = 0., transparent_sum = 0.;
     auto pvds = providers() | std::ranges::to<std::vector>();
     for (auto [i, ctx] : std::views::enumerate(contexts())) {
-        auto img =
-            QImage{ctx.width, ctx.height, QImage::Format_ARGB32_Premultiplied};
+        auto img = QImage{ctx.width, ctx.height, QImage::Format_ARGB32};
         img.fill(Qt::transparent);
         auto art = QPainter{&img};
         art.setCompositionMode(QPainter::CompositionMode_Darken);
         art.setRenderHint(QPainter::Antialiasing);
         art.setPen({Qt::darkCyan, 5});
         art.setBrush(Qt::cyan);
-        auto drw = boat::gui::draw_variant(art, ctx.affine, ctx.crs);
+        auto drw = boat::gui::draw_variant(
+            std::execution::par, art, ctx.affine, ctx.crs);
         for (auto& pvd : pvds) {
             pvd.grid = ctx.grid;
             for (auto var : pvd.variants())

@@ -8,7 +8,6 @@
 #include <wx/wx.h>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/gil.hpp>
-#include <execution>
 
 namespace boat::gui {
 
@@ -23,27 +22,28 @@ wxGraphicsPath& add(geometry::curve auto&& in, wxGraphicsPath& out)
 inline auto draw_geometry(wxGraphicsContext& out)
 {
     return overloaded{
-        [&](geometry::point auto&& g) { out.DrawEllipse(g.x(), g.y(), 1, 1); },
-        [&](geometry::linestring auto&& g) {
+        [&](geometry::point auto&& v) { out.DrawEllipse(v.x(), v.y(), 1, 1); },
+        [&](geometry::linestring auto&& v) {
             auto path = out.CreatePath();
-            out.StrokePath(add(g, path));
+            out.StrokePath(add(v, path));
         },
-        [&](geometry::polygon auto&& g) {
+        [&](geometry::polygon auto&& v) {
             auto path = out.CreatePath();
-            add(g.outer(), path).CloseSubpath();
-            for (auto& item : g.inners())
+            add(v.outer(), path).CloseSubpath();
+            for (auto& item : v.inners())
                 add(item, path).CloseSubpath();
             out.DrawPath(path);
         },
-        [](this auto&& self, geometry::multi auto&& g) -> void {
-            std::ranges::for_each(g, self);
+        [](this auto&& self, geometry::multi auto&& v) -> void {
+            std::ranges::for_each(v, self);
         },
-        [](this auto&& self, geometry::dynamic auto&& g) -> void {
-            std::visit(self, g);
+        [](this auto&& self, geometry::dynamic auto&& v) -> void {
+            std::visit(self, v);
         }};
 }
 
 void draw_image(  //
+    execution_policy auto policy,
     boost::gil::rgba8c_view_t in,
     geometry::matrix const& in_affine,
     geometry::srs_params auto&& in_crs,
@@ -52,11 +52,11 @@ void draw_image(  //
     geometry::srs_params auto&& out_crs)
 {
     auto [fwd, inv] = bidirectional(in_affine, in_crs, out_affine, out_crs);
-    auto intersect = [&](geometry::box auto&& g) {
+    auto intersect = [&](geometry::box auto&& v) {
         wxDouble w, h;
         out.GetSize(&w, &h);
         w = std::ceil(w), h = std::ceil(h);
-        auto a = g.min_corner(), b = g.max_corner();
+        auto a = v.min_corner(), b = v.max_corner();
         auto x = std::floor(a.x()), y = std::floor(a.y());
         return wxRect2DDouble{0., 0., w, h}.CreateIntersection(
             {x, y, std::ceil(b.x()) - x, std::ceil(b.y()) - y});
@@ -70,7 +70,7 @@ void draw_image(  //
     img.InitAlpha();
     auto ys = std::views::iota(0, img.GetHeight());
     auto pixel = get_pixel(in);
-    std::for_each(std::execution::par, ys.begin(), ys.end(), [&](int y) {
+    std::for_each(policy, ys.begin(), ys.end(), [&](int y) {
         auto d = y * img.GetWidth();
         auto rgb = reinterpret_cast<wxImage::RGBValue*>(img.GetData()) + d;
         auto alpha = img.GetAlpha() + d;

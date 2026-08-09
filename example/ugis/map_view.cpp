@@ -4,46 +4,36 @@
 #include <QMouseEvent>
 #include <QStatusBar>
 #include <QWheelEvent>
-#include <boat/geometry/raster.hpp>
 #include <boat/gui/qt.hpp>
+#include <boost/gil.hpp>
 #include "catalog.h"
 #include "map_view.h"
 
 namespace {
 
 namespace geo = boat::geometry;
+using point = geo::geographic::point;
 
-geo::matrix make_affine(  //
-    int width,
-    int height,
-    geo::geographic::point const& center,
-    double scale,
-    geo::srs_variant const& crs)
+auto pixel(point const& mid, double scale, auto const& fwd)
 {
-    auto fwd = std::visit(
-        [&](auto const& v) {
-            return geo::transform(geo::srs_forward(geo::transformation(v)));
-        },
-        crs);
-    auto a = *fwd(center);
-    auto b = *fwd(geo::add_meters(center, scale, 0.));
-    auto px = geo::cartesian::segment{{a.x(), a.y()}, {b.x(), b.y()}};
-    return geo::affine(width, height, px);
+    auto a = *fwd(mid), b = *fwd(geo::add_meters(mid, scale, 0.));
+    return geo::cartesian::segment{{a.x(), a.y()}, {b.x(), b.y()}};
 }
 
-std::optional<geo::geographic::point> pixel_to_lonlat(
-    QPointF pixel,
-    geo::matrix const& affine,
-    geo::srs_variant const& crs)
+auto fwd_transform(auto const& tf)
 {
-    auto inv = std::visit(
-        [&](auto const& v) {
-            return geo::transform(  //
-                geo::mat_forward(affine),
-                geo::srs_inverse(geo::transformation(v)));
-        },
-        crs);
-    return inv(geo::geographic::point{pixel.x(), pixel.y()});
+    return geo::transform(geo::srs_forward(tf));
+}
+
+auto to_lonlat(QPointF pos, geo::matrix const& affine, auto const& tf)
+{
+    auto inv = geo::transform(geo::mat_forward(affine), geo::srs_inverse(tf));
+    return inv(point(pos.x(), pos.y()));
+}
+
+bool is_latitude(double lat)
+{
+    return std::abs(lat) < 89.;
 }
 
 }  // namespace
@@ -63,31 +53,41 @@ map_view::map_view(QWidget* parent)
 
 void map_view::timerEvent(QTimerEvent* event)
 {
-    if (event->timerId() != redraw_timer_.timerId()) {
-        QWidget::timerEvent(event);
-        return;
-    }
+    if (event->timerId() != redraw_timer_.timerId())
+        return QWidget::timerEvent(event);
     redraw_timer_.stop();
     redraw();
+}
+
+void map_view::resizeEvent(QResizeEvent*)
+{
+    update();
+    schedule_redraw();
 }
 
 void map_view::redraw()
 {
     tasks_.request_stop();
-    auto w = width();
-    auto h = height();
+    auto w = width(), h = height();
     if (w <= 0 || h <= 0)
         return;
-    auto crs = geo::ortho(center_);
-    auto affine = make_affine(w, h, center_, scale_, crs);
+    auto mid = map_mid_;
+    auto scale = map_scale_;
+    auto crs = geo::ortho(mid);
+    auto mat = geo::affine(
+        w, h, pixel(mid, scale, fwd_transform(geo::transformation(crs))));
     auto num_points = static_cast<size_t>(
         (w * h) / (boat::tile::size * boat::tile::size) + 4);
     tasks_.run([=, lyrs = layers_](auto tok) {
-        auto img = QImage{w, h, QImage::Format_ARGB32_Premultiplied};
+        auto catalogs =
+            std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
+        auto grid = geo::geographic_interpolate(w, h, mat, crs, num_points);
+        auto img = QImage{w, h, QImage::Format_RGBA8888};
         img.fill(Qt::white);
         auto art = QPainter{&img};
         art.setRenderHint(QPainter::Antialiasing);
         art.setCompositionMode(QPainter::CompositionMode_Darken);
+        auto drw = boat::gui::draw_variant(std::execution::seq, art, mat, crs);
         for (auto& l : lyrs) {
             if (tok.stop_requested())
                 return;
@@ -97,14 +97,17 @@ void map_view::redraw()
                     art.setBrush(l.brush);
                 }
                 auto pvd = boat::gui::provider{
-                    .catalog = [cat = make_catalog(l.address)]
-                    -> decltype(auto) { return *cat; },
+                    .catalog = [&] -> boat::db::catalog& {
+                        auto& cat = catalogs[l.address];
+                        if (!cat)
+                            cat = make_catalog(l.address);
+                        return *cat;
+                    },
                     .layer = l.layer,
                     .cache = cache_,
                     .key = l.cache,
-                    .grid = geo::geographic_interpolate(
-                        w, h, affine, crs, num_points)};
-                auto drw = boat::gui::draw_variant(art, affine, crs);
+                    .grid = grid,
+                };
                 for (auto var : pvd.variants()) {
                     if (tok.stop_requested())
                         return;
@@ -121,6 +124,8 @@ void map_view::redraw()
                 if (tok.stop_requested())
                     return;
                 img_ = std::move(img);
+                img_mid_ = mid;
+                img_scale_ = scale;
                 update();
             },
             Qt::QueuedConnection);
@@ -130,68 +135,112 @@ void map_view::redraw()
 void map_view::paintEvent(QPaintEvent*)
 {
     auto art = QPainter{this};
+    art.fillRect(rect(), Qt::white);
     if (img_.isNull())
-        art.fillRect(rect(), Qt::white);
-    else
-        art.drawImage(0, 0, img_);
+        return;
+    if (boost::geometry::equals(img_mid_, map_mid_) &&
+        img_scale_ == map_scale_ && img_.width() == width() &&
+        img_.height() == height())
+        return art.drawImage(0, 0, img_);
+    auto img_crs = geo::ortho(img_mid_);
+    auto img_fwd = fwd_transform(geo::transformation(img_crs));
+    auto img_mat = geo::affine(
+        img_.width(), img_.height(), pixel(img_mid_, img_scale_, img_fwd));
+    auto map_crs = geo::ortho(map_mid_);
+    auto map_fwd = fwd_transform(geo::transformation(map_crs));
+    auto map_mat =
+        geo::affine(width(), height(), pixel(map_mid_, map_scale_, map_fwd));
+    if (img_.format() != QImage::Format_RGBA8888)
+        img_ = img_.convertToFormat(QImage::Format_RGBA8888);
+    auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
+    auto gil = boost::gil::interleaved_view(
+        img_.width(), img_.height(), bits, img_.bytesPerLine());
+    boat::gui::draw_image(
+        std::execution::par, gil, img_mat, img_crs, art, map_mat, map_crs);
 }
 
 void map_view::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
-        panning_ = true;
-        last_pos_ = event->pos();
-        setCursor(Qt::ClosedHandCursor);
-    }
+    if (event->button() != Qt::LeftButton)
+        return;
+    panning_pos_ = event->pos();
+    setCursor(Qt::ClosedHandCursor);
 }
 
 void map_view::mouseMoveEvent(QMouseEvent* event)
 {
-    if (panning_) {
-        auto delta = event->pos() - last_pos_;
-        last_pos_ = event->pos();
-        auto crs = geo::ortho(center_);
-        auto affine = make_affine(width(), height(), center_, scale_, crs);
-        auto px = QPointF{width() / 2. - delta.x(), height() / 2. - delta.y()};
-        if (auto ll = pixel_to_lonlat(px, affine, crs))
-            center_ = geo::wrap(*ll);
-        schedule_redraw();
-    }
-    update_status(event->pos());
+    auto pos = event->pos();
+    auto guard = qScopeGuard([&] { update_status(pos); });
+    if (!panning_pos_)
+        return;
+    auto delta = pos - *std::exchange(panning_pos_, pos);
+    auto tf = geo::transformation(geo::ortho(map_mid_));
+    auto fwd = fwd_transform(tf);
+    auto xy = fwd(map_mid_);
+    if (!xy)
+        return;
+    auto mat = geo::affine(width(), height(), pixel(map_mid_, map_scale_, fwd));
+    auto cursor =
+        geo::transform(geo::mat_forward(mat))(point(pos.x(), pos.y()));
+    auto pole_y = boat::numbers::earth::equatorial_radius *
+                  std::cos(map_mid_.y() * boat::numbers::degree);
+    auto flip =
+        cursor && std::copysign(1., map_mid_.y()) * cursor->y() > pole_y;
+    auto eastward = (flip ? delta.x() : -delta.x()) * map_scale_;
+    auto northward = delta.y() * map_scale_;
+    auto ll = geo::transform(geo::srs_inverse(tf))(
+        point(xy->x() + eastward, xy->y() + northward));
+    if (!ll || !is_latitude(ll->y()))
+        return;
+    map_mid_ = geo::wrap(*ll);
+    update();
+    schedule_redraw();
 }
 
 void map_view::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
-        panning_ = false;
-        setCursor(Qt::ArrowCursor);
-    }
+    if (event->button() != Qt::LeftButton)
+        return;
+    panning_pos_.reset();
+    setCursor(Qt::ArrowCursor);
 }
 
 void map_view::wheelEvent(QWheelEvent* event)
 {
     auto degrees = event->angleDelta().y() / 8.;
     auto factor = std::pow(2., degrees / 60.);
-    auto scale = std::clamp(scale_ / factor, 1., 1e5);
-    auto crs = geo::ortho(center_);
+    auto new_scale = std::clamp(map_scale_ / factor, 1., 1e5);
+    auto tf = geo::transformation(geo::ortho(map_mid_));
+    auto fwd = fwd_transform(tf);
     auto cursor = event->position();
-    auto a = pixel_to_lonlat(
-        cursor, make_affine(width(), height(), center_, scale_, crs), crs);
-    auto b = pixel_to_lonlat(
-        cursor, make_affine(width(), height(), center_, scale, crs), crs);
-    if (a && b)
-        center_ = geo::wrap(
-            {center_.x() + a->x() - b->x(), center_.y() + a->y() - b->y()});
-    scale_ = scale;
+    auto ll = [&](auto scale) {
+        auto mat = geo::affine(width(), height(), pixel(map_mid_, scale, fwd));
+        return to_lonlat(cursor, mat, tf);
+    };
+    auto a = ll(map_scale_), b = ll(new_scale);
+    if (a && b && is_latitude(map_mid_.y() + a->y() - b->y()))
+        map_mid_ = geo::wrap(
+            {map_mid_.x() + a->x() - b->x(), map_mid_.y() + a->y() - b->y()});
+    map_scale_ = new_scale;
+    update();
     schedule_redraw();
+    update_status(cursor);
 }
 
-void map_view::update_status(QPoint cursor)
+void map_view::leaveEvent(QEvent*)
 {
-    auto crs = geo::ortho(center_);
-    auto affine = make_affine(width(), height(), center_, scale_, crs);
+    if (auto mw = qobject_cast<QMainWindow*>(window()))
+        if (auto sb = mw->statusBar())
+            sb->clearMessage();
+}
+
+void map_view::update_status(QPointF cursor)
+{
+    auto tf = geo::transformation(geo::ortho(map_mid_));
+    auto mat = geo::affine(
+        width(), height(), pixel(map_mid_, map_scale_, fwd_transform(tf)));
     auto msg = QString{};
-    if (auto ll = pixel_to_lonlat(QPointF{cursor}, affine, crs))
+    if (auto ll = to_lonlat(cursor, mat, tf))
         msg = QString::asprintf("lon: %.6f  lat: %.6f", ll->x(), ll->y());
     if (auto mw = qobject_cast<QMainWindow*>(window()))
         if (auto sb = mw->statusBar())

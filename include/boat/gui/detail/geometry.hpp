@@ -33,11 +33,9 @@ auto boxes(  //
     auto ret = std::vector<geometry::cartesian::box>{};
     auto fwd = geometry::transform(
         geometry::srs_forward(geometry::transformation(crs)));
-    auto push = [&](geometry::geographic::box const& ll) {
+    auto add = [&](geometry::geographic::box const& ll) {
         auto a = ll.min_corner(), b = ll.max_corner();
-        if (a.x() <= -180. || b.x() >= 180.)
-            return;
-        if (a.y() <= -90. || b.y() >= 90.)
+        if (a.x() <= -180. || b.x() >= 180. || a.y() <= -90. || b.y() >= 90.)
             return;
         if (auto xy = fwd(ll).transform(geometry::cartesian{}))
             ret.push_back(*xy);
@@ -47,12 +45,12 @@ auto boxes(  //
         if (d >= numbers::earth::sqrt_area / 4)
             continue;
         for (auto& p : lvl.second) {
-            auto dx = d * geometry::meter(p.y());
-            auto dy = d * geometry::meter();
-            push({{p.x(), p.y()}, {p.x() + dx, p.y() + dy}});
-            push({{p.x() - dx, p.y()}, {p.x(), p.y() + dy}});
-            push({{p.x(), p.y() - dy}, {p.x() + dx, p.y()}});
-            push({{p.x() - dx, p.y() - dy}, {p.x(), p.y()}});
+            auto x = p.x(), y = p.y();
+            auto dx = d * geometry::meter(y), dy = d * geometry::meter();
+            add({{x, y}, {x + dx, y + dy}});
+            add({{x - dx, y}, {x, y + dy}});
+            add({{x, y - dy}, {x + dx, y}});
+            add({{x - dx, y - dy}, {x, y}});
         }
     }
     return ret;
@@ -60,13 +58,14 @@ auto boxes(  //
 
 inline auto multi_point(int width, int height)
 {
-    constexpr auto num_per_edge = 17;
-    constexpr auto num_inners = 71;
+    auto hi = std::max<>(width, height);
+    auto num_inners = std::max<int>(hi / 4, 1);
+    auto num_per_edge = std::max<int>(std::sqrt(hi), 1);
     auto ret = geometry::box_interpolate<geometry::geographic::multi_point>(
         width, height, num_inners);
     auto mbr = geometry::geographic::box{{}, {width * 1., height * 1.}};
-    for (auto tuple : boost::geometry::box_view{mbr} | std::views::pairwise) {
-        auto a = std::get<0>(tuple), b = std::get<1>(tuple);
+    for (auto tup : boost::geometry::box_view{mbr} | std::views::pairwise) {
+        auto a = std::get<0>(tup), b = std::get<1>(tup);
         ret.push_back(a);
         ret.append_range(
             std::views::iota(0, num_per_edge) |

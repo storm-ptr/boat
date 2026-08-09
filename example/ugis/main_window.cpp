@@ -61,6 +61,7 @@ main_window::main_window()
     auto tree_width = qRound(width / (std::numbers::phi + 1));
     splitter->setSizes({tree_width, width - tree_width});
     setCentralWidget(splitter);
+    statusBar();  //< show status bar at startup
 
     auto model = &tree->model();
     auto sync = [map_, model] { map_->set_layers(model->checked_leaves()); };

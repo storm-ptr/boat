@@ -3,16 +3,21 @@
 #ifndef TASK_GROUP_H
 #define TASK_GROUP_H
 
-#include <QFuture>
+#include <QThreadPool>
 #include <QtConcurrent/QtConcurrentRun>
 #include <concepts>
 #include <functional>
+#include <list>
 #include <stop_token>
-#include <utility>
-#include <vector>
 
 class task_group {
 public:
+    explicit task_group(int num_threads = QThread::idealThreadCount())
+    {
+        pool_.setMaxThreadCount(num_threads);
+        pool_.setThreadPriority(QThread::LowPriority);
+    }
+
     ~task_group()
     {
         source_.request_stop();
@@ -25,7 +30,7 @@ public:
     {
         std::erase_if(futures_, [](auto& fut) { return fut.isFinished(); });
         futures_.push_back(QtConcurrent::run(
-            [tok = source_.get_token(), fn = std::forward<F>(fn)] {
+            &pool_, [tok = source_.get_token(), fn = std::forward<F>(fn)] {
                 std::invoke(fn, tok);
             }));
     }
@@ -43,8 +48,9 @@ public:
     }
 
 private:
+    QThreadPool pool_;
     std::stop_source source_;
-    std::vector<QFuture<void>> futures_;
+    std::list<QFuture<void>> futures_;
 };
 
 #endif  // TASK_GROUP_H

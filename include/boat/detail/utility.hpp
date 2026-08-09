@@ -7,6 +7,7 @@
 #include <bit>
 #include <cmath>
 #include <cstddef>
+#include <execution>
 #include <ranges>
 #include <span>
 #include <sstream>
@@ -17,6 +18,9 @@ namespace boat {
 
 template <class T>
 concept arithmetic = std::is_arithmetic_v<T>;
+
+template <class T>
+concept execution_policy = std::is_execution_policy_v<T>;
 
 template <template <class...> class Tpl, class... Ts>
 void specialization_test(Tpl<Ts...> const&);

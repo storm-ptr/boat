@@ -8,22 +8,21 @@
 #include <QPainterPath>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/gil.hpp>
-#include <execution>
 
 namespace boat::gui {
 
 constexpr auto to_qt = overloaded{
-    [](geometry::point auto&& g) { return QPointF(g.x(), g.y()); },
-    [](this auto&& self, geometry::box auto&& g) -> QRectF {
-        return {self(g.min_corner()), self(g.max_corner())};
+    [](geometry::point auto&& v) { return QPointF(v.x(), v.y()); },
+    [](this auto&& self, geometry::box auto&& v) -> QRectF {
+        return {self(v.min_corner()), self(v.max_corner())};
     },
-    [](this auto&& self, geometry::curve auto&& g) -> QList<QPointF> {
-        return g | std::views::transform(self) | std::ranges::to<QList>();
+    [](this auto&& self, geometry::curve auto&& v) -> QList<QPointF> {
+        return v | std::views::transform(self) | std::ranges::to<QList>();
     },
-    [](this auto&& self, geometry::polygon auto&& g) -> QPainterPath {
+    [](this auto&& self, geometry::polygon auto&& v) -> QPainterPath {
         auto ret = QPainterPath{};
-        ret.addPolygon(self(g.outer()));
-        for (auto& item : g.inners())
+        ret.addPolygon(self(v.outer()));
+        for (auto& item : v.inners())
             ret.addPolygon(self(item));
         return ret;
     }};
@@ -31,18 +30,19 @@ constexpr auto to_qt = overloaded{
 inline auto draw_geometry(QPainter& out)
 {
     return overloaded{
-        [&](geometry::point auto&& g) { out.drawPoint(to_qt(g)); },
-        [&](geometry::linestring auto&& g) { out.drawPolyline(to_qt(g)); },
-        [&](geometry::polygon auto&& g) { out.drawPath(to_qt(g)); },
-        [](this auto&& self, geometry::multi auto&& g) -> void {
-            std::ranges::for_each(g, self);
+        [&](geometry::point auto&& v) { out.drawPoint(to_qt(v)); },
+        [&](geometry::linestring auto&& v) { out.drawPolyline(to_qt(v)); },
+        [&](geometry::polygon auto&& v) { out.drawPath(to_qt(v)); },
+        [](this auto&& self, geometry::multi auto&& v) -> void {
+            std::ranges::for_each(v, self);
         },
-        [](this auto&& self, geometry::dynamic auto&& g) -> void {
-            std::visit(self, g);
+        [](this auto&& self, geometry::dynamic auto&& v) -> void {
+            std::visit(self, v);
         }};
 }
 
 void draw_image(  //
+    execution_policy auto policy,
     boost::gil::rgba8c_view_t in,
     geometry::matrix const& in_affine,
     geometry::srs_params auto&& in_crs,
@@ -59,22 +59,20 @@ void draw_image(  //
             .transform(std::bind_front(&QRect::intersected, out.window()));
     if (!mbr || mbr->isEmpty())
         return;
-    auto img = QImage{mbr->size(), QImage::Format_ARGB32_Premultiplied};
+    auto img = QImage{mbr->size(), QImage::Format_RGBA8888};
     auto ys = std::views::iota(0, img.height());
     auto pixel = get_pixel(in);
-    std::for_each(std::execution::par, ys.begin(), ys.end(), [&](int y) {
-        auto rgb = reinterpret_cast<QRgb*>(img.scanLine(y));
-        for (int x{}; x < img.width(); ++x)
-            rgb[x] =
+    std::for_each(policy, ys.begin(), ys.end(), [&](int y) {
+        auto ln = reinterpret_cast<uint8_t*>(img.scanLine(y));
+        for (int x{}; x < img.width(); ++x) {
+            auto px =
                 inv(geometry::geographic::point(x + mbr->x(), y + mbr->y()))
-                    .and_then(pixel)
-                    .transform([](auto const& px) {
-                        return qRgba(get_color(px, boost::gil::red_t()),
-                                     get_color(px, boost::gil::green_t()),
-                                     get_color(px, boost::gil::blue_t()),
-                                     get_color(px, boost::gil::alpha_t()));
-                    })
-                    .value_or(Qt::transparent);
+                    .and_then(pixel);
+            if (px)
+                *reinterpret_cast<boost::gil::rgba8_pixel_t*>(ln + x * 4) = *px;
+            else
+                std::fill_n(ln + x * 4, 4, 0);
+        }
     });
     out.drawImage(mbr->topLeft(), img);
 }
