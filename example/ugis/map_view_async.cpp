@@ -7,6 +7,75 @@
 #include "map_view.h"
 
 namespace geo = boat::geometry;
+using point = geo::geographic::point;
+
+namespace {
+
+std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
+{
+    if (tok.stop_requested())
+        return {};
+    auto cat = make_catalog(lyr.address);
+    auto tbl = cat->get_table(lyr.layer.schema_name, lyr.layer.table_name);
+    auto& col = lyr.layer.column_name;
+    auto it =
+        std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
+    if (it == tbl.columns.end())
+        return {};
+    auto crs = geo::srs::epsg(it->epsg);
+    if (tok.stop_requested())
+        return {};
+    auto rs =
+        cat->select(tbl, boat::db::page{.select_list = {col}, .limit = 1});
+    if (rs.empty())
+        return {};
+    auto var = boat::db::get<boat::blob>(rs.value());
+    auto g1 = geo::geographic::variant{};
+    boat::blob_view{var} >> g1;
+    auto g2 = boat::overloaded{
+        [](geo::point auto&& v) {
+            return point{v.x(), v.y()};
+        },
+        [](this auto&& self, geo::curve auto&& v) -> point {
+            return self(v.front());
+        },
+        [](this auto&& self, geo::polygon auto&& v) -> point {
+            return self(v.outer());
+        },
+        [](this auto&& self, geo::multi auto&& v) -> point {
+            return self(v.front());
+        },
+        [](this auto&& self, geo::dynamic auto&& v) -> point {
+            return std::visit(self, v);
+        },
+    }(g1);
+    return geo::transform(geo::srs_inverse(geo::transformation(crs)))(g2);
+}
+
+}  // namespace
+
+void map_view::locate(leaf lyr)
+{
+    tasks_.request_stop();
+    tasks_.run([=, lyr = std::move(lyr)](auto tok) {
+        try {
+            QMetaObject::invokeMethod(
+                this,
+                [=, mid = any_lonlat(lyr, tok)] {
+                    if (tok.stop_requested())
+                        return;
+                    if (mid)
+                        map_mid_ = geo::wrap(*mid);
+                    update();
+                    redraw();
+                },
+                Qt::QueuedConnection);
+        }
+        catch (std::exception const& e) {
+            qWarning() << "locate error:" << e.what();
+        }
+    });
+}
 
 void map_view::redraw()
 {
@@ -17,6 +86,8 @@ void map_view::redraw()
     auto mid = map_mid_;
     auto scale = map_scale_;
     tasks_.run([=, lyrs = layers_](auto tok) {
+        if (tok.stop_requested())
+            return;
         auto catalogs =
             std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
         auto crs = geo::ortho(mid);

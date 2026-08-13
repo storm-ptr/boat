@@ -23,6 +23,7 @@ public:
 
 public slots:
     void set_layers(std::vector<leaf>);
+    void locate(leaf);
 
 protected:
     void leaveEvent(QEvent*) override;

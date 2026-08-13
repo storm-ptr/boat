@@ -10,9 +10,14 @@
 class QContextMenuEvent;
 
 class tree_view : public QTreeView {
+    Q_OBJECT
+
 public:
     explicit tree_view(QWidget* parent = nullptr);
     tree_model& model() { return model_; }
+
+signals:
+    void locate(leaf);
 
 protected:
     void contextMenuEvent(QContextMenuEvent*) override;

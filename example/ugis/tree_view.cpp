@@ -51,6 +51,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     QAction* act_describe{};
     QAction* act_drop{};
     QAction* act_fill{};
+    QAction* act_locate{};
     QAction* act_outline{};
     QAction* act_paste{};
     QAction* act_refresh{};
@@ -66,6 +67,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             act_width = menu.addAction("outline width");
             act_drop = menu.addAction("drop layer");
         }
+        act_locate = menu.addAction("locate");
         menu.addSeparator();
     }
     if (opt) {
@@ -168,6 +170,11 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     }
     else if (act == act_describe)
         model_.describe(idx);
+    else if (act == act_locate) {
+        if (!opt)
+            return;
+        emit locate(*opt);
+    }
     else if (act == act_mount) {
         auto dlg = select_source_dialog{this};
         if (dlg.exec() != QDialog::Accepted)
