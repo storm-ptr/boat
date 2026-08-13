@@ -9,14 +9,14 @@
 #include "geometry.h"
 #include "map_view.h"
 
-constexpr auto lat_max = 89.;
+constexpr auto lat_max = 85.;
 namespace geo = boat::geometry;
 using point = geo::geographic::point;
 
 void map_view::set_layers(std::vector<leaf> layers)
 {
     layers_ = std::move(layers);
-    schedule_redraw();
+    redraw();
 }
 
 map_view::map_view(QWidget* parent)
@@ -28,16 +28,24 @@ map_view::map_view(QWidget* parent)
 
 void map_view::timerEvent(QTimerEvent* event)
 {
-    if (event->timerId() != redraw_timer_.timerId())
-        return QWidget::timerEvent(event);
-    redraw_timer_.stop();
-    redraw();
+    if (event->timerId() == map_timer_.timerId()) {
+        map_timer_.stop();
+        update();
+        return;
+    }
+    if (event->timerId() == img_timer_.timerId()) {
+        img_timer_.stop();
+        redraw();
+        return;
+    }
+    QWidget::timerEvent(event);
 }
 
-void map_view::resizeEvent(QResizeEvent*)
+void map_view::schedule_paint()
 {
-    update();
-    schedule_redraw();
+    if (!map_timer_.isActive())
+        map_timer_.start(75, this);
+    img_timer_.start(350, this);
 }
 
 void map_view::paintEvent(QPaintEvent*)
@@ -87,7 +95,7 @@ void map_view::mouseMoveEvent(QMouseEvent* event)
     auto mat = affine(width(), height(), map_mid_, map_scale_, fwd);
     auto cursor =
         geo::transform(geo::mat_forward(mat))(point(pos.x(), pos.y()));
-    auto pole_y = boat::numbers::earth::equatorial_radius *
+    auto pole_y = boat::numbers::earth::mean_radius *
                   std::cos(map_mid_.y() * boat::numbers::degree);
     auto flip =
         cursor && std::copysign(1., map_mid_.y()) * cursor->y() > pole_y;
@@ -98,8 +106,7 @@ void map_view::mouseMoveEvent(QMouseEvent* event)
     if (!ll || std::abs(ll->y()) > lat_max)
         return;
     map_mid_ = geo::wrap(*ll);
-    update();
-    schedule_redraw();
+    schedule_paint();
 }
 
 void map_view::mouseReleaseEvent(QMouseEvent* event)
@@ -115,7 +122,7 @@ void map_view::wheelEvent(QWheelEvent* event)
     auto pos = event->position();
     auto degrees = event->angleDelta().y() / 8.;
     auto factor = std::pow(2., degrees / 60.);
-    auto new_scale = std::clamp(map_scale_ / factor, 1., 1e5);
+    auto new_scale = std::clamp(map_scale_ / factor, .5, 50'000.);
     auto tf = geo::transformation(geo::ortho(map_mid_));
     auto ll = [&](auto scale) {
         auto mat = affine(width(), height(), map_mid_, scale, tf);
@@ -127,8 +134,7 @@ void map_view::wheelEvent(QWheelEvent* event)
         map_mid_ = geo::wrap(
             {map_mid_.x() + a->x() - b->x(), map_mid_.y() + a->y() - b->y()});
     map_scale_ = new_scale;
-    update();
-    schedule_redraw();
+    schedule_paint();
     update_status(pos);
 }
 

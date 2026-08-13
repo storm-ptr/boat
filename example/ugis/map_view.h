@@ -31,24 +31,25 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void paintEvent(QPaintEvent*) override;
-    void resizeEvent(QResizeEvent*) override;
+    void resizeEvent(QResizeEvent*) override { schedule_paint(); }
     void timerEvent(QTimerEvent*) override;
     void wheelEvent(QWheelEvent*) override;
 
 private:
     void redraw();
-    void schedule_redraw() { redraw_timer_.start(250, this); }
+    void schedule_paint();
     void update_status(QPointF cursor);
 
     std::shared_ptr<boat::gui::caches::lru> cache_;
     QImage img_;
     boat::geometry::geographic::point img_mid_;
     double img_scale_;
+    QBasicTimer img_timer_;
     std::vector<leaf> layers_;
     boat::geometry::geographic::point map_mid_;
     double map_scale_ = 1e4;  //< meters per pixel
+    QBasicTimer map_timer_;
     std::optional<QPoint> panning_pos_;
-    QBasicTimer redraw_timer_;
     task_group tasks_{1};
 };
 
