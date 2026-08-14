@@ -31,7 +31,7 @@ geographic::grid geographic_interpolate(  //
             std::ranges::to<geographic::multi_point>())
             .value_or(geographic::multi_point{});
     auto ret = geographic::grid{};
-    for (auto fib : geographic_fibonacci_levels) {
+    for (auto fib : fibonacci_levels) {
         auto indices = std::unordered_set<size_t>{};
         for (auto& p : points)
             for (auto i : fib.nearests(p, sentinel)) {

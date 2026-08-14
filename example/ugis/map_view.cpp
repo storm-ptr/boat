@@ -13,17 +13,20 @@ constexpr auto lat_max = 85.;
 namespace geo = boat::geometry;
 using point = geo::geographic::point;
 
+map_view::map_view(QWidget* parent)
+    : QWidget(parent)
+    , cache_(std::make_shared<boat::gui::caches::lru>(10'000))
+    , map_res_{9'783.94}
+    , tasks_{1}
+{
+    setMouseTracking(true);
+    setAttribute(Qt::WA_OpaquePaintEvent);
+}
+
 void map_view::set_layers(std::vector<leaf> layers)
 {
     layers_ = std::move(layers);
     redraw();
-}
-
-map_view::map_view(QWidget* parent)
-    : QWidget(parent), cache_(std::make_shared<boat::gui::caches::lru>(10'000))
-{
-    setMouseTracking(true);
-    setAttribute(Qt::WA_OpaquePaintEvent);
 }
 
 void map_view::timerEvent(QTimerEvent* event)
@@ -54,15 +57,14 @@ void map_view::paintEvent(QPaintEvent*)
     art.fillRect(rect(), Qt::white);
     if (img_.isNull())
         return;
-    if (boost::geometry::equals(img_mid_, map_mid_) &&
-        img_scale_ == map_scale_ && img_.width() == width() &&
-        img_.height() == height())
+    if (boost::geometry::equals(img_mid_, map_mid_) && img_res_ == map_res_ &&
+        img_.width() == width() && img_.height() == height())
         return art.drawImage(0, 0, img_);
     auto img_crs = geo::ortho(img_mid_);
     auto img_mat =
-        affine(img_.width(), img_.height(), img_mid_, img_scale_, img_crs);
+        affine(img_.width(), img_.height(), img_mid_, img_res_, img_crs);
     auto map_crs = geo::ortho(map_mid_);
-    auto map_mat = affine(width(), height(), map_mid_, map_scale_, map_crs);
+    auto map_mat = affine(width(), height(), map_mid_, map_res_, map_crs);
     if (img_.format() != QImage::Format_RGBA8888)
         img_ = img_.convertToFormat(QImage::Format_RGBA8888);
     auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
@@ -92,15 +94,15 @@ void map_view::mouseMoveEvent(QMouseEvent* event)
     auto xy = fwd(map_mid_);
     if (!xy)
         return;
-    auto mat = affine(width(), height(), map_mid_, map_scale_, fwd);
+    auto mat = affine(width(), height(), map_mid_, map_res_, fwd);
     auto cursor =
         geo::transform(geo::mat_forward(mat))(point(pos.x(), pos.y()));
     auto pole_y = boat::numbers::earth::mean_radius *
                   std::cos(map_mid_.y() * boat::numbers::degree);
     auto flip =
         cursor && std::copysign(1., map_mid_.y()) * cursor->y() > pole_y;
-    auto eastward = (flip ? delta.x() : -delta.x()) * map_scale_;
-    auto northward = delta.y() * map_scale_;
+    auto eastward = (flip ? delta.x() : -delta.x()) * map_res_;
+    auto northward = delta.y() * map_res_;
     auto ll = geo::transform(geo::srs_inverse(tf))(
         point(xy->x() + eastward, xy->y() + northward));
     if (!ll || std::abs(ll->y()) > lat_max)
@@ -122,18 +124,18 @@ void map_view::wheelEvent(QWheelEvent* event)
     auto pos = event->position();
     auto degrees = event->angleDelta().y() / 8.;
     auto factor = std::pow(2., degrees / 60.);
-    auto new_scale = std::clamp(map_scale_ / factor, .5, 50'000.);
+    auto new_res = std::clamp(map_res_ / factor, 0.5972, 39'135.76);
     auto tf = geo::transformation(geo::ortho(map_mid_));
-    auto ll = [&](auto scale) {
-        auto mat = affine(width(), height(), map_mid_, scale, tf);
+    auto ll = [&](auto res) {
+        auto mat = affine(width(), height(), map_mid_, res, tf);
         auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
         return inv(point(pos.x(), pos.y()));
     };
-    auto a = ll(map_scale_), b = ll(new_scale);
+    auto a = ll(map_res_), b = ll(new_res);
     if (a && b && std::abs(map_mid_.y() + a->y() - b->y()) <= lat_max)
         map_mid_ = geo::wrap(
             {map_mid_.x() + a->x() - b->x(), map_mid_.y() + a->y() - b->y()});
-    map_scale_ = new_scale;
+    map_res_ = new_res;
     schedule_paint();
     update_status(pos);
 }
@@ -149,7 +151,7 @@ void map_view::update_status(QPointF cursor)
 {
     auto msg = QString{};
     auto tf = geo::transformation(geo::ortho(map_mid_));
-    auto mat = affine(width(), height(), map_mid_, map_scale_, tf);
+    auto mat = affine(width(), height(), map_mid_, map_res_, tf);
     auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
     if (auto ll = inv(point(cursor.x(), cursor.y())))
         msg = QString::asprintf("lon: %.6f  lat: %.6f", ll->x(), ll->y());

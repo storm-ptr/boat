@@ -19,24 +19,17 @@ auto tiles(  //
     namespace geo = geometry;
     static constexpr auto margin = 1.17;
     static constexpr auto d = {-1, 0, 1};
-
+    auto ret = std::unordered_set<tile>{};
     auto tf = geo::transformation(crs);
     auto fwd = geo::transform(geo::srs_forward(tf), geo::mat_inverse(affine));
     auto inv = geo::transform(geo::mat_forward(affine), geo::srs_inverse(tf));
-
-    auto scale_num = 0., scale_den = 0.;
-    for (auto& a : grid | std::views::values | std::views::join)
-        if (auto b = fwd(a); b && (b = inv(geo::add_value(*b, 1)))) {
-            scale_num += distance(a, *b) * numbers::inv_sqrt_2;
-            scale_den += 1.;
-        }
-    auto ret = std::unordered_set<tile>{};
-    if (!scale_den)
+    auto a = inv(geo::geographic::point(width * .5, height * .5));
+    auto b = inv(geo::geographic::point(width * .5 + 1., height * .5 + 1.));
+    if (!a || !b || grid.empty())
         return ret;
     auto meters = std::begin(grid)->first;
-    auto scale = scale_num / scale_den / meters * tile::size;
-
-    auto z = tile::zoom(width, height, scale * margin);
+    auto scale = distance(*a, *b) * numbers::inv_sqrt_2 / meters * tile::size;
+    auto z = tile::zoom(width, height, scale);
     auto k = 1. / tile::scale(width, height, z) / tile::size;
     auto snap = [k](auto v) { return static_cast<int>(k * v); };
     for (auto& a : grid | std::views::values | std::views::join) {

@@ -43,14 +43,14 @@ private:
     std::shared_ptr<boat::gui::caches::lru> cache_;
     QImage img_;
     boat::geometry::geographic::point img_mid_;
-    double img_scale_;
+    double img_res_;
     QBasicTimer img_timer_;
     std::vector<leaf> layers_;
     boat::geometry::geographic::point map_mid_;
-    double map_scale_ = 1e4;  //< meters per pixel
+    double map_res_;
     QBasicTimer map_timer_;
     std::optional<QPoint> panning_pos_;
-    task_group tasks_{1};
+    task_group tasks_;
 };
 
 #endif  // MAP_VIEW_H

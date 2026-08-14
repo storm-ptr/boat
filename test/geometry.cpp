@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(geometry_endian)
 BOOST_AUTO_TEST_CASE(geometry_fibonacci_monotonic)
 {
     auto lim = 50;
-    for (auto fib : geographic_fibonacci_levels | std::views::take(18))
+    for (auto fib : fibonacci_levels | std::views::take(18))
         for (auto p : geographic_random() | std::views::take(lim)) {
             auto prev = 0.;
             auto indices = std::unordered_set<size_t>{};
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(geometry_fibonacci_monotonic)
 
 BOOST_AUTO_TEST_CASE(geometry_fibonacci_vs_rtree)
 {
-    for (auto fib : geographic_fibonacci_levels | std::views::take(8)) {
+    for (auto fib : fibonacci_levels | std::views::take(8)) {
         auto rtree = index::rtree<geographic::point, index::rstar<4>>{};
         for (auto i : std::views::iota(0u, fib.num_points))
             rtree.insert(fib[i]);

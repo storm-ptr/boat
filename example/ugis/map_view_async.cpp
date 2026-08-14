@@ -29,10 +29,12 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         cat->select(tbl, boat::db::page{.select_list = {col}, .limit = 1});
     if (rs.empty())
         return {};
-    auto var = boat::db::get<boat::blob>(rs.value());
-    auto g1 = geo::geographic::variant{};
-    boat::blob_view{var} >> g1;
-    auto g2 = boat::overloaded{
+    auto wkb = std::get_if<boat::blob>(&rs.value());
+    if (!wkb)
+        return {};
+    auto var = geo::geographic::variant{};
+    boat::blob_view{*wkb} >> var;
+    auto p = boat::overloaded{
         [](geo::point auto&& v) {
             return point{v.x(), v.y()};
         },
@@ -48,8 +50,8 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         [](this auto&& self, geo::dynamic auto&& v) -> point {
             return std::visit(self, v);
         },
-    }(g1);
-    return geo::transform(geo::srs_inverse(geo::transformation(crs)))(g2);
+    }(var);
+    return geo::transform(geo::srs_inverse(geo::transformation(crs)))(p);
 }
 
 }  // namespace
@@ -79,18 +81,20 @@ void map_view::locate(leaf lyr)
 
 void map_view::redraw()
 {
-    tasks_.request_stop();
     auto w = width(), h = height();
+    if (w <= 0 || h <= 0)
+        return;
     auto mid = map_mid_;
-    auto scale = map_scale_;
+    auto res = map_res_;
+    tasks_.request_stop();
     tasks_.run([=, lyrs = layers_](auto tok) {
         if (tok.stop_requested())
             return;
         auto cats = std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
         auto crs = geo::ortho(mid);
-        auto mat = affine(w, h, mid, scale, crs);
+        auto mat = affine(w, h, mid, res, crs);
         auto num_points = static_cast<size_t>(
-            (w * h) / (boat::tile::size * boat::tile::size) + 4);
+            (w * h) / (boat::tile::size * boat::tile::size) + 1);
         auto pvd = boat::gui::provider{
             .cache = cache_,
             .grid = geo::geographic_interpolate(w, h, mat, crs, num_points)};
@@ -130,7 +134,7 @@ void map_view::redraw()
                     return;
                 img_ = std::move(img);
                 img_mid_ = mid;
-                img_scale_ = scale;
+                img_res_ = res;
                 update();
             },
             Qt::QueuedConnection);
