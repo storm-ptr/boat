@@ -55,6 +55,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     QAction* act_outline{};
     QAction* act_paste{};
     QAction* act_refresh{};
+    QAction* act_sample{};
     QAction* act_unmount{};
     QAction* act_width{};
     auto opt = model_.get_leaf(idx);
@@ -66,6 +67,8 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             act_outline = menu.addAction("outline color");
             act_width = menu.addAction("outline width");
             act_drop = menu.addAction("drop layer");
+            if (map_)
+                act_sample = menu.addAction("sample");
         }
         act_locate = menu.addAction("locate");
         menu.addSeparator();
@@ -168,12 +171,17 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
                 QMessageBox::No) == QMessageBox::Yes)
             model_.drop(idx);
     }
+    else if (act == act_sample) {
+        if (!opt || opt->layer.raster || !map_)
+            return;
+        model_.sample(idx, map_->view());
+    }
     else if (act == act_describe)
         model_.describe(idx);
     else if (act == act_locate) {
-        if (!opt)
+        if (!opt || !map_)
             return;
-        emit locate(*opt);
+        map_->locate(*opt);
     }
     else if (act == act_mount) {
         auto dlg = select_source_dialog{this};

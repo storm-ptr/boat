@@ -15,11 +15,19 @@
 #include "task_group.h"
 #include "tree.h"
 
+struct viewport {
+    boat::geometry::geographic::point mid;
+    double resolution;
+    int width;
+    int height;
+};
+
 class map_view : public QWidget {
     Q_OBJECT
 
 public:
     explicit map_view(QWidget* parent = nullptr);
+    viewport view() const;
 
 public slots:
     void set_layers(std::vector<leaf>);

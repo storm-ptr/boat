@@ -3,9 +3,11 @@
 #include <QDebug>
 #include <boat/db/io.hpp>
 #include <boat/gui/caches/cache.hpp>
+#include <boat/gui/detail/geometry.hpp>
 #include <filesystem>
 #include "catalog.h"
 #include "copy_layer.h"
+#include "geometry.h"
 #include "tree_model.h"
 
 void tree_model::copy_as(  //
@@ -164,6 +166,56 @@ void tree_model::describe(QModelIndex const& idx)
             else
                 qInfo().noquote() << boat::concat(cat->get_table(
                     lyr.layer.schema_name, lyr.layer.table_name));
+        }
+        catch (std::exception const& e) {
+            qWarning() << e.what();
+        }
+    });
+}
+
+void tree_model::sample(QModelIndex const& idx, viewport const& vp)
+{
+    auto l = to_leaf(idx);
+    if (!l || l->layer.raster)
+        return;
+    auto lyr = *l;
+    tasks_.run([lyr, vp](auto tok) {
+        try {
+            if (tok.stop_requested())
+                return;
+            auto cat = make_catalog(lyr.address);
+            auto tbl =
+                cat->get_table(lyr.layer.schema_name, lyr.layer.table_name);
+            auto& col = lyr.layer.column_name;
+            auto it = std::ranges::find(
+                tbl.columns, col, &boat::db::column::column_name);
+            if (it == tbl.columns.end())
+                return;
+            auto crs = boat::geometry::srs::epsg(it->epsg);
+            auto w = vp.width, h = vp.height;
+            if (w <= 0 || h <= 0)
+                return;
+            auto mid = vp.mid;
+            auto res = vp.resolution;
+            auto ortho = boat::geometry::ortho(mid);
+            auto mat = affine(w, h, mid, res, ortho);
+            auto num_points = static_cast<size_t>(
+                (w * h) / (boat::tile::size * boat::tile::size) + 1);
+            auto grid = boat::geometry::geographic_interpolate(
+                w, h, mat, ortho, num_points);
+            for (auto& box : boat::gui::boxes(grid, crs)) {
+                if (tok.stop_requested())
+                    return;
+                auto a = box.min_corner(), b = box.max_corner();
+                auto rs = cat->select(
+                    tbl,
+                    boat::db::bbox{{}, col, a.x(), a.y(), b.x(), b.y(), 10});
+                if (!rs.empty()) {
+                    qInfo().noquote() << boat::concat(rs);
+                    return;
+                }
+            }
+            qInfo() << "sample: no data found";
         }
         catch (std::exception const& e) {
             qWarning() << e.what();

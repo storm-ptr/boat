@@ -23,6 +23,14 @@ map_view::map_view(QWidget* parent)
     setAttribute(Qt::WA_OpaquePaintEvent);
 }
 
+viewport map_view::view() const
+{
+    return {.mid = map_mid_,
+            .resolution = map_res_,
+            .width = width(),
+            .height = height()};
+}
+
 void map_view::set_layers(std::vector<leaf> layers)
 {
     layers_ = std::move(layers);

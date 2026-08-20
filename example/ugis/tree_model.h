@@ -7,6 +7,7 @@
 #include <QString>
 #include <concepts>
 #include <optional>
+#include "map_view.h"
 #include "task_group.h"
 #include "tree.h"
 
@@ -34,6 +35,7 @@ public:
     void paste(QModelIndex const&, QString const& name);
     void request_stop();
     void refresh(QModelIndex const&);
+    void sample(QModelIndex const& idx, viewport const& vp);
     bool save_workspace(QString const& path) const;
     void unmount(QModelIndex const&);
 

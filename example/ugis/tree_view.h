@@ -8,16 +8,13 @@
 #include "tree_model.h"
 
 class QContextMenuEvent;
+class map_view;
 
 class tree_view : public QTreeView {
-    Q_OBJECT
-
 public:
     explicit tree_view(QWidget* parent = nullptr);
     tree_model& model() { return model_; }
-
-signals:
-    void locate(leaf);
+    void set_map_view(map_view* map) { map_ = map; }
 
 protected:
     void contextMenuEvent(QContextMenuEvent*) override;
@@ -25,6 +22,7 @@ protected:
 private:
     tree_model model_;
     QString workspace_path_;
+    map_view* map_{};
 };
 
 #endif  // TREE_VIEW_H

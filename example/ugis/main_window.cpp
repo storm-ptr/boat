@@ -70,7 +70,7 @@ main_window::main_window()
     connect(model, &QAbstractItemModel::rowsInserted, map_, sync);
     connect(model, &QAbstractItemModel::rowsRemoved, map_, sync);
     connect(model, &QAbstractItemModel::modelReset, map_, sync);
-    connect(tree, &tree_view::locate, map_, &map_view::locate);
+    tree->set_map_view(map_);
 
     qSetMessagePattern("[%{time hh:mm:ss}] %{type}: %{message}");
     log_ptr = log_;
