@@ -52,49 +52,68 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     QAction* act_drop{};
     QAction* act_fill{};
     QAction* act_locate{};
+    QAction* act_mount{};
+    QAction* act_new{};
+    QAction* act_open{};
     QAction* act_outline{};
     QAction* act_paste{};
     QAction* act_refresh{};
     QAction* act_sample{};
+    QAction* act_save{};
     QAction* act_unmount{};
     QAction* act_width{};
     auto opt = model_.get_leaf(idx);
+    auto is_vector = opt && !opt->layer.raster;
+
+    // other
     if (opt || model_.is_branch(idx))
-        act_describe = menu.addAction("describe");
-    if (opt) {
-        if (!opt->layer.raster) {
-            act_fill = menu.addAction("filling color");
-            act_outline = menu.addAction("outline color");
-            act_width = menu.addAction("outline width");
-            act_drop = menu.addAction("drop layer");
-            if (map_)
-                act_sample = menu.addAction("sample");
-        }
-        act_locate = menu.addAction("locate");
+        act_describe = menu.addAction("describe in log");
+    if (is_vector)
+        act_drop = menu.addAction("drop layer");
+    if (opt)
+        act_locate = menu.addAction("locate on map");
+    if (model_.can_refresh(idx))
+        act_refresh = menu.addAction("refresh source");
+    if (is_vector && map_)
+        act_sample = menu.addAction("sample in log");
+    if (act_describe || act_drop || act_locate || act_refresh || act_sample)
+        menu.addSeparator();
+
+    // color/width
+    if (is_vector) {
+        act_fill = menu.addAction("filling color");
+        act_outline = menu.addAction("outline color");
+        act_width = menu.addAction("outline width");
         menu.addSeparator();
     }
-    if (opt) {
-        if (!opt->layer.raster)
-            act_copy = menu.addAction("copy");
+
+    // copy/paste
+    if (is_vector)
+        act_copy = menu.addAction("copy");
+    if (opt)
         act_copy_as = menu.addAction("copy as");
-    }
     if (model_.can_paste_to(idx))
         act_paste = menu.addAction("paste");
     if (act_copy || act_copy_as || act_paste)
         menu.addSeparator();
-    if (model_.can_refresh(idx))
-        act_refresh = menu.addAction("refresh source");
-    auto act_mount = menu.addAction("mount source");
+
+    // mount/unmount
+    act_mount = menu.addAction("mount source");
     if (model_.is_mounted(idx))
         act_unmount = menu.addAction("unmount source");
     menu.addSeparator();
-    auto act_new = menu.addAction("new workspace");
-    auto act_open = menu.addAction("open workspace");
-    auto act_save = menu.addAction("save workspace");
+
+    // workspace
+    act_new = menu.addAction("new workspace");
+    act_open = menu.addAction("open workspace");
+    act_save = menu.addAction("save workspace");
+
+    // cancel
     if (model_.busy()) {
         menu.addSeparator();
         act_cancel = menu.addAction("cancel tasks");
     }
+
     auto act = menu.exec(event->globalPos());
     if (act == act_fill)
         pick_color(

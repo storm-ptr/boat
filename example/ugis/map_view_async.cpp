@@ -16,6 +16,14 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     if (tok.stop_requested())
         return {};
     auto cat = make_catalog(lyr.address);
+    if (lyr.layer.raster) {
+        auto rs = cat->get_raster(lyr.layer);
+        auto crs = geo::srs::epsg(rs.epsg);
+        auto x = rs.xorig + (rs.width / 2.) * rs.xscale;
+        auto y = rs.yorig + (rs.height / 2.) * rs.yscale;
+        return geo::transform(geo::srs_inverse(geo::transformation(crs)))(
+            point{x, y});
+    }
     auto tbl = cat->get_table(lyr.layer.schema_name, lyr.layer.table_name);
     auto& col = lyr.layer.column_name;
     auto it =
