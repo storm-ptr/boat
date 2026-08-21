@@ -46,6 +46,7 @@ protected:
 private:
     void redraw();
     void schedule_paint();
+    void watch_task(QFuture<void>);
     void update_status(QPointF cursor);
 
     std::shared_ptr<boat::gui::caches::lru> cache_;

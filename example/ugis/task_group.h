@@ -26,13 +26,15 @@ public:
     }
 
     template <std::invocable<std::stop_token> F>
-    void run(F&& fn)
+    QFuture<void> run(F&& fn)
     {
         std::erase_if(futures_, [](auto& fut) { return fut.isFinished(); });
-        futures_.push_back(QtConcurrent::run(
+        auto fut = QtConcurrent::run(
             &pool_, [tok = source_.get_token(), fn = std::forward<F>(fn)] {
                 std::invoke(fn, tok);
-            }));
+            });
+        futures_.push_back(fut);
+        return fut;
     }
 
     bool busy()

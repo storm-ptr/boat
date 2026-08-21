@@ -67,7 +67,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
 void map_view::locate(leaf lyr)
 {
     tasks_.request_stop();
-    tasks_.run([=, lyr = std::move(lyr)](auto tok) {
+    watch_task(tasks_.run([=, lyr = std::move(lyr)](auto tok) {
         try {
             QMetaObject::invokeMethod(
                 this,
@@ -84,7 +84,7 @@ void map_view::locate(leaf lyr)
         catch (std::exception const& e) {
             qWarning() << "locate error:" << e.what();
         }
-    });
+    }));
 }
 
 void map_view::redraw()
@@ -95,7 +95,7 @@ void map_view::redraw()
     auto mid = map_mid_;
     auto res = map_res_;
     tasks_.request_stop();
-    tasks_.run([=, lyrs = layers_](auto tok) {
+    watch_task(tasks_.run([=, lyrs = layers_](auto tok) {
         if (tok.stop_requested())
             return;
         auto cats = std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
@@ -146,5 +146,5 @@ void map_view::redraw()
                 update();
             },
             Qt::QueuedConnection);
-    });
+    }));
 }

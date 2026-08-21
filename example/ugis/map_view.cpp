@@ -52,6 +52,16 @@ void map_view::timerEvent(QTimerEvent* event)
     QWidget::timerEvent(event);
 }
 
+void map_view::watch_task(QFuture<void> fut)
+{
+    if (!panning_pos_)
+        setCursor(Qt::BusyCursor);
+    fut.then(this, [this] {
+        if (!panning_pos_)
+            setCursor(tasks_.busy() ? Qt::BusyCursor : Qt::ArrowCursor);
+    });
+}
+
 void map_view::schedule_paint()
 {
     if (!map_timer_.isActive())
@@ -124,7 +134,7 @@ void map_view::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() != Qt::LeftButton)
         return;
     panning_pos_.reset();
-    setCursor(Qt::ArrowCursor);
+    setCursor(tasks_.busy() ? Qt::BusyCursor : Qt::ArrowCursor);
 }
 
 void map_view::wheelEvent(QWheelEvent* event)
