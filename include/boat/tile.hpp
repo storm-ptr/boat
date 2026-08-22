@@ -43,6 +43,8 @@ struct tile {
 
     static std::generator<tile> all(int width, int height, int zoom)
     {
+        if (width <= 0 || height <= 0)
+            co_return;
         int px = scale(width, height, zoom);
         int tl = size * px;
         int xmax = (width - 1) / tl;

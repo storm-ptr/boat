@@ -34,7 +34,7 @@ preset_address make_preset_address()
         "http://mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}?agent=ugis",
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png?agent=ugis&ssl=0",
         "sqlite:///C:/home/gis_data/sqlite/california_roads.sqlite",
-        "wms:https://wms.gebco.net/mapserv?request=GetCapabilities&service=WMS",
+        R"(wms:https://gibs.earthdata.nasa.gov/twms/epsg4326/best/twms.cgi?request=GetTileService)",
         "/vsicurl/https://download.osgeo.org/gdal/data/gtiff/small_world.tif",
     };
     for (auto adr : boat::config::odbc_address())
@@ -105,10 +105,12 @@ select_source_dialog::select_source_dialog(QWidget* parent) : QDialog(parent)
     ok_ = buttons->button(QDialogButtonBox::Ok);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(name_, &QLineEdit::textChanged, this, [this] { update_ok(); });
-    connect(address_->lineEdit(), &QLineEdit::textChanged, this, [this] {
-        update_ok();
-    });
+    connect(
+        name_, &QLineEdit::textChanged, this, &select_source_dialog::update_ok);
+    connect(address_->lineEdit(),
+            &QLineEdit::textChanged,
+            this,
+            &select_source_dialog::update_ok);
     auto layout = new QVBoxLayout{this};
     layout->addLayout(form);
     layout->addWidget(buttons);

@@ -203,8 +203,10 @@ bool tree_model::removeRows(int position, int rows, QModelIndex const& parent)
 {
     if (rows <= 0)
         return true;
-    beginRemoveRows(parent, position, position + rows - 1);
     auto& children = to_tree(parent)->children;
+    if (position < 0 || rows > std::ssize(children) - position)
+        return false;
+    beginRemoveRows(parent, position, position + rows - 1);
     children.erase(children.begin() + position,
                    children.begin() + position + rows);
     endRemoveRows();

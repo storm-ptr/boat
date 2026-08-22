@@ -17,10 +17,10 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         return {};
     auto cat = make_catalog(lyr.address);
     if (lyr.layer.raster) {
-        auto rs = cat->get_raster(lyr.layer);
-        auto crs = geo::srs::epsg(rs.epsg);
-        auto x = rs.xorig + (rs.width / 2.) * rs.xscale;
-        auto y = rs.yorig + (rs.height / 2.) * rs.yscale;
+        auto rast = cat->get_raster(lyr.layer);
+        auto crs = geo::srs::epsg(rast.epsg);
+        auto x = rast.xorig + (rast.width / 2.) * rast.xscale;
+        auto y = rast.yorig + (rast.height / 2.) * rast.yscale;
         return geo::transform(geo::srs_inverse(geo::transformation(crs)))(
             point{x, y});
     }
@@ -43,23 +43,24 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     auto var = geo::geographic::variant{};
     boat::blob_view{*wkb} >> var;
     auto p = boat::overloaded{
-        [](geo::point auto&& v) {
+        [](geo::point auto&& v) -> std::optional<point> {
             return point{v.x(), v.y()};
         },
-        [](this auto&& self, geo::curve auto&& v) -> point {
-            return self(v.front());
+        [](this auto&& self, geo::curve auto&& v) -> std::optional<point> {
+            return v.empty() ? std::nullopt : self(v.front());
         },
-        [](this auto&& self, geo::polygon auto&& v) -> point {
+        [](this auto&& self, geo::polygon auto&& v) -> std::optional<point> {
             return self(v.outer());
         },
-        [](this auto&& self, geo::multi auto&& v) -> point {
-            return self(v.front());
+        [](this auto&& self, geo::multi auto&& v) -> std::optional<point> {
+            return v.empty() ? std::nullopt : self(v.front());
         },
-        [](this auto&& self, geo::dynamic auto&& v) -> point {
+        [](this auto&& self, geo::dynamic auto&& v) -> std::optional<point> {
             return std::visit(self, v);
         },
     }(var);
-    return geo::transform(geo::srs_inverse(geo::transformation(crs)))(p);
+    return p ? geo::transform(geo::srs_inverse(geo::transformation(crs)))(*p)
+             : std::nullopt;
 }
 
 }  // namespace

@@ -23,81 +23,11 @@ map_view::map_view(QWidget* parent)
     setAttribute(Qt::WA_OpaquePaintEvent);
 }
 
-viewport map_view::view() const
+void map_view::leaveEvent(QEvent*)
 {
-    return {.mid = map_mid_,
-            .resolution = map_res_,
-            .width = width(),
-            .height = height()};
-}
-
-void map_view::set_layers(std::vector<leaf> layers)
-{
-    layers_ = std::move(layers);
-    redraw();
-}
-
-void map_view::timerEvent(QTimerEvent* event)
-{
-    if (event->timerId() == map_timer_.timerId()) {
-        map_timer_.stop();
-        update();
-        return;
-    }
-    if (event->timerId() == img_timer_.timerId()) {
-        img_timer_.stop();
-        redraw();
-        return;
-    }
-    QWidget::timerEvent(event);
-}
-
-void map_view::watch_task(QFuture<void> fut)
-{
-    if (!panning_pos_)
-        setCursor(Qt::BusyCursor);
-    fut.then(this, [this] {
-        if (!panning_pos_)
-            setCursor(tasks_.busy() ? Qt::BusyCursor : Qt::ArrowCursor);
-    });
-}
-
-void map_view::schedule_paint()
-{
-    if (!map_timer_.isActive())
-        map_timer_.start(75, this);
-    img_timer_.start(350, this);
-}
-
-void map_view::paintEvent(QPaintEvent*)
-{
-    auto art = QPainter{this};
-    art.fillRect(rect(), Qt::white);
-    if (img_.isNull())
-        return;
-    if (boost::geometry::equals(img_mid_, map_mid_) && img_res_ == map_res_ &&
-        img_.width() == width() && img_.height() == height())
-        return art.drawImage(0, 0, img_);
-    auto img_crs = geo::ortho(img_mid_);
-    auto img_mat =
-        affine(img_.width(), img_.height(), img_mid_, img_res_, img_crs);
-    auto map_crs = geo::ortho(map_mid_);
-    auto map_mat = affine(width(), height(), map_mid_, map_res_, map_crs);
-    if (img_.format() != QImage::Format_RGBA8888)
-        img_ = img_.convertToFormat(QImage::Format_RGBA8888);
-    auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
-    auto gil = boost::gil::interleaved_view(
-        img_.width(), img_.height(), bits, img_.bytesPerLine());
-    boat::gui::draw_image(
-        std::execution::par, gil, img_mat, img_crs, art, map_mat, map_crs);
-}
-
-void map_view::mousePressEvent(QMouseEvent* event)
-{
-    if (event->button() != Qt::LeftButton)
-        return;
-    panning_pos_ = event->pos();
-    setCursor(Qt::ClosedHandCursor);
+    if (auto mw = qobject_cast<QMainWindow*>(window()))
+        if (auto sb = mw->statusBar())
+            sb->clearMessage();
 }
 
 void map_view::mouseMoveEvent(QMouseEvent* event)
@@ -129,6 +59,14 @@ void map_view::mouseMoveEvent(QMouseEvent* event)
     schedule_paint();
 }
 
+void map_view::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() != Qt::LeftButton)
+        return;
+    panning_pos_ = event->pos();
+    setCursor(Qt::ClosedHandCursor);
+}
+
 void map_view::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() != Qt::LeftButton)
@@ -137,32 +75,55 @@ void map_view::mouseReleaseEvent(QMouseEvent* event)
     setCursor(tasks_.busy() ? Qt::BusyCursor : Qt::ArrowCursor);
 }
 
-void map_view::wheelEvent(QWheelEvent* event)
+void map_view::paintEvent(QPaintEvent*)
 {
-    auto pos = event->position();
-    auto degrees = event->angleDelta().y() / 8.;
-    auto factor = std::pow(2., degrees / 60.);
-    auto new_res = std::clamp(map_res_ / factor, 0.5972, 39'135.76);
-    auto tf = geo::transformation(geo::ortho(map_mid_));
-    auto ll = [&](auto res) {
-        auto mat = affine(width(), height(), map_mid_, res, tf);
-        auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
-        return inv(point(pos.x(), pos.y()));
-    };
-    auto a = ll(map_res_), b = ll(new_res);
-    if (a && b && std::abs(map_mid_.y() + a->y() - b->y()) <= lat_max)
-        map_mid_ = geo::wrap(
-            {map_mid_.x() + a->x() - b->x(), map_mid_.y() + a->y() - b->y()});
-    map_res_ = new_res;
-    schedule_paint();
-    update_status(pos);
+    auto art = QPainter{this};
+    art.fillRect(rect(), Qt::white);
+    if (img_.isNull())
+        return;
+    if (boost::geometry::equals(img_mid_, map_mid_) && img_res_ == map_res_ &&
+        img_.width() == width() && img_.height() == height())
+        return art.drawImage(0, 0, img_);
+    auto img_crs = geo::ortho(img_mid_);
+    auto img_mat =
+        affine(img_.width(), img_.height(), img_mid_, img_res_, img_crs);
+    auto map_crs = geo::ortho(map_mid_);
+    auto map_mat = affine(width(), height(), map_mid_, map_res_, map_crs);
+    if (img_.format() != QImage::Format_RGBA8888)
+        img_ = img_.convertToFormat(QImage::Format_RGBA8888);
+    auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
+    auto gil = boost::gil::interleaved_view(
+        img_.width(), img_.height(), bits, img_.bytesPerLine());
+    boat::gui::draw_image(
+        std::execution::par, gil, img_mat, img_crs, art, map_mat, map_crs);
 }
 
-void map_view::leaveEvent(QEvent*)
+void map_view::schedule_paint()
 {
-    if (auto mw = qobject_cast<QMainWindow*>(window()))
-        if (auto sb = mw->statusBar())
-            sb->clearMessage();
+    img_timer_.start(350, this);
+    if (!map_timer_.isActive())
+        map_timer_.start(75, this);
+}
+
+void map_view::set_layers(std::vector<leaf> layers)
+{
+    layers_ = std::move(layers);
+    redraw();
+}
+
+void map_view::timerEvent(QTimerEvent* event)
+{
+    if (event->timerId() == map_timer_.timerId()) {
+        map_timer_.stop();
+        update();
+        return;
+    }
+    if (event->timerId() == img_timer_.timerId()) {
+        img_timer_.stop();
+        redraw();
+        return;
+    }
+    QWidget::timerEvent(event);
 }
 
 void map_view::update_status(QPointF cursor)
@@ -176,4 +137,43 @@ void map_view::update_status(QPointF cursor)
     if (auto mw = qobject_cast<QMainWindow*>(window()))
         if (auto sb = mw->statusBar())
             sb->showMessage(msg);
+}
+
+viewport map_view::view() const
+{
+    return {.mid_point = map_mid_,
+            .resolution = map_res_,
+            .width = width(),
+            .height = height()};
+}
+
+void map_view::watch_task(QFuture<void> fut)
+{
+    if (!panning_pos_)
+        setCursor(Qt::BusyCursor);
+    fut.then(this, [this] {
+        if (!panning_pos_)
+            setCursor(tasks_.busy() ? Qt::BusyCursor : Qt::ArrowCursor);
+    });
+}
+
+void map_view::wheelEvent(QWheelEvent* event)
+{
+    auto pos = event->position();
+    auto degrees = event->angleDelta().y() / 8.;
+    auto factor = std::pow(2., degrees / 60.);
+    auto new_res = std::clamp(map_res_ / factor, 0.5972, 19'567.88);
+    auto tf = geo::transformation(geo::ortho(map_mid_));
+    auto ll = [&](auto res) {
+        auto mat = affine(width(), height(), map_mid_, res, tf);
+        auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
+        return inv(point(pos.x(), pos.y()));
+    };
+    auto a = ll(map_res_), b = ll(new_res);
+    if (a && b && std::abs(map_mid_.y() + a->y() - b->y()) <= lat_max)
+        map_mid_ = geo::wrap(
+            {map_mid_.x() + a->x() - b->x(), map_mid_.y() + a->y() - b->y()});
+    map_res_ = new_res;
+    schedule_paint();
+    update_status(pos);
 }
