@@ -26,6 +26,12 @@ std::string make_extension(std::string_view extensions)
     return {};
 }
 
+boat::gdal::driver_type format_type(bool raster)
+{
+    return raster ? boat::gdal::driver_type::Raster
+                  : boat::gdal::driver_type::Vector;
+}
+
 std::vector<copy_format> make_formats(  //
     boat::gdal::driver_type type,
     boat::gdal::driver_op op)
@@ -43,10 +49,8 @@ std::vector<copy_format> make_formats(  //
 
 std::optional<copy_format> copy_as_format(bool raster, QString const& filter)
 {
-    for (auto& fmt : make_formats(  //
-             raster ? boat::gdal::driver_type::Raster
-                    : boat::gdal::driver_type::Vector,
-             boat::gdal::driver_op::Create))
+    for (auto& fmt :
+         make_formats(format_type(raster), boat::gdal::driver_op::Create))
         if (filter == fmt.filter)
             return fmt;
     return std::nullopt;
@@ -54,10 +58,8 @@ std::optional<copy_format> copy_as_format(bool raster, QString const& filter)
 
 QString copy_as_filter(bool raster)
 {
-    auto fmts = make_formats(  //
-        raster ? boat::gdal::driver_type::Raster
-               : boat::gdal::driver_type::Vector,
-        boat::gdal::driver_op::Create);
+    auto fmts =
+        make_formats(format_type(raster), boat::gdal::driver_op::Create);
     std::ranges::sort(fmts);
     auto ret = QString{};
     auto os = QTextStream{&ret};
@@ -69,14 +71,10 @@ QString copy_as_filter(bool raster)
 QString open_filter()
 {
     auto filters = std::set<QString>{};
-    for (auto& fmt : make_formats(  //
-             boat::gdal::driver_type::Raster,
-             boat::gdal::driver_op::Open))
-        filters.insert(fmt.filter);
-    for (auto& fmt : make_formats(  //
-             boat::gdal::driver_type::Vector,
-             boat::gdal::driver_op::Open))
-        filters.insert(fmt.filter);
+    for (auto type :
+         {boat::gdal::driver_type::Raster, boat::gdal::driver_type::Vector})
+        for (auto& fmt : make_formats(type, boat::gdal::driver_op::Open))
+            filters.insert(fmt.filter);
     auto ret = QString{};
     auto os = QTextStream{&ret};
     auto sep{""};

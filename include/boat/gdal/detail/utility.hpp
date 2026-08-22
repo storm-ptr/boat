@@ -22,14 +22,13 @@ using string_ptr = unique_ptr<char, CPLFree>;
 inline void init()
 {
     static auto flag = std::once_flag{};
-    constexpr auto fn = [] {
+    std::call_once(flag, [] {
         auto sec = std::to_string(std::chrono::seconds{timeout}.count());
         CPLSetConfigOption("GDAL_FILENAME_IS_UTF8", "YES");
         CPLSetConfigOption("GDAL_HTTP_CONNECTTIMEOUT", sec.data());
         CPLSetConfigOption("GDAL_HTTP_TIMEOUT", sec.data());
         GDALAllRegister();
-    };
-    std::call_once(flag, fn);
+    });
 }
 
 inline std::string error_or(std::string_view default_value)
@@ -69,6 +68,8 @@ inline auto make_srs(int epsg, std::string const& wkt, std::string const& proj4)
 
 inline int get_epsg(OGRSpatialReferenceH crs)
 {
+    if (!crs)
+        return 0;
     auto name = OSRGetAuthorityName(crs, 0);
     auto code = OSRGetAuthorityCode(crs, 0);
     if (!name || !code || std::strcmp(name, "EPSG"))
@@ -78,22 +79,22 @@ inline int get_epsg(OGRSpatialReferenceH crs)
 
 inline std::string get_proj4(OGRSpatialReferenceH crs)
 {
+    if (!crs)
+        return {};
     char* ptr;
     check(OSRExportToProj4(crs, &ptr));
     auto str = string_ptr{ptr};
-    if (!ptr)
-        return {};
-    return {ptr};
+    return ptr ? ptr : "";
 }
 
 inline std::string get_wkt(OGRSpatialReferenceH crs)
 {
+    if (!crs)
+        return {};
     char* ptr;
     check(OSRExportToWktEx(crs, &ptr, 0));
     auto str = string_ptr{ptr};
-    if (!ptr)
-        return {};
-    return {ptr};
+    return ptr ? ptr : "";
 }
 
 inline auto subdatasets(GDALDatasetH ds)

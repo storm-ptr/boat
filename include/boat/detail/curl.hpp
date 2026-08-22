@@ -46,20 +46,22 @@ public:
 
     value_type pop()
     {
-        int count;
-        do {
-            check(curl_multi_wait(multi_.get(), 0, 0, 1, 0));
+        using clock = std::chrono::steady_clock;
+        auto deadline = clock::now() + timeout;
+        for (;;) {
+            int count;
             check(curl_multi_perform(multi_.get(), &count));
-        } while (count == int(jobs_.size()));
-        CURLMsg* m;
-        do {
-            m = curl_multi_info_read(multi_.get(), &count);
-            boat::check(m, "curl_multi_info_read");
-        } while (m->msg != CURLMSG_DONE);
-        check(m->data.result);
-        auto it = jobs_.find(m->easy_handle);
-        boat::check(it != jobs_.end(), "curl easy");
-        return std::move(*jobs_.extract(it).mapped().second);
+            auto m = curl_multi_info_read(multi_.get(), &count);
+            if (m) {
+                boat::check(m->msg == CURLMSG_DONE, "curl message");
+                check(m->data.result);
+                auto it = jobs_.find(m->easy_handle);
+                boat::check(it != jobs_.end(), "curl easy");
+                return std::move(*jobs_.extract(it).mapped().second);
+            }
+            boat::check(clock::now() < deadline, "curl timeout");
+            check(curl_multi_wait(multi_.get(), 0, 0, 1'000, 0));
+        }
     }
 
 private:
@@ -94,7 +96,7 @@ private:
     static size_t callback(void* ptr, size_t size, size_t nmemb, blob* buf)
     {
         buf->append_range(std::span{as_bytes(ptr), size * nmemb});
-        return nmemb;
+        return size * nmemb;
     }
 };
 

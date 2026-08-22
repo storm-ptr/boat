@@ -11,6 +11,8 @@ namespace boat::sql {
 class catalog : public db::catalog {
     inline static auto err = std::logic_error{"sql"};
 
+    auto& dial() { return dialects::find(command->dbms()); }
+
 public:
     std::unique_ptr<db::command> command;
 
@@ -19,14 +21,12 @@ public:
     std::vector<db::layer> layers() override
     {
         return {std::from_range,
-                command->exec(dialects::find(command->dbms()).layers()) |
-                    db::view<db::layer>};
+                command->exec(dial().layers()) | db::view<db::layer>};
     }
 
     db::table get_table(std::string_view schema_name,
                         std::string_view table_name) override
     {
-        auto& dial = dialects::find(command->dbms());
         auto scm = current_schema_or(*command, schema_name);
         auto ret = db::table{
             .dbms{command->dbms()},
@@ -34,11 +34,11 @@ public:
             .table_name{table_name},
             .columns{
                 std::from_range,
-                command->exec(dial.columns(scm, table_name)) |
+                command->exec(dial().columns(scm, table_name)) |
                     db::view<db::column> |
                     std::views::transform(adaptors::parse(command->dbms()))},
             .index_keys{std::from_range,
-                        command->exec(dial.index_keys(scm, table_name)) |
+                        command->exec(dial().index_keys(scm, table_name)) |
                             db::view<db::index_key>}};
         std::ranges::sort(ret.index_keys, {}, [](auto& key) {
             return std::tuple{
@@ -49,12 +49,12 @@ public:
 
     db::rowset select(db::table const& tbl, db::page const& rq) override
     {
-        return command->exec(dialects::find(command->dbms()).select(tbl, rq));
+        return command->exec(dial().select(tbl, rq));
     }
 
     db::rowset select(db::table const& tbl, db::bbox const& rq) override
     {
-        return command->exec(dialects::find(command->dbms()).select(tbl, rq));
+        return command->exec(dial().select(tbl, rq));
     }
 
     void insert(  //
@@ -62,6 +62,9 @@ public:
         db::rowset const& rs,
         std::stop_token tok = {}) override
     {
+        if (rs.empty())
+            return;
+        check(!rs.columns.empty(), "no columns");
         auto cols = std::vector<std::unique_ptr<adaptors::adaptor>>{};
         for (auto& col : rs.columns)
             cols.push_back(adaptors::make(tbl.dbms, find(tbl.columns, col)));
@@ -87,7 +90,7 @@ public:
     db::table create(db::table const& tbl) override
     {
         auto t = migrate(*command, tbl);
-        command->exec(dialects::find(command->dbms()).create(t));
+        command->exec(dial().create(t));
         return get_table(t.schema_name, t.table_name);
     }
 

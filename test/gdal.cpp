@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_CASE(gdal_source)
 {
     auto cat = boat::gdal::catalog{};
     cat.dataset = boat::gdal::open(
-        R"(WMS:https://wms.gebco.net/mapserv?request=GetCapabilities&service=WMS)");
+        R"(wms:https://gibs.earthdata.nasa.gov/twms/epsg4326/best/twms.cgi?request=GetTileService)");
     auto sources = cat.sources();
     BOOST_CHECK(!sources.empty());
     for (auto& src : sources | std::views::take(2)) {

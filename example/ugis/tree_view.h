@@ -20,9 +20,9 @@ protected:
     void contextMenuEvent(QContextMenuEvent*) override;
 
 private:
+    map_view* map_{};
     tree_model model_;
     QString workspace_path_;
-    map_view* map_{};
 };
 
 #endif  // TREE_VIEW_H

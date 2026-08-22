@@ -7,8 +7,8 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <concepts>
 #include <functional>
-#include <list>
 #include <stop_token>
+#include <vector>
 
 class task_group {
 public:
@@ -29,12 +29,11 @@ public:
     QFuture<void> run(F&& fn)
     {
         std::erase_if(futures_, [](auto& fut) { return fut.isFinished(); });
-        auto fut = QtConcurrent::run(
-            &pool_, [tok = source_.get_token(), fn = std::forward<F>(fn)] {
+        return futures_.emplace_back(QtConcurrent::run(
+            &pool_,  //
+            [tok = source_.get_token(), fn = std::forward<F>(fn)] {
                 std::invoke(fn, tok);
-            });
-        futures_.push_back(fut);
-        return fut;
+            }));
     }
 
     bool busy()
@@ -50,9 +49,9 @@ public:
     }
 
 private:
+    std::vector<QFuture<void>> futures_;
     QThreadPool pool_;
     std::stop_source source_;
-    std::list<QFuture<void>> futures_;
 };
 
 #endif  // TASK_GROUP_H
