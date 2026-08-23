@@ -8,6 +8,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <boat/detail/uri.hpp>
 #include "formats.h"
 #include "select_source_dialog.h"
 #include "tree_view.h"
@@ -45,111 +46,82 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
 {
     auto idx = indexAt(event->pos());
     auto menu = QMenu{this};
-    QAction* act_cancel{};
-    QAction* act_copy{};
-    QAction* act_copy_as{};
-    QAction* act_describe{};
-    QAction* act_drop{};
-    QAction* act_fill{};
-    QAction* act_locate{};
-    QAction* act_mount{};
-    QAction* act_new{};
-    QAction* act_open{};
-    QAction* act_outline{};
-    QAction* act_paste{};
-    QAction* act_refresh{};
-    QAction* act_sample{};
-    QAction* act_save{};
-    QAction* act_unmount{};
-    QAction* act_width{};
     auto opt = model_.get_leaf(idx);
     auto is_vector = opt && !opt->layer.raster;
+    auto source = model_.get_source(idx);
+    auto add = [&menu, this](bool on, char const* text, auto fn) {
+        if (on)
+            menu.addAction(text, this, std::move(fn));
+        return on;
+    };
 
     // other
-    if (opt || model_.is_branch(idx))
-        act_describe = menu.addAction("describe in log");
-    if (is_vector)
-        act_drop = menu.addAction("drop layer");
-    if (opt)
-        act_locate = menu.addAction("locate on map");
-    if (model_.can_refresh(idx))
-        act_refresh = menu.addAction("refresh source");
-    if (is_vector && map_)
-        act_sample = menu.addAction("sample in log");
-    if (act_describe || act_drop || act_locate || act_refresh || act_sample)
+    auto populated = false;
+    populated |= add(opt || model_.is_branch(idx),
+                     "describe in log",
+                     [this, idx] { model_.describe(idx); });
+    populated |= add(is_vector, "drop layer", [this, idx] {
+        if (QMessageBox::question(  //
+                this,
+                {},
+                "drop layer?",
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No) == QMessageBox::Yes)
+            model_.drop(idx);
+    });
+    populated |= add(bool(opt), "locate on map", [this, opt] {
+        if (map_)
+            map_->locate(*opt);
+    });
+    populated |= add(model_.can_refresh(idx), "refresh source", [this, idx] {
+        model_.refresh(idx);
+    });
+    populated |= add(is_vector && map_, "sample in log", [this, idx] {
+        if (map_)
+            model_.sample(idx, map_->view());
+    });
+    populated |=
+        add(source && sql_handler_ && !boat::is_http_url(source->address),
+            "sql",
+            [this, source] { sql_handler_(*source); });
+    if (populated)
         menu.addSeparator();
 
     // color/width
     if (is_vector) {
-        act_fill = menu.addAction("filling color");
-        act_outline = menu.addAction("outline color");
-        act_width = menu.addAction("outline width");
+        add(true, "filling color", [this, idx] {
+            pick_color(
+                this,
+                model_,
+                idx,
+                "filling color",
+                [](leaf const& l) { return l.brush.color(); },
+                [](leaf& l, QColor c) { l.brush.setColor(c); });
+        });
+        add(true, "outline color", [this, idx] {
+            pick_color(
+                this,
+                model_,
+                idx,
+                "outline color",
+                [](leaf const& l) { return l.pen.color(); },
+                [](leaf& l, QColor c) { l.pen.setColor(c); });
+        });
+        add(true, "outline width", [this, idx, opt] {
+            auto ok = false;
+            auto width = QInputDialog::getInt(
+                this, "outline width", {}, opt->pen.width(), 0, 100, 1, &ok);
+            if (ok)
+                model_.mutate_leaf(idx,
+                                   [&](leaf& l) { l.pen.setWidth(width); });
+        });
         menu.addSeparator();
     }
 
     // copy/paste
-    if (is_vector)
-        act_copy = menu.addAction("copy");
-    if (opt)
-        act_copy_as = menu.addAction("copy as");
-    if (model_.can_paste_to(idx))
-        act_paste = menu.addAction("paste");
-    if (act_copy || act_copy_as || act_paste)
-        menu.addSeparator();
-
-    // mount/unmount
-    act_mount = menu.addAction("mount source");
-    if (model_.is_mounted(idx))
-        act_unmount = menu.addAction("unmount source");
-    menu.addSeparator();
-
-    // workspace
-    act_new = menu.addAction("new workspace");
-    act_open = menu.addAction("open workspace");
-    act_save = menu.addAction("save workspace");
-
-    // cancel
-    if (model_.busy()) {
-        menu.addSeparator();
-        act_cancel = menu.addAction("cancel tasks");
-    }
-
-    auto act = menu.exec(event->globalPos());
-    if (act == act_fill)
-        pick_color(
-            this,
-            model_,
-            idx,
-            "filling color",
-            [](leaf const& l) { return l.brush.color(); },
-            [](leaf& l, QColor c) { l.brush.setColor(c); });
-    else if (act == act_outline)
-        pick_color(
-            this,
-            model_,
-            idx,
-            "outline color",
-            [](leaf const& l) { return l.pen.color(); },
-            [](leaf& l, QColor c) { l.pen.setColor(c); });
-    else if (act == act_width) {
-        if (!opt || opt->layer.raster)
-            return;
-        auto ok = false;
-        auto width = QInputDialog::getInt(
-            this, "outline width", {}, opt->pen.width(), 0, 100, 1, &ok);
-        if (ok)
-            model_.mutate_leaf(idx, [&](leaf& l) { l.pen.setWidth(width); });
-    }
-    else if (act == act_refresh)
-        model_.refresh(idx);
-    else if (act == act_copy) {
-        if (!opt || opt->layer.raster)
-            return;
-        model_.copy(idx);
-    }
-    else if (act == act_copy_as) {
-        if (!opt)
-            return;
+    populated = false;
+    populated |= add(is_vector, "copy", [this, idx] { model_.copy(idx); });
+    populated |= add(bool(opt), "copy as", [this, idx, opt] {
         auto selected = QString{};
         auto path = QFileDialog::getSaveFileName(  //
             this,
@@ -161,14 +133,12 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
         if (path.isEmpty())
             return;
         auto fmt = copy_as_format(opt->layer.raster, selected);
-        if (!fmt)
-            return;
-        model_.copy_as(  //
-            idx,
-            ensure_extension(std::move(path), fmt->extension),
-            fmt->driver);
-    }
-    else if (act == act_paste) {
+        if (fmt)
+            model_.copy_as(idx,
+                           ensure_extension(std::move(path), fmt->extension),
+                           fmt->driver);
+    });
+    populated |= add(model_.can_paste_to(idx), "paste", [this, idx] {
         auto ok = false;
         auto name = QInputDialog::getText(  //
             this,
@@ -177,47 +147,32 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             QLineEdit::Normal,
             model_.clipboard_name(),
             &ok);
-        if (!ok || name.isEmpty())
-            return;
-        model_.paste(idx, name);
-    }
-    else if (act == act_drop) {
-        if (QMessageBox::question(  //
-                this,
-                {},
-                "drop layer?",
-                QMessageBox::Yes | QMessageBox::No,
-                QMessageBox::No) == QMessageBox::Yes)
-            model_.drop(idx);
-    }
-    else if (act == act_sample) {
-        if (!opt || opt->layer.raster || !map_)
-            return;
-        model_.sample(idx, map_->view());
-    }
-    else if (act == act_describe)
-        model_.describe(idx);
-    else if (act == act_locate) {
-        if (!opt || !map_)
-            return;
-        map_->locate(*opt);
-    }
-    else if (act == act_mount) {
+        if (ok && !name.isEmpty())
+            model_.paste(idx, name);
+    });
+    if (populated)
+        menu.addSeparator();
+
+    // mount/unmount
+    add(true, "mount source", [this] {
         auto dlg = select_source_dialog{this};
-        if (dlg.exec() != QDialog::Accepted)
-            return;
-        model_.mount({
-            .source_name = dlg.name().toStdString(),
-            .address = dlg.address().toStdString(),
-        });
-    }
-    else if (act == act_unmount)
+        if (dlg.exec() == QDialog::Accepted)
+            model_.mount({
+                .source_name = dlg.name().toStdString(),
+                .address = dlg.address().toStdString(),
+            });
+    });
+    add(model_.is_mounted(idx), "unmount source", [this, idx] {
         model_.unmount(idx);
-    else if (act == act_new) {
+    });
+    menu.addSeparator();
+
+    // workspace
+    add(true, "new workspace", [this] {
         model_.new_workspace();
         workspace_path_.clear();
-    }
-    else if (act == act_open) {
+    });
+    add(true, "open workspace", [this] {
         auto path = QFileDialog::getOpenFileName(  //
             this,
             {},
@@ -231,8 +186,8 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             QMessageBox::warning(this, {}, "open workspace failed");
         else
             workspace_path_ = path;
-    }
-    else if (act == act_save) {
+    });
+    add(true, "save workspace", [this] {
         auto path = QFileDialog::getSaveFileName(  //
             this,
             {},
@@ -247,14 +202,26 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             QMessageBox::warning(this, {}, "save workspace failed");
         else
             workspace_path_ = path;
+    });
+
+    // cancel
+    if (model_.busy()) {
+        menu.addSeparator();
+        add(true, "cancel tasks", [this] {
+            if (QMessageBox::question(  //
+                    this,
+                    {},
+                    "cancel tasks?",
+                    QMessageBox::Yes | QMessageBox::No,
+                    QMessageBox::No) == QMessageBox::Yes)
+                model_.request_stop();
+        });
     }
-    else if (act == act_cancel) {
-        if (QMessageBox::question(  //
-                this,
-                {},
-                "cancel tasks?",
-                QMessageBox::Yes | QMessageBox::No,
-                QMessageBox::No) == QMessageBox::Yes)
-            model_.request_stop();
-    }
+
+    menu.exec(event->globalPos());
+}
+
+void tree_view::set_sql_handler(std::function<void(boat::db::source const&)> fn)
+{
+    sql_handler_ = std::move(fn);
 }

@@ -26,6 +26,7 @@ public:
     void describe(QModelIndex const&);
     void drop(QModelIndex const&);
     std::optional<leaf> get_leaf(QModelIndex const&) const;
+    std::optional<boat::db::source> get_source(QModelIndex const&) const;
     std::vector<leaf> checked_leaves() const;
     bool is_branch(QModelIndex const&) const;
     bool is_mounted(QModelIndex const&) const;

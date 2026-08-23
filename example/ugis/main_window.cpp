@@ -9,6 +9,7 @@
 #include <numbers>
 #include "main_window.h"
 #include "map_view.h"
+#include "sql_view.h"
 #include "tree_view.h"
 
 namespace {
@@ -52,6 +53,7 @@ main_window::main_window()
 
     auto tabs = new QTabWidget{this};
     tabs->setTabPosition(QTabWidget::East);
+    tabs->setElideMode(Qt::ElideRight);
     tabs->addTab(map_, "map");
     tabs->addTab(log_, "log");
 
@@ -71,6 +73,19 @@ main_window::main_window()
     connect(model, &QAbstractItemModel::rowsRemoved, map_, sync);
     connect(model, &QAbstractItemModel::modelReset, map_, sync);
     tree->set_map_view(map_);
+    tree->set_sql_handler([tabs](boat::db::source const& source) {
+        auto view = new sql_view{source.address, tabs};
+        auto index =
+            tabs->addTab(view, QString::fromStdString(source.source_name));
+        tabs->setTabToolTip(index, QString::fromStdString(source.source_name));
+        view->set_close_handler([tabs, view] {
+            if (auto index = tabs->indexOf(view); index >= 0)
+                tabs->removeTab(index);
+            view->close_async();
+        });
+        tabs->setCurrentWidget(view);
+        view->setFocus();
+    });
 
     qSetMessagePattern("[%{time hh:mm:ss}] %{type}: %{message}");
     log_ptr = log_;

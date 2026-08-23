@@ -8,6 +8,11 @@
 
 namespace boat {
 
+constexpr bool is_http_url(std::string_view url)
+{
+    return url.starts_with("http://") || url.starts_with("https://");
+}
+
 struct uri {
     std::string_view scheme;
     std::string_view user;

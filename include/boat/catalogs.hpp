@@ -17,7 +17,7 @@ namespace boat {
 
 inline std::unique_ptr<db::catalog> make_catalog(std::string_view address)
 {
-    if (any({"http://", "https://"}, prefix(address)))
+    if (is_http_url(address))
 #if __has_include(<curl/curl.h>)
     {
         auto ret = std::make_unique<slippy::catalog>();

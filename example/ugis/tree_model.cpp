@@ -32,13 +32,22 @@ std::optional<leaf> tree_model::get_leaf(QModelIndex const& idx) const
     return {};
 }
 
+std::optional<boat::db::source> tree_model::get_source(
+    QModelIndex const& idx) const
+{
+    if (auto b = to_branch(idx); b && to_tree(idx) != root_.get())
+        return b->source;
+    return {};
+}
+
 std::vector<leaf> tree_model::checked_leaves() const
 {
     auto ret = std::vector<leaf>{};
     auto collect = [&](auto& self, tree* ptr) -> void {
         if (!ptr)
             return;
-        if (auto l = std::get_if<leaf>(&ptr->data); l && l->state == Qt::Checked)
+        if (auto l = std::get_if<leaf>(&ptr->data);
+            l && l->state == Qt::Checked)
             ret.push_back(*l);
         for (auto& ch : ptr->children)
             self(self, ch.get());

@@ -11,6 +11,7 @@
 #include <QStandardItemModel>
 #include <QVBoxLayout>
 #include <boat/address.hpp>
+#include <boat/detail/uri.hpp>
 #include <boat/sql/commands.hpp>
 #include "formats.h"
 #include "select_source_dialog.h"
@@ -44,7 +45,7 @@ preset_address make_preset_address()
     auto ret = preset_address{};
     for (auto& adr : all) {
         auto std_adr = adr.toStdString();
-        if (std_adr.starts_with("http://") || std_adr.starts_with("https://"))
+        if (boat::is_http_url(std_adr))
             ret.slippy.push_back(adr);
         else if (boat::sql::supported_url(std_adr))
             ret.sql.push_back(adr);
