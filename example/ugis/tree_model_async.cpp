@@ -10,7 +10,7 @@
 #include "geometry.h"
 #include "tree_model.h"
 
-void tree_model::copy_as(  //
+void tree_model::copy_layer_as(  //
     QModelIndex const& idx,
     QString const& path,
     QString const& driver)
@@ -44,7 +44,7 @@ void tree_model::copy_as(  //
                             std::filesystem::path(adr).filename().string(),
                         .address = adr,
                     });
-                    qInfo() << "copy_as completed";
+                    qInfo() << "copy_layer_as completed";
                 },
                 Qt::QueuedConnection);
         }
@@ -147,7 +147,7 @@ void tree_model::fetchMore(QModelIndex const& idx)
     });
 }
 
-void tree_model::paste(QModelIndex const& idx, QString const& name)
+void tree_model::paste_layer(QModelIndex const& idx, QString const& name)
 {
     if (!can_paste_to(idx))
         return;
@@ -163,7 +163,7 @@ void tree_model::paste(QModelIndex const& idx, QString const& name)
                     if (tok.stop_requested())
                         return;
                     on_pasted(per, dst);
-                    qInfo() << "paste completed";
+                    qInfo() << "paste_layer completed";
                 },
                 Qt::QueuedConnection);
         }

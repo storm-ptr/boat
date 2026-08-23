@@ -18,8 +18,8 @@ public:
     bool can_paste_to(QModelIndex const&) const;
     bool can_refresh(QModelIndex const&) const;
     QString clipboard_name() const;
-    void copy(QModelIndex const&);
-    void copy_as(  //
+    void copy_layer(QModelIndex const&);
+    void copy_layer_as(  //
         QModelIndex const&,
         QString const& path,
         QString const& driver);
@@ -33,7 +33,7 @@ public:
     void mount(boat::db::source const&);
     void new_workspace();
     bool open_workspace(QString const& path);
-    void paste(QModelIndex const&, QString const& name);
+    void paste_layer(QModelIndex const&, QString const& name);
     void request_stop();
     void refresh(QModelIndex const&);
     void sample(QModelIndex const& idx, viewport const& vp);

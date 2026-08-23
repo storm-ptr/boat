@@ -222,7 +222,7 @@ bool tree_model::removeRows(int position, int rows, QModelIndex const& parent)
     return true;
 }
 
-void tree_model::copy(QModelIndex const& idx)
+void tree_model::copy_layer(QModelIndex const& idx)
 {
     if (auto l = to_leaf(idx); l && !l->layer.raster)
         clipboard_ = *l;

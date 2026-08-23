@@ -1,8 +1,10 @@
 // Andrew Naplavkov
 
+#include <QClipboard>
 #include <QColorDialog>
 #include <QContextMenuEvent>
 #include <QFileDialog>
+#include <QGuiApplication>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLineEdit>
@@ -120,8 +122,9 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
 
     // copy/paste
     populated = false;
-    populated |= add(is_vector, "copy", [this, idx] { model_.copy(idx); });
-    populated |= add(bool(opt), "copy as", [this, idx, opt] {
+    populated |=
+        add(is_vector, "copy layer", [this, idx] { model_.copy_layer(idx); });
+    populated |= add(bool(opt), "copy layer as", [this, idx, opt] {
         auto selected = QString{};
         auto path = QFileDialog::getSaveFileName(  //
             this,
@@ -134,11 +137,18 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             return;
         auto fmt = copy_as_format(opt->layer.raster, selected);
         if (fmt)
-            model_.copy_as(idx,
-                           ensure_extension(std::move(path), fmt->extension),
-                           fmt->driver);
+            model_.copy_layer_as(
+                idx,
+                ensure_extension(std::move(path), fmt->extension),
+                fmt->driver);
     });
-    populated |= add(model_.can_paste_to(idx), "paste", [this, idx] {
+    populated |= add(is_vector, "copy name", [opt] {
+        auto schema = QString::fromStdString(opt->layer.schema_name);
+        auto table = QString::fromStdString(opt->layer.table_name);
+        QGuiApplication::clipboard()->setText(
+            schema.isEmpty() ? table : schema + "." + table);
+    });
+    populated |= add(model_.can_paste_to(idx), "paste layer", [this, idx] {
         auto ok = false;
         auto name = QInputDialog::getText(  //
             this,
@@ -148,7 +158,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             model_.clipboard_name(),
             &ok);
         if (ok && !name.isEmpty())
-            model_.paste(idx, name);
+            model_.paste_layer(idx, name);
     });
     if (populated)
         menu.addSeparator();
