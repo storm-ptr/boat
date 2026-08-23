@@ -9,6 +9,7 @@
 #include "tree_model.h"
 
 class QContextMenuEvent;
+class QPaintEvent;
 class map_view;
 
 class tree_view : public QTreeView {
@@ -20,6 +21,7 @@ public:
 
 protected:
     void contextMenuEvent(QContextMenuEvent*) override;
+    void paintEvent(QPaintEvent*) override;
 
 private:
     map_view* map_{};

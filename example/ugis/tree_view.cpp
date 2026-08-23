@@ -10,6 +10,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPainter>
 #include <boat/detail/uri.hpp>
 #include "formats.h"
 #include "select_source_dialog.h"
@@ -229,6 +230,18 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     }
 
     menu.exec(event->globalPos());
+}
+
+void tree_view::paintEvent(QPaintEvent* event)
+{
+    QTreeView::paintEvent(event);
+    if (model_.rowCount())
+        return;
+    auto art = QPainter{viewport()};
+    art.setPen(palette().color(QPalette::PlaceholderText));
+    art.drawText(viewport()->rect(),
+                 Qt::AlignCenter | Qt::TextSingleLine,
+                 "right-click to mount a source or open a workspace");
 }
 
 void tree_view::set_sql_handler(std::function<void(boat::db::source const&)> fn)
