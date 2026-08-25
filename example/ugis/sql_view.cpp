@@ -21,7 +21,6 @@ std::unique_ptr<boat::db::command> make_command(std::string const& address)
         return boat::sql::make_command(address);
     auto ret = std::make_unique<boat::gdal::command>();
     ret->dataset = boat::gdal::open(address.data());
-    ret->dialect = "OGRSQL";
     return ret;
 }
 
