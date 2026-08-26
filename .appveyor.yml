@@ -2,11 +2,12 @@ clone_depth: 1
 configuration: Release
 image: Visual Studio 2026
 platform: x64
-skip_tags: true
 
 environment:
   OSGEO4W_ROOT: C:\OSGeo4W
   PGPASSWORD: Password12!
+  UGIS_ARCHIVE: ugis.windows.x64.zip
+  UGIS_ROOT: C:\ugis
   WX_ROOT: C:\wxWidgets
 
 install:
@@ -36,6 +37,13 @@ build_script:
   - qmake
   - nmake
 
+after_build:
+  - mkdir %UGIS_ROOT%
+  - copy %APPVEYOR_BUILD_FOLDER%\example\ugis\release\ugis.exe %UGIS_ROOT%
+  - windeployqt --release --no-translations %UGIS_ROOT%\ugis.exe
+  - copy %OSGEO4W_ROOT%\bin\*.dll %UGIS_ROOT%
+  - 7z a %APPVEYOR_BUILD_FOLDER%\%UGIS_ARCHIVE% %UGIS_ROOT%\*
+
 test_script:
   - cd %APPVEYOR_BUILD_FOLDER%\test
   - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=%PGPASSWORD% /DBOAT_TEST_MSSQL_HOST=(local)\\SQL2022 /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f .\windows.makefile test
@@ -44,3 +52,20 @@ test_script:
   - nmake test
   - cd %APPVEYOR_BUILD_FOLDER%\test\gui\wx
   - SET CXXFLAGS=/DBOAT_TEST_PASSWORD=%PGPASSWORD% /DBOAT_TEST_MSSQL_HOST=(local)\\SQL2022 /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f .\windows.makefile test
+
+artifacts:
+  - path: $(UGIS_ARCHIVE)
+    name: $(UGIS_ARCHIVE)
+
+deploy:
+  provider: GitHub
+  tag: $(APPVEYOR_REPO_TAG_NAME)
+  release: ugis $(APPVEYOR_REPO_TAG_NAME)
+  description: Windows x64 build of ugis
+  auth_token:
+    secure: +Gn7GWLP1bJNiaRC7DajkAH1q5pkZHgj01H3eX6ZxP5zCoF9Ew+wunr5r9EmHdz/aKtOHet4Gv8ngHHeeSnZauG5q6hgnDzcUJ0tRZgrc0WsQVF7IYxstc7ABzYGZ7sa
+  artifact: $(UGIS_ARCHIVE)
+  draft: true
+  prerelease: false
+  on:
+    APPVEYOR_REPO_TAG: true
