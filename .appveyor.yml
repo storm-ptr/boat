@@ -12,10 +12,11 @@ environment:
   WX_VERSION: 3.3.3
 
 cache:
-  - '%WX_ROOT%'
+  - '%WX_ROOT%\include'
+  - '%WX_ROOT%\lib'
 
 init:
-  - SET WX_CACHE_MARKER=%WX_ROOT%\.boat-cache-%WX_VERSION%-vs18-x64-ready
+  - SET WX_CACHE_MARKER=%WX_ROOT%\lib\.boat-cache-%WX_VERSION%-vs18-x64-ready
 
 install:
   - mkdir %OSGEO4W_ROOT%
@@ -31,14 +32,15 @@ install:
   - if not exist "%WX_CACHE_MARKER%" curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxWidgets-%WX_VERSION%.zip
   - if not exist "%WX_CACHE_MARKER%" call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-%WX_VERSION%.zip -o%WX_ROOT% > nul
   - SET WXWIN=%WX_ROOT%
-  - cd %WX_ROOT%\build\msw
+  - if not exist "%WX_CACHE_MARKER%" cd /d %WX_ROOT%\build\msw
   - if not exist "%WX_CACHE_MARKER%" nmake -f makefile.vc BUILD=release > nul
   - if not exist "%WX_CACHE_MARKER%" copy /y nul "%WX_CACHE_MARKER%" > nul
+  - cd /d %APPVEYOR_BUILD_FOLDER%
   - net start MSSQL$SQL2022
   - ps: Start-Service MySQL80
-  - curl -L -O -S -s http://download.osgeo.org/postgis/windows/pg18/archive/postgis-bundle-pg18-3.6.1x64.zip
-  - call "C:\Program Files\7-Zip\7z.exe" x postgis-bundle-pg18-3.6.1x64.zip > nul
-  - xcopy /s /y /q postgis-bundle-pg18-3.6.1x64 "C:\Program Files\PostgreSQL\18"
+  - curl -L -S -s -o %APPVEYOR_BUILD_FOLDER%\postgis-bundle-pg18-3.6.1x64.zip http://download.osgeo.org/postgis/windows/pg18/archive/postgis-bundle-pg18-3.6.1x64.zip
+  - call "C:\Program Files\7-Zip\7z.exe" x %APPVEYOR_BUILD_FOLDER%\postgis-bundle-pg18-3.6.1x64.zip -o%APPVEYOR_BUILD_FOLDER% -y > nul
+  - xcopy /s /y /q %APPVEYOR_BUILD_FOLDER%\postgis-bundle-pg18-3.6.1x64 "C:\Program Files\PostgreSQL\18"
   - net start postgresql-x64-18
   - call "C:\Program Files\PostgreSQL\18\bin\psql" -U postgres -c "CREATE EXTENSION postgis;"
 
