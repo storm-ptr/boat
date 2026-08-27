@@ -23,9 +23,9 @@ install:
   - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxWidgets-%WX_VERSION%-headers.7z
   - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxMSW-%WX_VERSION%_vc14x_x64_Dev.7z
   - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxMSW-%WX_VERSION%_vc14x_x64_ReleaseDLL.7z
-  - call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-%WX_VERSION%-headers.7z -o%WX_ROOT% > nul
-  - call "C:\Program Files\7-Zip\7z.exe" x wxMSW-%WX_VERSION%_vc14x_x64_Dev.7z -o%WX_ROOT% -xr!*.pdb > nul
-  - call "C:\Program Files\7-Zip\7z.exe" x wxMSW-%WX_VERSION%_vc14x_x64_ReleaseDLL.7z -o%WX_ROOT% > nul
+  - call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-%WX_VERSION%-headers.7z -o%WX_ROOT% -y > nul
+  - call "C:\Program Files\7-Zip\7z.exe" x wxMSW-%WX_VERSION%_vc14x_x64_Dev.7z -o%WX_ROOT% -xr!*.pdb -y > nul
+  - call "C:\Program Files\7-Zip\7z.exe" x wxMSW-%WX_VERSION%_vc14x_x64_ReleaseDLL.7z -o%WX_ROOT% -y > nul
   - SET WXWIN=%WX_ROOT%
   - SET PATH=%WX_ROOT%\lib\vc14x_x64_dll;%PATH%
   - cd /d %APPVEYOR_BUILD_FOLDER%
