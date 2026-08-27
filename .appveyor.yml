@@ -11,13 +11,6 @@ environment:
   WX_ROOT: C:\wxWidgets
   WX_VERSION: 3.3.3
 
-cache:
-  - '%WX_ROOT%\include'
-  - '%WX_ROOT%\lib'
-
-init:
-  - SET WX_CACHE_MARKER=%WX_ROOT%\lib\.boat-cache-%WX_VERSION%-vs18-x64-ready
-
 install:
   - mkdir %OSGEO4W_ROOT%
   - ps: Invoke-WebRequest -Uri http://download.osgeo.org/osgeo4w/v2/osgeo4w-setup.exe -OutFile $env:OSGEO4W_ROOT\osgeo4w-setup.exe
@@ -27,14 +20,14 @@ install:
   - call %OSGEO4W_ROOT%\bin\o4w_env.bat
   - call C:\Qt\6.11\msvc2022_64\bin\qtenv2.bat
   - call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
-  - if exist "%WX_CACHE_MARKER%" (echo wxWidgets cache hit) else (echo wxWidgets cache miss)
-  - if not exist "%WX_CACHE_MARKER%" if exist "%WX_ROOT%" rmdir /s /q "%WX_ROOT%"
-  - if not exist "%WX_CACHE_MARKER%" curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxWidgets-%WX_VERSION%.zip
-  - if not exist "%WX_CACHE_MARKER%" call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-%WX_VERSION%.zip -o%WX_ROOT% > nul
+  - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxWidgets-%WX_VERSION%-headers.7z
+  - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxMSW-%WX_VERSION%_vc14x_x64_Dev.7z
+  - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxMSW-%WX_VERSION%_vc14x_x64_ReleaseDLL.7z
+  - call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-%WX_VERSION%-headers.7z -o%WX_ROOT% > nul
+  - call "C:\Program Files\7-Zip\7z.exe" x wxMSW-%WX_VERSION%_vc14x_x64_Dev.7z -o%WX_ROOT% -xr!*.pdb > nul
+  - call "C:\Program Files\7-Zip\7z.exe" x wxMSW-%WX_VERSION%_vc14x_x64_ReleaseDLL.7z -o%WX_ROOT% > nul
   - SET WXWIN=%WX_ROOT%
-  - if not exist "%WX_CACHE_MARKER%" cd /d %WX_ROOT%\build\msw
-  - if not exist "%WX_CACHE_MARKER%" nmake -f makefile.vc BUILD=release > nul
-  - if not exist "%WX_CACHE_MARKER%" copy /y nul "%WX_CACHE_MARKER%" > nul
+  - SET PATH=%WX_ROOT%\lib\vc14x_x64_dll;%PATH%
   - cd /d %APPVEYOR_BUILD_FOLDER%
   - net start MSSQL$SQL2022
   - ps: Start-Service MySQL80
