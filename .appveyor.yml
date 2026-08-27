@@ -9,6 +9,13 @@ environment:
   UGIS_ARCHIVE: ugis.windows.x64.zip
   UGIS_ROOT: C:\ugis
   WX_ROOT: C:\wxWidgets
+  WX_VERSION: 3.3.3
+
+cache:
+  - '%WX_ROOT%'
+
+init:
+  - SET WX_CACHE_MARKER=%WX_ROOT%\.boat-cache-%WX_VERSION%-vs18-x64-ready
 
 install:
   - mkdir %OSGEO4W_ROOT%
@@ -19,11 +26,14 @@ install:
   - call %OSGEO4W_ROOT%\bin\o4w_env.bat
   - call C:\Qt\6.11\msvc2022_64\bin\qtenv2.bat
   - call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat"
-  - curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v3.3.3/wxWidgets-3.3.3.zip
-  - call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-3.3.3.zip -o%WX_ROOT% > nul
+  - if exist "%WX_CACHE_MARKER%" (echo wxWidgets cache hit) else (echo wxWidgets cache miss)
+  - if not exist "%WX_CACHE_MARKER%" if exist "%WX_ROOT%" rmdir /s /q "%WX_ROOT%"
+  - if not exist "%WX_CACHE_MARKER%" curl -L -O -S -s https://github.com/wxWidgets/wxWidgets/releases/download/v%WX_VERSION%/wxWidgets-%WX_VERSION%.zip
+  - if not exist "%WX_CACHE_MARKER%" call "C:\Program Files\7-Zip\7z.exe" x wxWidgets-%WX_VERSION%.zip -o%WX_ROOT% > nul
   - SET WXWIN=%WX_ROOT%
   - cd %WX_ROOT%\build\msw
-  - nmake -f makefile.vc BUILD=release > nul
+  - if not exist "%WX_CACHE_MARKER%" nmake -f makefile.vc BUILD=release > nul
+  - if not exist "%WX_CACHE_MARKER%" copy /y nul "%WX_CACHE_MARKER%" > nul
   - net start MSSQL$SQL2022
   - ps: Start-Service MySQL80
   - curl -L -O -S -s http://download.osgeo.org/postgis/windows/pg18/archive/postgis-bundle-pg18-3.6.1x64.zip
