@@ -31,7 +31,6 @@ preset_address make_preset_address()
         boat::config::mysql_gdal_address.data(),
         boat::config::postgres_address.data(),
         boat::config::postgres_gdal_address.data(),
-        "http://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         "http://mt.google.com/vt/lyrs=s&z={z}&x={x}&y={y}?agent=ugis",
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png?agent=ugis&ssl=0",
         "sqlite:///C:/home/gis_data/sqlite/california_roads.sqlite",
