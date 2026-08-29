@@ -1,4 +1,5 @@
 clone_depth: 1
+skip_tags: true
 configuration: Release
 image: Visual Studio 2026
 platform: x64
@@ -62,16 +63,3 @@ test_script:
 artifacts:
   - path: $(UGIS_ARCHIVE)
     name: $(UGIS_ARCHIVE)
-
-deploy:
-  provider: GitHub
-  tag: $(APPVEYOR_REPO_TAG_NAME)
-  release: ugis $(APPVEYOR_REPO_TAG_NAME)
-  description: Windows x64 build of ugis
-  auth_token:
-    secure: +Gn7GWLP1bJNiaRC7DajkAH1q5pkZHgj01H3eX6ZxP5zCoF9Ew+wunr5r9EmHdz/aKtOHet4Gv8ngHHeeSnZauG5q6hgnDzcUJ0tRZgrc0WsQVF7IYxstc7ABzYGZ7sa
-  artifact: $(UGIS_ARCHIVE)
-  draft: true
-  prerelease: false
-  on:
-    APPVEYOR_REPO_TAG: true

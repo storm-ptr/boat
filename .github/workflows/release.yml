@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  APPVEYOR_ACCOUNT: storm-ptr
+  APPVEYOR_PROJECT: boat
+  WINDOWS_ARTIFACT: ugis.windows.x64.zip
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@v4
+
+      - name: Resolve the commit
+        id: commit
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Find the successful AppVeyor build
+        id: appveyor
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          api="https://ci.appveyor.com/api"
+          project="$api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT"
+          history=$(curl --fail --silent --show-error \
+            "$project/history?recordsNumber=100&branch=main")
+
+          version=$(jq -r --arg sha "$TARGET_SHA" \
+            '[.builds[] | select(.commitId == $sha and .status == "success")][0].version // empty' \
+            <<< "$history")
+
+          if [[ -z "$version" ]]; then
+            status=$(jq -r --arg sha "$TARGET_SHA" \
+              '[.builds[] | select(.commitId == $sha)][0].status // "not-found"' \
+              <<< "$history")
+            echo "A successful AppVeyor main build is required for $TARGET_SHA; current status: $status" >&2
+            exit 1
+          fi
+
+          echo "Found successful AppVeyor build $version for $TARGET_SHA"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Download the Windows artifact
+        shell: bash
+        env:
+          APPVEYOR_VERSION: ${{ steps.appveyor.outputs.version }}
+          TARGET_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          api="https://ci.appveyor.com/api"
+          project="$api/projects/$APPVEYOR_ACCOUNT/$APPVEYOR_PROJECT"
+          build=$(curl --fail --silent --show-error \
+            "$project/build/$APPVEYOR_VERSION")
+
+          actual_sha=$(jq -r '.build.commitId' <<< "$build")
+          status=$(jq -r '.build.status' <<< "$build")
+          job_id=$(jq -r '[.build.jobs[] | select(.status == "success")][0].jobId // empty' \
+            <<< "$build")
+
+          if [[ "$actual_sha" != "$TARGET_SHA" || "$status" != "success" || -z "$job_id" ]]; then
+            echo "AppVeyor build no longer matches the tagged commit" >&2
+            exit 1
+          fi
+
+          artifacts=$(curl --fail --silent --show-error \
+            "$api/buildjobs/$job_id/artifacts")
+          jq -e --arg name "$WINDOWS_ARTIFACT" \
+            '.[] | select(.fileName == $name)' <<< "$artifacts" > /dev/null
+
+          curl --fail --location --silent --show-error \
+            "$api/buildjobs/$job_id/artifacts/$WINDOWS_ARTIFACT" \
+            --output "$WINDOWS_ARTIFACT"
+          unzip -t "$WINDOWS_ARTIFACT"
+
+      - name: Create the draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists" >&2
+            exit 1
+          fi
+
+          gh release create "$GITHUB_REF_NAME" "$WINDOWS_ARTIFACT" \
+            --draft \
+            --verify-tag \
+            --title "ugis $GITHUB_REF_NAME" \
+            --notes "Windows x64 build of ugis."
