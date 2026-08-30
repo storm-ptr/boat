@@ -44,7 +44,7 @@ public:
     {
         if (auto l = to_leaf(idx); l && !l->layer.raster) {
             std::invoke(fn, *l);
-            emit dataChanged(idx, idx);
+            Q_EMIT dataChanged(idx, idx);
         }
     }
 

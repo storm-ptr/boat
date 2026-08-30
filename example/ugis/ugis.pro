@@ -1,5 +1,6 @@
 QT = concurrent core gui widgets
 CONFIG += c++latest warn_off
+DEFINES += QT_NO_KEYWORDS
 SOURCES = *.cpp
 HEADERS = *.h
 INCLUDEPATH += ../../include

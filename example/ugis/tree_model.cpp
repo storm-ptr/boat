@@ -109,7 +109,7 @@ void tree_model::refresh(QModelIndex const& idx)
     if (int count = static_cast<int>(to_tree(idx)->children.size()))
         removeRows(0, count, idx);
     else
-        emit dataChanged(idx, idx);
+        Q_EMIT dataChanged(idx, idx);
 }
 
 void tree_model::new_workspace()
@@ -202,7 +202,7 @@ bool tree_model::setData(QModelIndex const& idx, QVariant const&, int role)
         return false;
     if (auto l = to_leaf(idx)) {
         l->state = l->state == Qt::Checked ? Qt::Unchecked : Qt::Checked;
-        emit dataChanged(idx, idx);
+        Q_EMIT dataChanged(idx, idx);
         return true;
     }
     return false;
@@ -259,7 +259,7 @@ void tree_model::on_fetch_canceled(QPersistentModelIndex per)
         return;
     if (auto b = to_branch(per); b && b->state == branch_state::fetching) {
         b->state = branch_state::blank;
-        emit dataChanged(per, per);
+        Q_EMIT dataChanged(per, per);
     }
 }
 
@@ -282,7 +282,7 @@ void tree_model::on_fetched(  //
         endInsertRows();
     }
     else
-        emit dataChanged(per, per);
+        Q_EMIT dataChanged(per, per);
 }
 
 void tree_model::request_stop()
