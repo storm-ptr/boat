@@ -14,8 +14,8 @@ permissions:
 
 jobs:
   build-ugis:
-    name: Build ugis on Ubuntu 24.04
-    runs-on: ubuntu-24.04
+    name: Build ugis on Ubuntu 26.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Check out the source
         uses: actions/checkout@v4
@@ -24,13 +24,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends \
-            gcc-14 \
-            g++-14 \
+            gcc-15 \
+            g++-15 \
             make \
             pkg-config \
             qmake6 \
             qt6-base-dev \
-            libboost1.83-dev \
+            libboost-dev \
             libcurl4-openssl-dev \
             libgdal-dev \
             libjpeg-dev \
@@ -43,7 +43,7 @@ jobs:
 
       - name: Configure ugis
         working-directory: example/ugis
-        run: qmake6 ugis.pro QMAKE_CC=gcc-14 QMAKE_CXX=g++-14
+        run: qmake6 ugis.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
 
       - name: Build ugis
         working-directory: example/ugis
