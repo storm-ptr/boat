@@ -1,0 +1,54 @@
+name: Linux
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ugis:
+    name: Build ugis on Ubuntu 24.04
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            gcc-14 \
+            g++-14 \
+            make \
+            pkg-config \
+            qmake6 \
+            qt6-base-dev \
+            libboost1.83-dev \
+            libcurl4-openssl-dev \
+            libgdal-dev \
+            libjpeg-dev \
+            default-libmysqlclient-dev \
+            libpng-dev \
+            libpq-dev \
+            libsqlite3-dev \
+            libtbb-dev \
+            unixodbc-dev
+
+      - name: Configure ugis
+        working-directory: example/ugis
+        run: qmake6 ugis.pro QMAKE_CC=gcc-14 QMAKE_CXX=g++-14
+
+      - name: Build ugis
+        working-directory: example/ugis
+        run: make --jobs=2
+
+      - name: Verify the executable
+        working-directory: example/ugis
+        run: test -x ugis

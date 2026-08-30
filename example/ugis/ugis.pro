@@ -2,10 +2,10 @@ QT = concurrent core gui widgets
 CONFIG += c++latest warn_off
 SOURCES = *.cpp
 HEADERS = *.h
+INCLUDEPATH += ../../include
 
 windows:{
 QMAKE_CXXFLAGS += -EHsc -bigobj -MP
-INCLUDEPATH += ../../include
 LIBS += \
   -L$$(LIB)\
   -lgdal_i\
@@ -20,4 +20,18 @@ LIBS += \
 reset.commands = rmdir /s /q debug release
 reset.depends = distclean
 QMAKE_EXTRA_TARGETS += reset
+}
+
+unix:!macx {
+CONFIG += link_pkgconfig
+PKGCONFIG += \
+  gdal \
+  libcurl \
+  libjpeg \
+  libpng \
+  libpq \
+  mysqlclient \
+  odbc \
+  sqlite3 \
+  tbb
 }
