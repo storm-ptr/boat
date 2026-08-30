@@ -49,9 +49,10 @@ private:
                     auto rs = catalog().select(
                         tbl,
                         db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 4096});
-                    auto wkb = std::vector<blob>{};
-                    std::ranges::sample(
-                        rs | db::view<blob>, std::back_inserter(wkb), 128, gen);
+                    auto wkb = std::vector<blob>(128);
+                    auto end = std::ranges::sample(
+                        rs | db::view<blob>, wkb.begin(), wkb.size(), gen);
+                    wkb.erase(end, wkb.end());
                     auto inv = geometry::transform(
                         geometry::srs_inverse(geometry::transformation(crs)));
                     auto ret = geometry::geographic::geometry_collection{};
