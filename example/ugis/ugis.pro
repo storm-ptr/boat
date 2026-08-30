@@ -33,6 +33,7 @@ PKGCONFIG += \
   libpq \
   mysqlclient \
   odbc \
+  spatialite \
   sqlite3 \
   tbb
 }

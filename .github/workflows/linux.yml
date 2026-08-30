@@ -37,6 +37,7 @@ jobs:
             default-libmysqlclient-dev \
             libpng-dev \
             libpq-dev \
+            libspatialite-dev \
             libsqlite3-dev \
             libtbb-dev \
             unixodbc-dev
