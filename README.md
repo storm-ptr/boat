@@ -1,1 +1,36 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/github/storm-ptr/boat?svg=true&branch=main)](https://ci.appveyor.com/project/storm-ptr/boat/branch/main)
+[![Linux](https://github.com/storm-ptr/boat/actions/workflows/linux.yml/badge.svg)](https://github.com/storm-ptr/boat/actions/workflows/linux.yml)
+
+## Build ugis on Ubuntu 26.04
+
+Install the compiler and development packages:
+
+```sh
+sudo apt-get update
+sudo apt-get install --yes --no-install-recommends \
+  gcc-15 \
+  g++-15 \
+  make \
+  pkg-config \
+  qmake6 \
+  qt6-base-dev \
+  libboost-dev \
+  libcurl4-openssl-dev \
+  libgdal-dev \
+  libjpeg-dev \
+  default-libmysqlclient-dev \
+  libpng-dev \
+  libpq-dev \
+  libspatialite-dev \
+  libsqlite3-dev \
+  libtbb-dev \
+  unixodbc-dev
+```
+
+Configure and build:
+
+```sh
+cd example/ugis
+qmake6 ugis.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
+make --jobs=2
+```
