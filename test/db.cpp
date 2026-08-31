@@ -12,8 +12,8 @@ BOOST_AUTO_TEST_CASE(db)
         rs | boat::db::view<udt>,
         BOAT_LIFT(boost::pfr::eq_fields)));
     auto locale = std::locale{"en_US.UTF-8"};
-    auto global_scope = revoke{&std::locale::global, locale};
-    auto cout_scope = revoke{
+    auto global_scope = scoped_revoke{&std::locale::global, locale};
+    auto cout_scope = scoped_revoke{
         std::bind_front(&decltype(std::cout)::imbue, &std::cout), locale};
     std::cout << std::fixed << std::setprecision(2) << rs << "\n";
 }

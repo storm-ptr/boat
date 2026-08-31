@@ -18,11 +18,11 @@ bool operator==(T const& lhs, T const& rhs)
 }  // namespace boost::geometry
 
 template <class F, class Arg>
-struct revoke {
+struct scoped_revoke {
     F f;
     Arg arg;
-    revoke(F f, Arg const& arg) : f{f}, arg{std::invoke(f, arg)} {}
-    ~revoke() { std::invoke(f, arg); }
+    scoped_revoke(F f, Arg const& arg) : f{f}, arg{std::invoke(f, arg)} {}
+    ~scoped_revoke() { std::invoke(f, arg); }
 };
 
 inline std::generator<boat::geometry::geographic::point> geographic_random()
