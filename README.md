@@ -24,7 +24,9 @@ sudo apt-get install --yes --no-install-recommends \
   libspatialite-dev \
   libsqlite3-dev \
   libtbb-dev \
-  unixodbc-dev
+  unixodbc-dev \
+  xauth \
+  xvfb
 ```
 
 Configure and build:
@@ -33,4 +35,12 @@ Configure and build:
 cd example/ugis
 qmake6 ugis.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
 make --jobs=2
+```
+
+Run a ten-second smoke test on a virtual display:
+
+```sh
+status=0
+timeout --kill-after=5s 10s xvfb-run --auto-servernum ./ugis || status=$?
+test "$status" -eq 124
 ```

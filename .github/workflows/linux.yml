@@ -40,7 +40,9 @@ jobs:
             libspatialite-dev \
             libsqlite3-dev \
             libtbb-dev \
-            unixodbc-dev
+            unixodbc-dev \
+            xauth \
+            xvfb
 
       - name: Configure ugis
         working-directory: example/ugis
@@ -53,3 +55,13 @@ jobs:
       - name: Verify the executable
         working-directory: example/ugis
         run: test -x ugis
+
+      - name: Smoke-test ugis
+        working-directory: example/ugis
+        run: |
+          status=0
+          timeout --kill-after=5s 10s xvfb-run --auto-servernum ./ugis || status=$?
+          if [ "$status" -ne 124 ]; then
+            echo "ugis exited unexpectedly with status $status" >&2
+            exit 1
+          fi
