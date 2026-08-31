@@ -44,3 +44,11 @@ status=0
 timeout --kill-after=5s 10s xvfb-run --auto-servernum ./ugis || status=$?
 test "$status" -eq 124
 ```
+
+Build and run the autonomous tests (no database servers or network access are
+required):
+
+```sh
+cd test
+make --file=linux.makefile --jobs=2 test CXX=g++-15
+```

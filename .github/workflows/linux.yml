@@ -65,3 +65,7 @@ jobs:
             echo "ugis exited unexpectedly with status $status" >&2
             exit 1
           fi
+
+      - name: Run autonomous tests
+        working-directory: test
+        run: make --file=linux.makefile --jobs=2 test CXX=g++-15
