@@ -50,5 +50,6 @@ required):
 
 ```sh
 cd test
-make --file=linux.makefile --jobs=2 test CXX=g++-15
+make --file=linux.makefile --jobs=2 CXX=g++-15
+make --file=linux.makefile test CXX=g++-15
 ```

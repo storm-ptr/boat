@@ -66,6 +66,14 @@ jobs:
             exit 1
           fi
 
+      - name: Build tests
+        working-directory: test
+        run: make --file=linux.makefile --jobs=2 CXX=g++-15
+
       - name: Run autonomous tests
         working-directory: test
-        run: make --file=linux.makefile --jobs=2 test CXX=g++-15
+        run: make --file=linux.makefile test-autonomous CXX=g++-15
+
+      - name: Run SQLite tests
+        working-directory: test
+        run: make --file=linux.makefile test-sqlite CXX=g++-15
