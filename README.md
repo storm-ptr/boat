@@ -53,3 +53,10 @@ cd test
 make --file=linux.makefile --jobs=2 CXX=g++-15
 make --file=linux.makefile test CXX=g++-15
 ```
+
+Run the PostgreSQL tests against a local PostGIS-enabled server:
+
+```sh
+make --file=linux.makefile test-postgres CXX=g++-15 \
+  TEST_PASSWORD=Password12! TEST_POSTGRES_HOST=localhost
+```

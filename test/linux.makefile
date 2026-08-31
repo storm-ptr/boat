@@ -1,13 +1,17 @@
 CXX ?= g++-15
-CXXFLAGS += -std=gnu++2c -O2 -w -DBOAT_TEST_SQLITE_ONLY -I../include $(shell pkg-config --cflags $(PACKAGES))
+CPPFLAGS += -DBOAT_TEST_PASSWORD=$(TEST_PASSWORD) -DBOAT_TEST_POSTGRES_HOST=$(TEST_POSTGRES_HOST)
+CXXFLAGS += -std=gnu++2c -O2 -w -I../include $(shell pkg-config --cflags $(PACKAGES))
 LDLIBS += $(shell pkg-config --libs $(PACKAGES))
 
 EXECUTABLE = run
 PACKAGES = gdal libcurl libjpeg libpng libpq mysqlclient odbc spatialite sqlite3 tbb
 SOURCES = main.cpp blob.cpp cache.cpp db.cpp geometry.cpp sql.cpp unicode.cpp uri.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
+SQL_TESTS = sql_select,sql_vector,sql_datatypes
+TEST_PASSWORD ?= Password12!
+TEST_POSTGRES_HOST ?= localhost
 
-.PHONY: all test test-autonomous test-sqlite reset
+.PHONY: all test test-autonomous test-sqlite test-postgres reset
 
 all: $(EXECUTABLE)
 
@@ -23,7 +27,10 @@ test-autonomous: $(EXECUTABLE)
 	./$(EXECUTABLE) --log_level=unit_scope --run_test=blob_*,cache,db,geometry_*,unicode,uri
 
 test-sqlite: $(EXECUTABLE)
-	./$(EXECUTABLE) --log_level=unit_scope --run_test=sql_*
+	BOAT_TEST_DB=sqlite ./$(EXECUTABLE) --log_level=unit_scope --run_test=$(SQL_TESTS)
+
+test-postgres: $(EXECUTABLE)
+	BOAT_TEST_DB=postgres ./$(EXECUTABLE) --log_level=unit_scope --run_test=$(SQL_TESTS)
 
 reset:
 	rm -f $(OBJECTS) $(EXECUTABLE) drop.*

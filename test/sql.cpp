@@ -8,7 +8,6 @@
 
 using namespace boat;
 
-#ifndef BOAT_TEST_SQLITE_ONLY
 BOOST_AUTO_TEST_CASE(sql_odbc_drivers)
 {
     for (auto drv : sql::odbc::drivers()) {
@@ -16,7 +15,6 @@ BOOST_AUTO_TEST_CASE(sql_odbc_drivers)
         std::cout << drv << "\n";
     }
 }
-#endif
 
 BOOST_AUTO_TEST_CASE(sql_select)
 {
