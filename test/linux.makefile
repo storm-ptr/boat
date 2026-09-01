@@ -9,7 +9,7 @@ SOURCES = main.cpp blob.cpp cache.cpp db.cpp geometry.cpp sql.cpp unicode.cpp ur
 OBJECTS = $(SOURCES:.cpp=.o)
 SQL_TESTS = sql_select,sql_vector,sql_datatypes
 TEST_PASSWORD ?= Password12!
-TEST_MYSQL_HOST ?= localhost
+TEST_MYSQL_HOST ?= 127.0.0.1
 TEST_POSTGRES_HOST ?= localhost
 
 .PHONY: all test test-autonomous test-sqlite test-postgres test-mysql reset

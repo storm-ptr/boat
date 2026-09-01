@@ -65,5 +65,5 @@ Run the MySQL tests against a local server:
 
 ```sh
 make --file=linux.makefile test-mysql CXX=g++-15 \
-  TEST_PASSWORD=Password12! TEST_MYSQL_HOST=localhost
+  TEST_PASSWORD=Password12! TEST_MYSQL_HOST=127.0.0.1
 ```
