@@ -67,3 +67,11 @@ Run the MySQL tests against a local server:
 make --file=linux.makefile test-mysql CXX=g++-15 \
   TEST_PASSWORD=Password12! TEST_MYSQL_HOST=127.0.0.1
 ```
+
+Run the local and PostgreSQL GDAL vector tests:
+
+```sh
+make --file=linux.makefile test-gdal-local CXX=g++-15
+make --file=linux.makefile test-gdal-postgres CXX=g++-15 \
+  TEST_PASSWORD=Password12! TEST_POSTGRES_HOST=localhost
+```

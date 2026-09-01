@@ -109,3 +109,11 @@ jobs:
       - name: Run MySQL tests
         working-directory: test
         run: make --file=linux.makefile test-mysql CXX=g++-15
+
+      - name: Run local GDAL vector tests
+        working-directory: test
+        run: make --file=linux.makefile test-gdal-local CXX=g++-15
+
+      - name: Run PostgreSQL GDAL vector tests
+        working-directory: test
+        run: make --file=linux.makefile test-gdal-postgres CXX=g++-15
