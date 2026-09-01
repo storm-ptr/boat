@@ -83,3 +83,15 @@ Run the PostgreSQL tests through ODBC:
 make --file=linux.makefile test-odbc-postgres CXX=g++-15 \
   TEST_PASSWORD=Password12! TEST_POSTGRES_HOST=localhost
 ```
+
+Build and run the Qt GUI test on a virtual display:
+
+```sh
+cd test/gui/qt
+qmake6 test.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15 \
+  "DEFINES+=BOAT_TEST_PASSWORD=Password12! \
+  BOAT_TEST_MYSQL_HOST=127.0.0.1 \
+  BOAT_TEST_POSTGRES_HOST=localhost"
+make --jobs=2
+xvfb-run --auto-servernum ./run --log_level=unit_scope
+```

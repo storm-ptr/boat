@@ -122,3 +122,19 @@ jobs:
       - name: Run PostgreSQL GDAL vector tests
         working-directory: test
         run: make --file=linux.makefile test-gdal-postgres CXX=g++-15
+
+      - name: Configure Qt GUI test
+        working-directory: test/gui/qt
+        run: >-
+          qmake6 test.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
+          "DEFINES+=BOAT_TEST_PASSWORD=Password12!
+          BOAT_TEST_MYSQL_HOST=127.0.0.1
+          BOAT_TEST_POSTGRES_HOST=localhost"
+
+      - name: Build Qt GUI test
+        working-directory: test/gui/qt
+        run: make --jobs=2
+
+      - name: Run Qt GUI test
+        working-directory: test/gui/qt
+        run: xvfb-run --auto-servernum ./run --log_level=unit_scope
