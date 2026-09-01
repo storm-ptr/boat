@@ -24,6 +24,7 @@ sudo apt-get install --yes --no-install-recommends \
   libspatialite-dev \
   libsqlite3-dev \
   libtbb-dev \
+  odbc-postgresql \
   unixodbc-dev \
   xauth \
   xvfb
@@ -73,5 +74,12 @@ Run the local and PostgreSQL GDAL vector tests:
 ```sh
 make --file=linux.makefile test-gdal-local CXX=g++-15
 make --file=linux.makefile test-gdal-postgres CXX=g++-15 \
+  TEST_PASSWORD=Password12! TEST_POSTGRES_HOST=localhost
+```
+
+Run the PostgreSQL tests through ODBC:
+
+```sh
+make --file=linux.makefile test-odbc-postgres CXX=g++-15 \
   TEST_PASSWORD=Password12! TEST_POSTGRES_HOST=localhost
 ```

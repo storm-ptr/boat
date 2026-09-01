@@ -64,6 +64,7 @@ jobs:
             libspatialite-dev \
             libsqlite3-dev \
             libtbb-dev \
+            odbc-postgresql \
             unixodbc-dev \
             xauth \
             xvfb
@@ -109,6 +110,10 @@ jobs:
       - name: Run MySQL tests
         working-directory: test
         run: make --file=linux.makefile test-mysql CXX=g++-15
+
+      - name: Run PostgreSQL ODBC tests
+        working-directory: test
+        run: make --file=linux.makefile test-odbc-postgres CXX=g++-15
 
       - name: Run local GDAL vector tests
         working-directory: test
