@@ -12,7 +12,10 @@ version=${2#v}
 output=$(realpath --canonicalize-missing "$3")
 
 test -x "$executable"
-dpkg --validate-thing version "$version"
+if [[ ! $version =~ ^[0-9][0-9A-Za-z.+~-]*$ ]]; then
+  echo "invalid package version: $version" >&2
+  exit 2
+fi
 mkdir -p "$(dirname "$output")"
 
 work=$(mktemp --directory)
