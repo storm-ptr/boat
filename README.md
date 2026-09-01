@@ -60,3 +60,10 @@ Run the PostgreSQL tests against a local PostGIS-enabled server:
 make --file=linux.makefile test-postgres CXX=g++-15 \
   TEST_PASSWORD=Password12! TEST_POSTGRES_HOST=localhost
 ```
+
+Run the MySQL tests against a local server:
+
+```sh
+make --file=linux.makefile test-mysql CXX=g++-15 \
+  TEST_PASSWORD=Password12! TEST_MYSQL_HOST=localhost
+```
