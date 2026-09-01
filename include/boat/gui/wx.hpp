@@ -87,7 +87,12 @@ void draw_image(  //
             else
                 alpha[x] = wxIMAGE_ALPHA_TRANSPARENT;
     });
-    out.DrawBitmap(out.CreateBitmapFromImage(img), *mbr);
+    out.DrawBitmap(  //
+        out.CreateBitmapFromImage(img),
+        mbr->m_x,
+        mbr->m_y,
+        mbr->m_width,
+        mbr->m_height);
 }
 
 }  // namespace boat::gui
