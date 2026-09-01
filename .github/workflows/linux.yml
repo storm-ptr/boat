@@ -50,6 +50,7 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
             gcc-15 \
             g++-15 \
+            dpkg-dev \
             make \
             pkg-config \
             qmake6 \
@@ -147,3 +148,46 @@ jobs:
       - name: Run wx GUI test
         working-directory: test/gui/wx
         run: make --file=linux.makefile test CXX=g++-15
+
+      - name: Build the Ubuntu package
+        run: |
+          version="0.0.0+git${GITHUB_RUN_NUMBER}.${GITHUB_SHA::8}"
+          bash packaging/build-deb.sh \
+            example/ugis/ugis \
+            "$version" \
+            ugis.ubuntu.x64.deb
+          dpkg-deb --info ugis.ubuntu.x64.deb
+          dpkg-deb --contents ugis.ubuntu.x64.deb
+
+      - name: Upload the Ubuntu package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ugis.ubuntu.x64.deb
+          path: ugis.ubuntu.x64.deb
+          if-no-files-found: error
+
+  verify-package:
+    name: Verify the Ubuntu package
+    needs: build-ugis
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Download the Ubuntu package
+        uses: actions/download-artifact@v7
+        with:
+          name: ugis.ubuntu.x64.deb
+
+      - name: Install the package and its dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ./ugis.ubuntu.x64.deb xauth xvfb
+
+      - name: Verify the installed package
+        run: |
+          test "$(command -v ugis)" = "/usr/bin/ugis"
+          dpkg-query --show --showformat='${Status}\n${Version}\n' ugis
+          status=0
+          timeout --kill-after=5s 10s xvfb-run --auto-servernum ugis || status=$?
+          if [ "$status" -ne 124 ]; then
+            echo "installed ugis exited unexpectedly with status $status" >&2
+            exit 1
+          fi

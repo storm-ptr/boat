@@ -56,6 +56,16 @@ make --file=linux.makefile --jobs=2 CXX=g++-15
 make --file=linux.makefile test CXX=g++-15
 ```
 
+Build an Ubuntu package with automatically detected runtime dependencies:
+
+```sh
+bash packaging/build-deb.sh \
+  example/ugis/ugis \
+  0.0.0+local \
+  ugis.ubuntu.x64.deb
+sudo apt install ./ugis.ubuntu.x64.deb
+```
+
 Run the PostgreSQL tests against a local PostGIS-enabled server:
 
 ```sh
