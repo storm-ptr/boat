@@ -64,6 +64,7 @@ jobs:
             libspatialite-dev \
             libsqlite3-dev \
             libtbb-dev \
+            libwxgtk3.2-dev \
             odbc-postgresql \
             unixodbc-dev \
             xauth \
@@ -138,3 +139,11 @@ jobs:
       - name: Run Qt GUI test
         working-directory: test/gui/qt
         run: xvfb-run --auto-servernum ./run --log_level=unit_scope
+
+      - name: Build wx GUI test
+        working-directory: test/gui/wx
+        run: make --file=linux.makefile --jobs=2 CXX=g++-15
+
+      - name: Run wx GUI test
+        working-directory: test/gui/wx
+        run: make --file=linux.makefile test CXX=g++-15

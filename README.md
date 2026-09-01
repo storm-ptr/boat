@@ -24,6 +24,7 @@ sudo apt-get install --yes --no-install-recommends \
   libspatialite-dev \
   libsqlite3-dev \
   libtbb-dev \
+  libwxgtk3.2-dev \
   odbc-postgresql \
   unixodbc-dev \
   xauth \
@@ -94,4 +95,12 @@ qmake6 test.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15 \
   BOAT_TEST_POSTGRES_HOST=localhost"
 make --jobs=2
 xvfb-run --auto-servernum ./run --log_level=unit_scope
+```
+
+Build and run the wx GUI test on a virtual display:
+
+```sh
+cd test/gui/wx
+make --file=linux.makefile --jobs=2 CXX=g++-15
+make --file=linux.makefile test CXX=g++-15
 ```
