@@ -1,0 +1,194 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OSGEO4W_ROOT: C:\OSGeo4W
+  QT_ROOT: C:\Qt\6.11.0\msvc2022_64
+  QT_VERSION: 6.11.0
+  TEST_PASSWORD: Password12!
+  UGIS_ARCHIVE: ugis.windows.x64.zip
+  WX_ROOT: C:\wxWidgets
+  WX_VERSION: 3.3.3
+
+jobs:
+  build:
+    name: Build and test on Windows 2025
+    runs-on: windows-2025-vs2026
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v7
+
+      - name: Cache OSGeo4W
+        id: cache-osgeo4w
+        uses: actions/cache@v5
+        with:
+          path: C:\OSGeo4W
+          key: osgeo4w-v2-2
+
+      - name: Install OSGeo4W
+        if: steps.cache-osgeo4w.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force $env:OSGEO4W_ROOT | Out-Null
+          $setup = "$env:OSGEO4W_ROOT\osgeo4w-setup.exe"
+          Invoke-WebRequest https://download.osgeo.org/osgeo4w/v2/osgeo4w-setup.exe -OutFile $setup
+          & $setup -q -k -r -A -s https://download.osgeo.org/osgeo4w/v2 `
+            -P boost-devel,curl-devel,gdal-devel,gdal-mss,libjpeg-devel,libmysql-devel,libpng-devel,libpq-devel,libspatialite-devel,sqlite3-devel,zlib-devel `
+            -R $env:OSGEO4W_ROOT
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v5
+        with:
+          path: C:\Qt
+          key: qt-${{ env.QT_VERSION }}-msvc2022-x64
+
+      - name: Install Qt
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          python -m pip install aqtinstall
+          python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 -O C:\Qt
+
+      - name: Cache wxWidgets
+        id: cache-wx
+        uses: actions/cache@v5
+        with:
+          path: C:\wxWidgets
+          key: wxwidgets-${{ env.WX_VERSION }}-vc14x-x64
+
+      - name: Install wxWidgets
+        if: steps.cache-wx.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $base = "https://github.com/wxWidgets/wxWidgets/releases/download/v$env:WX_VERSION"
+          $archives = @(
+            "wxWidgets-$env:WX_VERSION-headers.7z",
+            "wxMSW-$env:WX_VERSION`_vc14x_x64_Dev.7z",
+            "wxMSW-$env:WX_VERSION`_vc14x_x64_ReleaseDLL.7z"
+          )
+          foreach ($archive in $archives) {
+            Invoke-WebRequest "$base/$archive" -OutFile "$env:RUNNER_TEMP\$archive"
+            7z x "$env:RUNNER_TEMP\$archive" "-o$env:WX_ROOT" -y | Out-Null
+          }
+          Remove-Item "$env:WX_ROOT\lib\vc14x_x64_dll\*.pdb" -ErrorAction SilentlyContinue
+
+      - name: Install MySQL
+        shell: pwsh
+        run: |
+          choco install mysql --version=8.0.46 --yes --params "/serviceName:MySQL80"
+          Start-Service MySQL80
+          mysql --user=root --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY '$env:TEST_PASSWORD';"
+
+      - name: Start PostgreSQL with PostGIS
+        shell: pwsh
+        env:
+          PGPASSWORD: root
+        run: |
+          Set-Service postgresql-x64-17 -StartupType Manual
+          Start-Service postgresql-x64-17
+          & "$env:PGBIN\psql.exe" -U postgres -c "ALTER USER postgres PASSWORD '$env:TEST_PASSWORD';"
+          $bundle = "$env:RUNNER_TEMP\postgis.zip"
+          Invoke-WebRequest https://download.osgeo.org/postgis/windows/pg17/archive/postgis-bundle-pg17-3.6.1x64.zip -OutFile $bundle
+          7z x $bundle "-o$env:RUNNER_TEMP\postgis" -y | Out-Null
+          Stop-Service postgresql-x64-17
+          Copy-Item "$env:RUNNER_TEMP\postgis\postgis-bundle-pg17-3.6.1x64\*" $env:PGROOT -Recurse -Force
+          Start-Service postgresql-x64-17
+          $env:PGPASSWORD = $env:TEST_PASSWORD
+          & "$env:PGBIN\psql.exe" -U postgres -c "CREATE EXTENSION postgis;"
+
+      - name: Configure the build environment
+        shell: pwsh
+        run: |
+          @(
+            "$env:QT_ROOT\bin",
+            "$env:OSGEO4W_ROOT\bin",
+            "$env:WX_ROOT\lib\vc14x_x64_dll"
+          ) | Add-Content $env:GITHUB_PATH
+          @(
+            "INCLUDE=$env:GITHUB_WORKSPACE\include;$env:OSGEO4W_ROOT\include",
+            "LIB=$env:OSGEO4W_ROOT\lib",
+            "QT_PLUGIN_PATH=$env:QT_ROOT\plugins",
+            "WXWIN=$env:WX_ROOT"
+          ) | Add-Content $env:GITHUB_ENV
+
+      - name: Build and smoke-test ugis
+        shell: cmd
+        working-directory: example/ugis
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          qmake
+          nmake
+          powershell -NoProfile -Command "$p = Start-Process .\release\ugis.exe -PassThru -WindowStyle Hidden; Start-Sleep 10; if ($p.HasExited) { throw 'ugis exited unexpectedly with status ' + $p.ExitCode }; Stop-Process -Id $p.Id"
+
+      - name: Test
+        shell: cmd
+        working-directory: test
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          set CXXFLAGS=/DBOAT_TEST_PASSWORD=%TEST_PASSWORD% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f windows.makefile test
+
+      - name: Test Qt GUI
+        shell: cmd
+        working-directory: test/gui/qt
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          qmake "DEFINES+='BOAT_TEST_PASSWORD=%TEST_PASSWORD%' 'BOAT_TEST_MYSQL_HOST=localhost' 'BOAT_TEST_POSTGRES_HOST=localhost'"
+          nmake test
+
+      - name: Test wx GUI
+        shell: cmd
+        working-directory: test/gui/wx
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          set CXXFLAGS=/DBOAT_TEST_PASSWORD=%TEST_PASSWORD% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f windows.makefile test
+
+      - name: Build the Windows archive
+        shell: pwsh
+        run: |
+          $root = "$env:RUNNER_TEMP\ugis"
+          New-Item -ItemType Directory $root | Out-Null
+          Copy-Item example\ugis\release\ugis.exe $root
+          & "$env:QT_ROOT\bin\windeployqt.exe" --release --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-opengl-sw "$root\ugis.exe"
+          Copy-Item "$env:OSGEO4W_ROOT\bin\*.dll" $root
+          Remove-Item "$root\mod_spatialite.dll" -ErrorAction SilentlyContinue
+          7z a $env:UGIS_ARCHIVE "$root\*"
+
+      - name: Upload the Windows archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.UGIS_ARCHIVE }}
+          path: ${{ env.UGIS_ARCHIVE }}
+          if-no-files-found: error
+
+  verify-archive:
+    name: Verify the Windows archive
+    needs: build
+    runs-on: windows-2025-vs2026
+    steps:
+      - name: Download the Windows archive
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ env.UGIS_ARCHIVE }}
+
+      - name: Verify the archive
+        shell: pwsh
+        run: |
+          7z t $env:UGIS_ARCHIVE
+          7z x $env:UGIS_ARCHIVE -overify -y | Out-Null
+          $process = Start-Process .\verify\ugis.exe -PassThru -WindowStyle Hidden
+          Start-Sleep 10
+          if ($process.HasExited) { throw "ugis exited unexpectedly with status $($process.ExitCode)" }
+          Stop-Process -Id $process.Id
