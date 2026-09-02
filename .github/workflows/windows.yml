@@ -13,6 +13,8 @@ permissions:
   contents: read
 
 env:
+  BOOST_ROOT: C:\boost_1_91_0
+  BOOST_VERSION: 1.91.0
   OSGEO4W_ROOT: C:\OSGeo4W
   QT_ROOT: C:\Qt\6.10.3\msvc2022_64
   QT_VERSION: 6.10.3
@@ -44,7 +46,7 @@ jobs:
           $setup = "$env:OSGEO4W_ROOT\osgeo4w-setup.exe"
           Invoke-WebRequest https://download.osgeo.org/osgeo4w/v2/osgeo4w-setup.exe -OutFile $setup
           & $setup -q -k -r -A -s https://download.osgeo.org/osgeo4w/v2 `
-            -P boost-devel,curl-devel,gdal-devel,gdal-mss,libjpeg-devel,libmysql-devel,libpng-devel,libpq-devel,libspatialite-devel,sqlite3-devel,zlib-devel `
+            -P curl-devel,gdal-devel,gdal-mss,libjpeg-devel,libmysql-devel,libpng-devel,libpq-devel,libspatialite-devel,sqlite3-devel,zlib-devel `
             -R $env:OSGEO4W_ROOT
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
@@ -61,6 +63,22 @@ jobs:
         run: |
           python -m pip install aqtinstall
           python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 -O C:\Qt
+
+      - name: Cache Boost
+        id: cache-boost
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.BOOST_ROOT }}
+          key: boost-${{ env.BOOST_VERSION }}
+
+      - name: Install Boost
+        if: steps.cache-boost.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $version = $env:BOOST_VERSION.Replace('.', '_')
+          $archive = "$env:RUNNER_TEMP\boost.zip"
+          Invoke-WebRequest "https://archives.boost.io/release/$env:BOOST_VERSION/source/boost_$version.zip" -OutFile $archive
+          7z x $archive -oC:\ -y | Out-Null
 
       - name: Cache wxWidgets
         id: cache-wx
@@ -110,50 +128,39 @@ jobs:
           & "$env:PGBIN\psql.exe" -U postgres -c "CREATE EXTENSION postgis;"
 
       - name: Configure the build environment
-        shell: pwsh
+        shell: cmd
         run: |
-          @(
-            "$env:QT_ROOT\bin",
-            "$env:OSGEO4W_ROOT\bin",
-            "$env:WX_ROOT\lib\vc14x_x64_dll"
-          ) | Add-Content $env:GITHUB_PATH
-          @(
-            "INCLUDE=$env:GITHUB_WORKSPACE\include;$env:OSGEO4W_ROOT\include",
-            "LIB=$env:OSGEO4W_ROOT\lib",
-            "QT_PLUGIN_PATH=$env:QT_ROOT\plugins",
-            "WXWIN=$env:WX_ROOT"
-          ) | Add-Content $env:GITHUB_ENV
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          echo INCLUDE=%GITHUB_WORKSPACE%\include;%BOOST_ROOT%;%OSGEO4W_ROOT%\include;%INCLUDE%>>%GITHUB_ENV%
+          echo LIB=%OSGEO4W_ROOT%\lib;%LIB%>>%GITHUB_ENV%
+          echo PATH=%QT_ROOT%\bin;%OSGEO4W_ROOT%\bin;%WX_ROOT%\lib\vc14x_x64_dll;%PATH%>>%GITHUB_ENV%
+          echo QT_PLUGIN_PATH=%QT_ROOT%\plugins>>%GITHUB_ENV%
+          echo WXWIN=%WX_ROOT%>>%GITHUB_ENV%
 
       - name: Build and smoke-test ugis
         shell: cmd
         working-directory: example/ugis
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          qmake
-          nmake
+          qmake || exit /b 1
+          nmake || exit /b 1
           powershell -NoProfile -Command "$p = Start-Process .\release\ugis.exe -PassThru -WindowStyle Hidden; Start-Sleep 10; if ($p.HasExited) { throw 'ugis exited unexpectedly with status ' + $p.ExitCode }; Stop-Process -Id $p.Id"
 
       - name: Test
         shell: cmd
         working-directory: test
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set CXXFLAGS=/DBOAT_TEST_PASSWORD=%TEST_PASSWORD% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f windows.makefile test
+        run: set CXXFLAGS=/DBOAT_TEST_PASSWORD=%TEST_PASSWORD% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f windows.makefile test
 
       - name: Test Qt GUI
         shell: cmd
         working-directory: test/gui/qt
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          qmake "DEFINES+='BOAT_TEST_PASSWORD=%TEST_PASSWORD%' 'BOAT_TEST_MYSQL_HOST=localhost' 'BOAT_TEST_POSTGRES_HOST=localhost'"
+          qmake "DEFINES+='BOAT_TEST_PASSWORD=%TEST_PASSWORD%' 'BOAT_TEST_MYSQL_HOST=localhost' 'BOAT_TEST_POSTGRES_HOST=localhost'" || exit /b 1
           nmake test
 
       - name: Test wx GUI
         shell: cmd
         working-directory: test/gui/wx
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          set CXXFLAGS=/DBOAT_TEST_PASSWORD=%TEST_PASSWORD% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f windows.makefile test
+        run: set CXXFLAGS=/DBOAT_TEST_PASSWORD=%TEST_PASSWORD% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f windows.makefile test
 
       - name: Build the Windows archive
         shell: pwsh
