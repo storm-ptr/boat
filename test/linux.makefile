@@ -5,15 +5,13 @@ LDLIBS += $(shell pkg-config --libs $(PACKAGES))
 
 EXECUTABLE = run
 PACKAGES = gdal libcurl libjpeg libpng libpq mysqlclient odbc spatialite sqlite3 tbb
-SOURCES = main.cpp blob.cpp cache.cpp db.cpp gdal.cpp geometry.cpp sql.cpp unicode.cpp uri.cpp
+SOURCES := $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
-SQL_TESTS = sql_select,sql_vector,sql_datatypes
-ODBC_TESTS = sql_odbc_drivers,$(SQL_TESTS)
 TEST_PASSWORD ?= Password12!
 TEST_MYSQL_HOST ?= 127.0.0.1
 TEST_POSTGRES_HOST ?= localhost
 
-.PHONY: all test test-autonomous test-sqlite test-postgres test-mysql test-odbc-postgres test-gdal-local test-gdal-postgres reset
+.PHONY: all test reset
 
 all: $(EXECUTABLE)
 
@@ -23,28 +21,8 @@ $(EXECUTABLE): $(OBJECTS)
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-test: test-autonomous test-sqlite
-
-test-autonomous: $(EXECUTABLE)
-	./$(EXECUTABLE) --log_level=unit_scope --run_test=blob_*,cache,db,geometry_*,unicode,uri
-
-test-sqlite: $(EXECUTABLE)
-	BOAT_TEST_DB=sqlite ./$(EXECUTABLE) --log_level=unit_scope --run_test=$(SQL_TESTS)
-
-test-postgres: $(EXECUTABLE)
-	BOAT_TEST_DB=postgres ./$(EXECUTABLE) --log_level=unit_scope --run_test=$(SQL_TESTS)
-
-test-mysql: $(EXECUTABLE)
-	BOAT_TEST_DB=mysql ./$(EXECUTABLE) --log_level=unit_scope --run_test=$(SQL_TESTS)
-
-test-odbc-postgres: $(EXECUTABLE)
-	BOAT_TEST_DB=odbc ./$(EXECUTABLE) --log_level=unit_scope --run_test=$(ODBC_TESTS)
-
-test-gdal-local: $(EXECUTABLE)
-	BOAT_TEST_GDAL=local ./$(EXECUTABLE) --log_level=unit_scope --run_test=gdal_vector
-
-test-gdal-postgres: $(EXECUTABLE)
-	BOAT_TEST_GDAL=postgres ./$(EXECUTABLE) --log_level=unit_scope --run_test=gdal_vector
+test: $(EXECUTABLE)
+	./$(EXECUTABLE) --log_level=unit_scope
 
 reset:
 	rm -f $(OBJECTS) $(EXECUTABLE) drop.*

@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  build-ugis:
-    name: Build ugis on Ubuntu 26.04
+  build:
+    name: Build and test on Ubuntu 26.04
     runs-on: ubuntu-26.04
     services:
       mysql:
@@ -71,21 +71,12 @@ jobs:
             xauth \
             xvfb
 
-      - name: Configure ugis
-        working-directory: example/ugis
-        run: qmake6 ugis.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
-
-      - name: Build ugis
-        working-directory: example/ugis
-        run: make --jobs=2
-
-      - name: Verify the executable
-        working-directory: example/ugis
-        run: test -x ugis
-
-      - name: Smoke-test ugis
+      - name: Build and smoke-test ugis
         working-directory: example/ugis
         run: |
+          qmake6 ugis.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
+          make --jobs=2
+          test -x ugis
           status=0
           timeout --kill-after=5s 10s xvfb-run --auto-servernum ./ugis || status=$?
           if [ "$status" -ne 124 ]; then
@@ -93,61 +84,21 @@ jobs:
             exit 1
           fi
 
-      - name: Build tests
+      - name: Test
         working-directory: test
-        run: make --file=linux.makefile --jobs=2 CXX=g++-15
+        run: make --file=linux.makefile --jobs=2 test CXX=g++-15
 
-      - name: Run autonomous tests
-        working-directory: test
-        run: make --file=linux.makefile test-autonomous CXX=g++-15
-
-      - name: Run SQLite tests
-        working-directory: test
-        run: make --file=linux.makefile test-sqlite CXX=g++-15
-
-      - name: Run PostgreSQL tests
-        working-directory: test
-        run: make --file=linux.makefile test-postgres CXX=g++-15
-
-      - name: Run MySQL tests
-        working-directory: test
-        run: make --file=linux.makefile test-mysql CXX=g++-15
-
-      - name: Run PostgreSQL ODBC tests
-        working-directory: test
-        run: make --file=linux.makefile test-odbc-postgres CXX=g++-15
-
-      - name: Run local GDAL vector tests
-        working-directory: test
-        run: make --file=linux.makefile test-gdal-local CXX=g++-15
-
-      - name: Run PostgreSQL GDAL vector tests
-        working-directory: test
-        run: make --file=linux.makefile test-gdal-postgres CXX=g++-15
-
-      - name: Configure Qt GUI test
+      - name: Test Qt GUI
         working-directory: test/gui/qt
-        run: >-
-          qmake6 test.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
-          "DEFINES+=BOAT_TEST_PASSWORD=Password12!
-          BOAT_TEST_MYSQL_HOST=127.0.0.1
-          BOAT_TEST_POSTGRES_HOST=localhost"
+        run: |
+          qmake6 test.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15 \
+            "DEFINES+=BOAT_TEST_PASSWORD=Password12! BOAT_TEST_MYSQL_HOST=127.0.0.1 BOAT_TEST_POSTGRES_HOST=localhost"
+          make --jobs=2
+          xvfb-run --auto-servernum ./run --log_level=unit_scope
 
-      - name: Build Qt GUI test
-        working-directory: test/gui/qt
-        run: make --jobs=2
-
-      - name: Run Qt GUI test
-        working-directory: test/gui/qt
-        run: xvfb-run --auto-servernum ./run --log_level=unit_scope
-
-      - name: Build wx GUI test
+      - name: Test wx GUI
         working-directory: test/gui/wx
-        run: make --file=linux.makefile --jobs=2 CXX=g++-15
-
-      - name: Run wx GUI test
-        working-directory: test/gui/wx
-        run: make --file=linux.makefile test CXX=g++-15
+        run: make --file=linux.makefile --jobs=2 test CXX=g++-15
 
       - name: Build the Ubuntu package
         run: |
@@ -168,7 +119,7 @@ jobs:
 
   verify-package:
     name: Verify the Ubuntu package
-    needs: build-ugis
+    needs: build
     runs-on: ubuntu-26.04
     steps:
       - name: Download the Ubuntu package

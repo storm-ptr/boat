@@ -7,7 +7,6 @@
 #include <boat/geometry/raster.hpp>
 #include <boat/slippy.hpp>
 #include <boost/test/unit_test.hpp>
-#include <cstdlib>
 #include "data.hpp"
 
 BOOST_AUTO_TEST_CASE(gdal_source)
@@ -35,20 +34,18 @@ BOOST_AUTO_TEST_CASE(gdal_vector)
     struct {
         std::string path;
         std::string driver;
-        std::string_view group;
     } tests[] = {
-        {"", "MEM", "local"},
-        {"./drop.gdal_vector.gpkg", "GPKG", "local"},
-        {"./drop.gdal_vector.sqlite", "SQLite", "local"},
-        {boat::config::mssql_gdal_address(), "", "mssql"},
-        {boat::config::postgres_gdal_address, "", "postgres"},
+        {"", "MEM"},
+        {"./drop.gdal_vector.gpkg", "GPKG"},
+        {"./drop.gdal_vector.sqlite", "SQLite"},
+        {boat::config::mssql_gdal_address(), ""},
+        {boat::config::postgres_gdal_address, ""},
 
         // OFTDateTime is created without ms
-        // {boat::config::mysql_gdal_address, "", "mysql"},
+        // {boat::config::mysql_gdal_address, ""},
     };
-    auto selected = std::getenv("BOAT_TEST_GDAL");
-    for (auto [path, driver, group] : tests) {
-        if (selected != nullptr && group != selected)
+    for (auto [path, driver] : tests) {
+        if (path.empty() && driver.empty())
             continue;
         auto cat = boat::gdal::catalog{};
         if (driver.empty())
