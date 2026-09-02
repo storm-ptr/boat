@@ -31,15 +31,7 @@ jobs:
       - name: Check out the source
         uses: actions/checkout@v7
 
-      - name: Cache OSGeo4W
-        id: cache-osgeo4w
-        uses: actions/cache@v5
-        with:
-          path: C:\OSGeo4W
-          key: osgeo4w-v2-3
-
       - name: Install OSGeo4W
-        if: steps.cache-osgeo4w.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force $env:OSGEO4W_ROOT | Out-Null
@@ -54,45 +46,21 @@ jobs:
             throw "OSGeo4W development files were not installed"
           }
 
-      - name: Cache Qt
-        id: cache-qt
-        uses: actions/cache@v5
-        with:
-          path: C:\Qt
-          key: qt-${{ env.QT_VERSION }}-msvc2022-x64
-
       - name: Install Qt
-        if: steps.cache-qt.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           python -m pip install aqtinstall
           python -m aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 -O C:\Qt
 
-      - name: Cache Boost
-        id: cache-boost
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.BOOST_ROOT }}
-          key: boost-${{ env.BOOST_VERSION }}
-
       - name: Install Boost
-        if: steps.cache-boost.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $version = $env:BOOST_VERSION.Replace('.', '_')
-          $archive = "$env:RUNNER_TEMP\boost.zip"
-          Invoke-WebRequest "https://archives.boost.io/release/$env:BOOST_VERSION/source/boost_$version.zip" -OutFile $archive
-          7z x $archive -oC:\ -y | Out-Null
-
-      - name: Cache wxWidgets
-        id: cache-wx
-        uses: actions/cache@v5
-        with:
-          path: C:\wxWidgets
-          key: wxwidgets-${{ env.WX_VERSION }}-vc14x-x64
+          $archive = "$env:RUNNER_TEMP\boost.7z"
+          Invoke-WebRequest "https://archives.boost.io/release/$env:BOOST_VERSION/source/boost_$version.7z" -OutFile $archive
+          7z x $archive "boost_$version\boost\*" -oC:\ -y | Out-Null
 
       - name: Install wxWidgets
-        if: steps.cache-wx.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $base = "https://github.com/wxWidgets/wxWidgets/releases/download/v$env:WX_VERSION"
