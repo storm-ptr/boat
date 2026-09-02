@@ -14,8 +14,8 @@ permissions:
 
 env:
   OSGEO4W_ROOT: C:\OSGeo4W
-  QT_ROOT: C:\Qt\6.11.0\msvc2022_64
-  QT_VERSION: 6.11.0
+  QT_ROOT: C:\Qt\6.11.2\msvc2022_64
+  QT_VERSION: 6.11.2
   TEST_PASSWORD: Password12!
   UGIS_ARCHIVE: ugis.windows.x64.zip
   WX_ROOT: C:\wxWidgets
