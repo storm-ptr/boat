@@ -19,7 +19,7 @@ env:
   QT_ROOT: C:\Qt\6.10.3\msvc2022_64
   QT_VERSION: 6.10.3
   TEST_PASSWORD: Password12!
-  UGIS_ARCHIVE: ugis.windows.x64.zip
+  UGIS_ARTIFACT: ugis.windows.x64
   WX_ROOT: C:\wxWidgets
   WX_VERSION: 3.3.3
 
@@ -166,40 +166,37 @@ jobs:
         working-directory: test/gui/wx
         run: set CXXFLAGS=/DBOAT_TEST_PASSWORD=%TEST_PASSWORD% /DBOAT_TEST_MYSQL_HOST=localhost /DBOAT_TEST_POSTGRES_HOST=localhost&& nmake -f windows.makefile test
 
-      - name: Build the Windows archive
+      - name: Build the Windows bundle
         shell: pwsh
         run: |
-          $root = "$env:RUNNER_TEMP\ugis"
+          $root = "$env:GITHUB_WORKSPACE\$env:UGIS_ARTIFACT"
           New-Item -ItemType Directory $root | Out-Null
           Copy-Item example\ugis\release\ugis.exe $root
           & "$env:QT_ROOT\bin\windeployqt.exe" --release --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-opengl-sw "$root\ugis.exe"
           Copy-Item "$env:OSGEO4W_ROOT\bin\*.dll" $root
           Remove-Item "$root\mod_spatialite.dll" -ErrorAction SilentlyContinue
-          7z a $env:UGIS_ARCHIVE "$root\*"
 
-      - name: Upload the Windows archive
+      - name: Upload the Windows bundle
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.UGIS_ARCHIVE }}
-          path: ${{ env.UGIS_ARCHIVE }}
+          name: ${{ env.UGIS_ARTIFACT }}
+          path: ${{ env.UGIS_ARTIFACT }}
           if-no-files-found: error
 
-  verify-archive:
-    name: Verify the Windows archive
+  verify-bundle:
+    name: Verify the Windows bundle
     needs: build
     runs-on: windows-2025-vs2026
     steps:
-      - name: Download the Windows archive
+      - name: Download the Windows bundle
         uses: actions/download-artifact@v7
         with:
-          name: ${{ env.UGIS_ARCHIVE }}
+          name: ${{ env.UGIS_ARTIFACT }}
 
-      - name: Verify the archive
+      - name: Verify the bundle
         shell: pwsh
         run: |
-          7z t $env:UGIS_ARCHIVE
-          7z x $env:UGIS_ARCHIVE -overify -y | Out-Null
-          $process = Start-Process .\verify\ugis.exe -PassThru -WindowStyle Hidden
+          $process = Start-Process .\ugis.exe -PassThru -WindowStyle Hidden
           Start-Sleep 10
           if ($process.HasExited) { throw "ugis exited unexpectedly with status $($process.ExitCode)" }
           Stop-Process -Id $process.Id
