@@ -14,9 +14,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APPVEYOR_PROJECT: https://ci.appveyor.com/api/projects/storm-ptr/boat
   LINUX_ARTIFACT: ugis.ubuntu.x64.deb
-  WINDOWS_ARTIFACT: ugis.windows.x64.zip
+  WINDOWS_ARTIFACT: ugis.windows.x64
+  WINDOWS_ARCHIVE: ugis.windows.x64.zip
 
 jobs:
   release:
@@ -34,40 +34,31 @@ jobs:
 
       - name: Download the Windows artifact
         env:
+          GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ steps.commit.outputs.sha }}
         run: |
           set -euo pipefail
 
-          history=$(curl --fail --silent --show-error \
-            "$APPVEYOR_PROJECT/history?recordsNumber=100&branch=main")
-          version=$(jq -r --arg sha "$TARGET_SHA" \
-            '[.builds[] | select(.commitId == $sha and .status == "success")][0].version // empty' \
-            <<< "$history")
-          if [[ -z "$version" ]]; then
-            echo "A successful AppVeyor main build is required for $TARGET_SHA" >&2
+          run_id=$(gh run list \
+            --workflow windows.yml \
+            --branch main \
+            --commit "$TARGET_SHA" \
+            --event push \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+          if [[ -z "$run_id" ]]; then
+            echo "A successful Windows main build is required for $TARGET_SHA" >&2
             exit 1
           fi
 
-          build=$(curl --fail --silent --show-error \
-            "$APPVEYOR_PROJECT/build/$version")
-          job_id=$(jq -r --arg sha "$TARGET_SHA" \
-            'select(.build.commitId == $sha and .build.status == "success") |
-             [.build.jobs[] | select(.status == "success")][0].jobId // empty' \
-            <<< "$build")
-          if [[ -z "$job_id" ]]; then
-            echo "AppVeyor build no longer matches the tagged commit" >&2
-            exit 1
-          fi
-
-          api=https://ci.appveyor.com/api
-          artifacts=$(curl --fail --silent --show-error \
-            "$api/buildjobs/$job_id/artifacts")
-          jq -e --arg name "$WINDOWS_ARTIFACT" \
-            '.[] | select(.fileName == $name)' <<< "$artifacts" > /dev/null
-          curl --fail --location --silent --show-error \
-            "$api/buildjobs/$job_id/artifacts/$WINDOWS_ARTIFACT" \
-            --output "$WINDOWS_ARTIFACT"
-          unzip -t "$WINDOWS_ARTIFACT"
+          mkdir windows-artifact
+          gh run download "$run_id" \
+            --name "$WINDOWS_ARTIFACT" \
+            --dir windows-artifact
+          (cd windows-artifact && zip --recurse-paths "../$WINDOWS_ARCHIVE" .)
+          unzip -t "$WINDOWS_ARCHIVE"
 
       - name: Download and version the Ubuntu package
         env:
@@ -119,7 +110,7 @@ jobs:
           fi
           gh release create \
             "$GITHUB_REF_NAME" \
-            "$WINDOWS_ARTIFACT" \
+            "$WINDOWS_ARCHIVE" \
             "$LINUX_ARTIFACT" \
             --draft \
             --verify-tag \
