@@ -122,6 +122,7 @@ inline std::vector<std::string> odbc_address()
 
 inline std::string mssql_gdal_address()
 {
+#if defined(BOAT_TEST_MSSQL_HOST)
     for (auto [srv, drv] : detail::odbc_drivers({"sql server"}))
         if (srv == "sql server")
             return boat::concat(  //
@@ -131,6 +132,7 @@ inline std::string mssql_gdal_address()
                 mssql_host,
                 ";database=master;uid=sa;pwd=",
                 password);
+#endif
     return {};
 }
 
