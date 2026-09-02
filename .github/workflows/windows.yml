@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: C:\OSGeo4W
-          key: osgeo4w-v2-2
+          key: osgeo4w-v2-3
 
       - name: Install OSGeo4W
         if: steps.cache-osgeo4w.outputs.cache-hit != 'true'
@@ -45,10 +45,14 @@ jobs:
           New-Item -ItemType Directory -Force $env:OSGEO4W_ROOT | Out-Null
           $setup = "$env:OSGEO4W_ROOT\osgeo4w-setup.exe"
           Invoke-WebRequest https://download.osgeo.org/osgeo4w/v2/osgeo4w-setup.exe -OutFile $setup
-          & $setup -q -k -r -A -s https://download.osgeo.org/osgeo4w/v2 `
-            -P curl-devel,gdal-devel,gdal-mss,libjpeg-devel,libmysql-devel,libpng-devel,libpq-devel,libspatialite-devel,sqlite3-devel,zlib-devel `
-            -R $env:OSGEO4W_ROOT
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $packages = "curl-devel,gdal-devel,gdal-mss,libjpeg-devel,libmysql-devel,libpng-devel,libpq-devel,libspatialite-devel,sqlite3-devel,zlib-devel"
+          $process = Start-Process $setup `
+            -ArgumentList "-q -k -r -A -s https://download.osgeo.org/osgeo4w/v2 -P $packages -R $env:OSGEO4W_ROOT" `
+            -PassThru -Wait -WindowStyle Hidden
+          if ($process.ExitCode) { exit $process.ExitCode }
+          if (!(Test-Path "$env:OSGEO4W_ROOT\include\cpl_conv.h")) {
+            throw "OSGeo4W development files were not installed"
+          }
 
       - name: Cache Qt
         id: cache-qt
