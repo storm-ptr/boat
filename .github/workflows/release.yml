@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  LINUX_ARTIFACT: ugis.ubuntu.x64.deb
+  UBUNTU_ARTIFACT: ugis.ubuntu-26.04.x64.deb
   WINDOWS_ARTIFACT: ugis.windows.x64
   WINDOWS_ARCHIVE: ugis.windows.x64.zip
 
@@ -68,7 +68,7 @@ jobs:
           set -euo pipefail
 
           run_id=$(gh run list \
-            --workflow linux.yml \
+            --workflow ubuntu.yml \
             --branch main \
             --commit "$TARGET_SHA" \
             --event push \
@@ -77,26 +77,26 @@ jobs:
             --json databaseId \
             --jq '.[0].databaseId // empty')
           if [[ -z "$run_id" ]]; then
-            echo "A successful Linux main build is required for $TARGET_SHA" >&2
+            echo "A successful Ubuntu main build is required for $TARGET_SHA" >&2
             exit 1
           fi
 
-          mkdir linux-artifact
+          mkdir ubuntu-artifact
           gh run download "$run_id" \
-            --name "$LINUX_ARTIFACT" \
-            --dir linux-artifact
-          mv "linux-artifact/$LINUX_ARTIFACT" .
+            --name "$UBUNTU_ARTIFACT" \
+            --dir ubuntu-artifact
+          mv "ubuntu-artifact/$UBUNTU_ARTIFACT" .
 
           version=${GITHUB_REF_NAME#v}
           [[ $version =~ ^[0-9][0-9A-Za-z.+~-]*$ ]]
           work=$(mktemp --directory)
           trap 'rm -rf "$work"' EXIT
-          dpkg-deb --raw-extract "$LINUX_ARTIFACT" "$work/root"
+          dpkg-deb --raw-extract "$UBUNTU_ARTIFACT" "$work/root"
           sed -i "s/^Version: .*/Version: $version/" "$work/root/DEBIAN/control"
           dpkg-deb --build --root-owner-group \
-            "$work/root" "$work/$LINUX_ARTIFACT"
-          mv "$work/$LINUX_ARTIFACT" "$LINUX_ARTIFACT"
-          test "$(dpkg-deb --field "$LINUX_ARTIFACT" Version)" = "$version"
+            "$work/root" "$work/$UBUNTU_ARTIFACT"
+          mv "$work/$UBUNTU_ARTIFACT" "$UBUNTU_ARTIFACT"
+          test "$(dpkg-deb --field "$UBUNTU_ARTIFACT" Version)" = "$version"
 
       - name: Create the draft release
         env:
@@ -111,7 +111,7 @@ jobs:
           gh release create \
             "$GITHUB_REF_NAME" \
             "$WINDOWS_ARCHIVE" \
-            "$LINUX_ARTIFACT" \
+            "$UBUNTU_ARTIFACT" \
             --draft \
             --verify-tag \
             --title "ugis $GITHUB_REF_NAME" \
