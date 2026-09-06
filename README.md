@@ -1,3 +1,5 @@
+<img width="1214" height="789" alt="ugis2" src="https://github.com/user-attachments/assets/19899d42-95cb-49f2-8133-27a001a7eb9d" />
+
 [![Ubuntu](https://github.com/storm-ptr/boat/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/storm-ptr/boat/actions/workflows/ubuntu.yml)
 [![Windows](https://github.com/storm-ptr/boat/actions/workflows/windows.yml/badge.svg)](https://github.com/storm-ptr/boat/actions/workflows/windows.yml)
 
@@ -7,23 +9,20 @@ A cross-platform, header-only C++23 library for working with geospatial data.
 
 ## Modules
 
-- **geometry** — WKB/WKT conversion, coordinate transforms, raster algorithms
+- **geometry** — WKB conversion, raster algorithms
 - **db** — type-safe database access (commands, rowsets, variants, reflection)
-- **sql** — SQL dialect abstraction (SQLite, MySQL/MariaDB, PostgreSQL, ODBC)
+- **sql** — SQL dialect abstraction (MySQL, ODBC, PostgreSQL/PostGIS, SQLite/SpatiaLite)
 - **gdal** — GDAL/OGR wrappers for raster and vector I/O
 - **gui** — Qt and wxWidgets providers for map rendering and tile caching
 
 ## ugis
 
-A micro GIS application built on top of the boat library — browse, inspect and
-copy geospatial data from a variety of sources.
-
-<img width="1214" height="789" alt="ugis2" src="https://github.com/user-attachments/assets/19899d42-95cb-49f2-8133-27a001a7eb9d" />
+A micro GIS application built on top of the boat library —
+browse, inspect and copy geospatial data from a variety of sources.
 
 ### Download
 
-- [ugis.windows.zip](https://github.com/storm-ptr/boat/releases/latest/download/ugis.windows.zip)
-- [ugis.ubuntu-26.04.deb](https://github.com/storm-ptr/boat/releases/latest/download/ugis.ubuntu-26.04.deb)
+- [latest](https://github.com/storm-ptr/boat/releases/latest)
 
 ### Run
 
@@ -44,7 +43,7 @@ ugis
 Extract the archive and run:
 
 ```sh
-ugis\ugis.exe
+ugis.exe
 ```
 
 </details>
@@ -89,9 +88,10 @@ Install the following:
 - [Visual Studio 2026](https://visualstudio.microsoft.com/) (MSVC, NMake)
 - [Qt 6](https://www.qt.io/download) (MSVC 64-bit)
 - [Boost](https://www.boost.org/users/download/) (headers only)
-- [wxWidgets](https://www.wxwidgets.org/download/) (MSVC 64-bit DLLs)
-- [OSGeo4W](https://trac.osgeo.org/osgeo4w/) — GDAL, libcurl, libjpeg, libmysql,
-  libpng, libpq, libspatialite, sqlite3, zlib (development packages)
+- [wxWidgets](https://wxwidgets.org/downloads/) (MSVC 64-bit DLLs)
+- [OSGeo4W](https://trac.osgeo.org/osgeo4w/) —
+  GDAL, libcurl, libjpeg, libmysql, libpng, libpq, libspatialite, sqlite3, zlib
+  (development packages)
 
 Set environment variables:
 
