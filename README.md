@@ -18,6 +18,8 @@ A cross-platform, header-only C++23 library for working with geospatial data.
 A micro GIS application built on top of the boat library — browse, inspect and
 copy geospatial data from a variety of sources.
 
+<img width="1214" height="789" alt="ugis2" src="https://github.com/user-attachments/assets/19899d42-95cb-49f2-8133-27a001a7eb9d" />
+
 ### Download
 
 - [ugis.windows.zip](https://github.com/storm-ptr/boat/releases/latest/download/ugis.windows.zip)
