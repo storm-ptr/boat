@@ -99,24 +99,36 @@ jobs:
       - name: Build the Ubuntu package
         run: |
           version="0.0.0+git${GITHUB_RUN_NUMBER}.${GITHUB_SHA::8}"
-          root="$UGIS_PACKAGE.tmp"
-          mkdir -p "$root/DEBIAN" "$root/usr/bin"
+          root="$GITHUB_WORKSPACE/$UGIS_PACKAGE.tmp"
+          work="$(mktemp --directory)"
+          mkdir -p "$root/DEBIAN" "$root/usr/bin" "$work/debian"
           strip --strip-unneeded example/ugis/ugis
           install -m 0755 example/ugis/ugis "$root/usr/bin/ugis"
-          depends=$(dpkg-shlibdeps --package=ugis -O "$root/usr/bin/ugis" \
-            2>/dev/null | sed -n 's/^shlibs:Depends=//p')
-          cat > "$root/DEBIAN/control" <<EOF
-          Package: ugis
-          Version: $version
-          Section: science
-          Priority: optional
-          Architecture: $(dpkg --print-architecture)
-          Maintainer: Andrew Naplavkov <storm-ptr@users.noreply.github.com>
-          Depends: $depends
-          Homepage: https://github.com/storm-ptr/boat
-          Description: Universal GIS application
-           ugis is a desktop application for viewing and working with geospatial data.
-          EOF
+          {
+            echo "Source: ugis"
+            echo "Section: science"
+            echo "Priority: optional"
+            echo "Maintainer: Andrew Naplavkov <storm-ptr@users.noreply.github.com>"
+            echo ""
+            echo "Package: ugis"
+            echo "Architecture: any"
+            echo "Depends: \${shlibs:Depends}"
+            echo "Description: Universal GIS application"
+          } > "$work/debian/control"
+          depends=$(cd "$work" && dpkg-shlibdeps --package=ugis -O "$root/usr/bin/ugis" \
+            | sed -n 's/^shlibs:Depends=//p')
+          {
+            echo "Package: ugis"
+            echo "Version: $version"
+            echo "Section: science"
+            echo "Priority: optional"
+            echo "Architecture: $(dpkg --print-architecture)"
+            echo "Maintainer: Andrew Naplavkov <storm-ptr@users.noreply.github.com>"
+            echo "Depends: $depends"
+            echo "Homepage: https://github.com/storm-ptr/boat"
+            echo "Description: Universal GIS application"
+            echo " ugis is a desktop application for viewing and working with geospatial data."
+          } > "$root/DEBIAN/control"
           dpkg-deb --build --root-owner-group "$root" "$UGIS_PACKAGE"
           dpkg-deb --info "$UGIS_PACKAGE"
           dpkg-deb --contents "$UGIS_PACKAGE"
