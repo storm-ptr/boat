@@ -2,11 +2,9 @@ name: Windows
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -19,7 +17,7 @@ env:
   QT_ROOT: C:\Qt\6.10.3\msvc2022_64
   QT_VERSION: 6.10.3
   TEST_PASSWORD: Password12!
-  UGIS_ARTIFACT: ugis.windows.x64
+  UGIS_ARTIFACT: ugis.windows
   WX_ROOT: C:\wxWidgets
   WX_VERSION: 3.3.3
 
@@ -28,8 +26,7 @@ jobs:
     name: Build and test on Windows 2025
     runs-on: windows-2025-vs2026
     steps:
-      - name: Check out the source
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
       - name: Install OSGeo4W
         shell: pwsh
@@ -144,8 +141,7 @@ jobs:
           Copy-Item "$env:OSGEO4W_ROOT\bin\*.dll" $root
           Remove-Item "$root\mod_spatialite.dll" -ErrorAction SilentlyContinue
 
-      - name: Upload the Windows bundle
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.UGIS_ARTIFACT }}
           path: ${{ env.UGIS_ARTIFACT }}
@@ -156,8 +152,7 @@ jobs:
     needs: build
     runs-on: windows-2025-vs2026
     steps:
-      - name: Download the Windows bundle
-        uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v7
         with:
           name: ${{ env.UGIS_ARTIFACT }}
 

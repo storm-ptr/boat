@@ -2,18 +2,16 @@ name: Ubuntu
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
-  UGIS_PACKAGE: ugis.ubuntu-26.04.x64.deb
+  UGIS_PACKAGE: ugis.ubuntu-26.04.deb
 
 jobs:
   build:
@@ -44,8 +42,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - name: Check out the source
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
       - name: Install build dependencies
         run: |
@@ -80,12 +77,8 @@ jobs:
           qmake6 ugis.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
           make --jobs="$(nproc)"
           test -x ugis
-          status=0
-          timeout --kill-after=5s 10s xvfb-run --auto-servernum ./ugis || status=$?
-          if [ "$status" -ne 124 ]; then
-            echo "ugis exited unexpectedly with status $status" >&2
-            exit 1
-          fi
+          timeout --kill-after=5s 10s xvfb-run --auto-servernum ./ugis && status=$? || status=$?
+          [ "$status" -eq 124 ] || { echo "ugis exited unexpectedly with status $status" >&2; exit 1; }
 
       - name: Test
         working-directory: test
@@ -106,15 +99,29 @@ jobs:
       - name: Build the Ubuntu package
         run: |
           version="0.0.0+git${GITHUB_RUN_NUMBER}.${GITHUB_SHA::8}"
-          bash packaging/build-deb.sh \
-            example/ugis/ugis \
-            "$version" \
-            "$UGIS_PACKAGE"
+          root="$UGIS_PACKAGE.tmp"
+          mkdir -p "$root/DEBIAN" "$root/usr/bin"
+          strip --strip-unneeded example/ugis/ugis
+          install -m 0755 example/ugis/ugis "$root/usr/bin/ugis"
+          depends=$(dpkg-shlibdeps --package=ugis -O "$root/usr/bin/ugis" \
+            2>/dev/null | sed -n 's/^shlibs:Depends=//p')
+          cat > "$root/DEBIAN/control" <<EOF
+          Package: ugis
+          Version: $version
+          Section: science
+          Priority: optional
+          Architecture: $(dpkg --print-architecture)
+          Maintainer: Andrew Naplavkov <storm-ptr@users.noreply.github.com>
+          Depends: $depends
+          Homepage: https://github.com/storm-ptr/boat
+          Description: Universal GIS application
+           ugis is a desktop application for viewing and working with geospatial data.
+          EOF
+          dpkg-deb --build --root-owner-group "$root" "$UGIS_PACKAGE"
           dpkg-deb --info "$UGIS_PACKAGE"
           dpkg-deb --contents "$UGIS_PACKAGE"
 
-      - name: Upload the Ubuntu package
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.UGIS_PACKAGE }}
           path: ${{ env.UGIS_PACKAGE }}
@@ -125,23 +132,15 @@ jobs:
     needs: build
     runs-on: ubuntu-26.04
     steps:
-      - name: Download the Ubuntu package
-        uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v7
         with:
           name: ${{ env.UGIS_PACKAGE }}
 
-      - name: Install the package and its dependencies
+      - name: Install and verify the package
         run: |
           sudo apt-get update
           sudo apt-get install --yes "./$UGIS_PACKAGE" xauth xvfb
-
-      - name: Verify the installed package
-        run: |
           test "$(command -v ugis)" = "/usr/bin/ugis"
           dpkg-query --show --showformat='${Status}\n${Version}\n' ugis
-          status=0
-          timeout --kill-after=5s 10s xvfb-run --auto-servernum ugis || status=$?
-          if [ "$status" -ne 124 ]; then
-            echo "installed ugis exited unexpectedly with status $status" >&2
-            exit 1
-          fi
+          timeout --kill-after=5s 10s xvfb-run --auto-servernum ugis && status=$? || status=$?
+          [ "$status" -eq 124 ] || { echo "installed ugis exited unexpectedly with status $status" >&2; exit 1; }
