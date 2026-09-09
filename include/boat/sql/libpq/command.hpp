@@ -19,8 +19,13 @@ public:
         check(dbc_ && PQstatus(dbc_.get()) == CONNECTION_OK, dbc_.get());
     }
 
-    db::rowset exec(db::query const& qry) override
+    db::rowset exec(db::query const& qry, std::stop_token tok = {}) override
     {
+        auto cxl = unique_ptr<PGcancel, PQfreeCancel>{PQgetCancel(dbc_.get())};
+        check(!!cxl, dbc_.get());
+        char err[256]{};
+        auto stop = std::stop_callback{
+            tok, [&] { PQcancel(cxl.get(), err, sizeof(err)); }};
         auto txt = qry.text(id_quote(), param_mark());
         auto ps = qry.params() | std::views::transform(params::make) |
                   std::ranges::to<std::vector>();

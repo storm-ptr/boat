@@ -115,7 +115,7 @@ void sql_view::run()
         if (tok.stop_requested())
             return;
         try {
-            auto rows = make_command(address_)->exec(sql);
+            auto rows = make_command(address_)->exec(sql, tok);
             if (tok.stop_requested())
                 return;
             auto text = format(rows);

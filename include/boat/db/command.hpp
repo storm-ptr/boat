@@ -5,12 +5,13 @@
 
 #include <boat/db/query.hpp>
 #include <boat/db/rowset.hpp>
+#include <stop_token>
 
 namespace boat::db {
 
 struct command {
     virtual ~command() = default;
-    virtual rowset exec(query const&) = 0;
+    virtual rowset exec(query const&, std::stop_token = {}) = 0;
     virtual void set_autocommit(bool) = 0;
     virtual void commit() = 0;
     virtual char id_quote() = 0;

@@ -12,7 +12,7 @@ struct command : db::command {
     dataset_ptr dataset;
     std::string dialect;
 
-    db::rowset exec(db::query const& qry) override
+    db::rowset exec(db::query const& qry, std::stop_token = {}) override
     {
         auto txt = qry.text(id_quote(), param_mark());
         if (auto lyr = execute(dataset.get(), txt.data(), dialect.data()))

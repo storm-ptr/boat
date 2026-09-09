@@ -42,7 +42,7 @@ public:
         check(!mysql_set_character_set(dbc_.get(), "utf8"), dbc_);
     }
 
-    db::rowset exec(db::query const& qry) override
+    db::rowset exec(db::query const& qry, std::stop_token = {}) override
     {
         auto ret = db::rowset{};
         auto txt = qry.text(id_quote(), param_mark());

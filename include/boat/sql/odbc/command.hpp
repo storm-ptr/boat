@@ -49,8 +49,9 @@ public:
         dbms_ = to_lower(info(dbc_, SQL_DBMS_NAME));
     }
 
-    db::rowset exec(db::query const& qry) override
+    db::rowset exec(db::query const& qry, std::stop_token tok = {}) override
     {
+        auto stop = std::stop_callback{tok, [&] { SQLCancel(stmt_.get()); }};
         check(SQLFreeStmt(stmt_.get(), SQL_RESET_PARAMS), stmt_);
         auto ret = db::rowset{};
         auto txt = qry.text(id_quote_, param_mark()) | unicode::utf<SQLWCHAR>;

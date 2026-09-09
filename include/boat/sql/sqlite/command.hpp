@@ -32,8 +32,10 @@ public:
             }
     }
 
-    db::rowset exec(db::query const& qry) override
+    db::rowset exec(db::query const& qry, std::stop_token tok = {}) override
     {
+        auto stop =
+            std::stop_callback{tok, [&] { sqlite3_interrupt(dbc_.get()); }};
         auto ret = db::rowset{};
         auto const txt = qry.text(id_quote(), param_mark());
         auto first = txt.data();
