@@ -1,10 +1,8 @@
 // Andrew Naplavkov
 
-#include <QClipboard>
 #include <QColorDialog>
 #include <QContextMenuEvent>
 #include <QFileDialog>
-#include <QGuiApplication>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLineEdit>
@@ -142,12 +140,6 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
                 idx,
                 ensure_extension(std::move(path), fmt->extension),
                 fmt->driver);
-    });
-    populated |= add(is_vector, "copy name", [opt] {
-        auto schema = QString::fromStdString(opt->layer.schema_name);
-        auto table = QString::fromStdString(opt->layer.table_name);
-        QGuiApplication::clipboard()->setText(
-            schema.isEmpty() ? table : schema + "." + table);
     });
     populated |= add(model_.can_paste_to(idx), "paste layer", [this, idx] {
         auto ok = false;
