@@ -77,7 +77,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     populated |= add(model_.can_refresh(idx), "refresh source", [this, idx] {
         model_.refresh(idx);
     });
-    populated |= add(is_vector && map_, "sample in log", [this, idx] {
+    populated |= add(is_vector && map_, "sample from map to log", [this, idx] {
         if (map_)
             model_.sample(idx, map_->view());
     });

@@ -9,7 +9,7 @@ A cross-platform, header-only C++23 library for working with geospatial data.
 
 ## Modules
 
-- **geometry** — WKB conversion, raster algorithms
+- **geometry** — Boost.Geometry wrapper and extensions: WKB conversion, raster algorithms
 - **db** — type-safe database access (commands, rowsets, variants, reflection)
 - **sql** — SQL dialect abstraction (MySQL, ODBC, PostgreSQL/PostGIS, SQLite/SpatiaLite)
 - **gdal** — GDAL/OGR wrappers for raster and vector I/O
