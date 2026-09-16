@@ -59,6 +59,7 @@ ugis.exe
 sudo apt-get install --yes --no-install-recommends \
   gcc-15 \
   g++-15 \
+  git \
   make \
   pkg-config \
   qmake6 \
@@ -73,7 +74,6 @@ sudo apt-get install --yes --no-install-recommends \
   libspatialite-dev \
   libsqlite3-dev \
   libtbb-dev \
-  libwxgtk3.2-dev \
   odbc-postgresql \
   unixodbc-dev
 ```
@@ -86,21 +86,21 @@ sudo apt-get install --yes --no-install-recommends \
 Install the following:
 
 - [Visual Studio 2026](https://visualstudio.microsoft.com/) (MSVC, NMake)
+- [Git](https://git-scm.com/downloads/win)
 - [Qt 6](https://www.qt.io/download) (MSVC 64-bit)
 - [Boost](https://www.boost.org/users/download/) (headers only)
-- [wxWidgets](https://wxwidgets.org/downloads/) (MSVC 64-bit DLLs)
 - [OSGeo4W](https://trac.osgeo.org/osgeo4w/) —
   GDAL, libcurl, libjpeg, libmysql, libpng, libpq, libspatialite, sqlite3, zlib
   (development packages)
 
-Set environment variables:
+Run the following commands from the **x64 Native Tools Command Prompt for
+Visual Studio 2026**:
 
 ```cmd
-set INCLUDE=%CD%\include;C:\boost_1_91_0;C:\OSGeo4W\include;%INCLUDE%
+set INCLUDE=C:\boost_1_91_0;C:\OSGeo4W\include;%INCLUDE%
 set LIB=C:\OSGeo4W\lib;%LIB%
-set PATH=C:\Qt\6.10.3\msvc2022_64\bin;C:\OSGeo4W\bin;C:\wxWidgets\lib\vc14x_x64_dll;%PATH%
+set PATH=C:\Qt\6.10.3\msvc2022_64\bin;C:\OSGeo4W\bin;%PATH%
 set QT_PLUGIN_PATH=C:\Qt\6.10.3\msvc2022_64\plugins
-set WXWIN=C:\wxWidgets
 ```
 
 </details>
@@ -111,7 +111,8 @@ set WXWIN=C:\wxWidgets
 <summary>Ubuntu</summary>
 
 ```sh
-cd example/ugis
+git clone --depth=1 https://github.com/storm-ptr/boat.git
+cd boat/example/ugis
 qmake6 ugis.pro QMAKE_CC=gcc-15 QMAKE_CXX=g++-15
 make --jobs="$(nproc)"
 ```
@@ -122,7 +123,8 @@ make --jobs="$(nproc)"
 <summary>Windows</summary>
 
 ```cmd
-cd example\ugis
+git clone --depth=1 https://github.com/storm-ptr/boat.git
+cd boat\example\ugis
 qmake
 nmake
 ```
