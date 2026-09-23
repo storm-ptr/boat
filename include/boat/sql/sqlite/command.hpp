@@ -43,11 +43,13 @@ public:
         auto ps = qry.params();
         auto it = ps.begin();
         while (first != last) {
-            ret = {};
-            sqlite3_stmt* stmt;
+            sqlite3_stmt* stmt{};
             check(sqlite3_prepare_v2(
                       dbc_.get(), first, int(last - first), &stmt, &first),
                   dbc_);
+            if (!stmt)
+                continue;
+            ret = {};
             auto _ = unique_ptr<sqlite3_stmt, sqlite3_finalize>{stmt};
             int params = sqlite3_bind_parameter_count(stmt);
             for (int i{}; i < params && it != ps.end(); ++i, ++it)

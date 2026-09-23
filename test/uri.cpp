@@ -8,7 +8,7 @@ BOOST_AUTO_TEST_CASE(uri)
 {
     struct {
         std::string_view str;
-        boat::uri expect;
+        boat::uri url;
     } tests[] = {
         {"http://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
          {.scheme = "http",
@@ -68,6 +68,8 @@ BOOST_AUTO_TEST_CASE(uri)
           .query = "client_encoding=UTF8"}},
         {"postgresql://localhost",
          {.scheme = "postgresql", .host_spec = "localhost"}},
+        {"custom+ext-1.0://localhost",
+         {.scheme = "custom+ext-1.0", .host_spec = "localhost"}},
         {"postgresql://localhost:5433",
          {.scheme = "postgresql", .host_spec = "localhost:5433"}},
         {"postgresql://localhost/mydb",
@@ -94,6 +96,6 @@ BOOST_AUTO_TEST_CASE(uri)
           .query = "target_session_attrs=any&application_name=myapp"}},
         {"sqlite:///:memory:", {.scheme = "sqlite", .path = ":memory:"}},
     };
-    for (auto& [str, expect] : tests)
-        BOOST_CHECK(boat::uri::parse(str) == expect);
+    for (auto& [str, url] : tests)
+        BOOST_CHECK(boat::uri::parse(str) == url);
 }

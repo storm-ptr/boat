@@ -22,11 +22,8 @@ concept arithmetic = std::is_arithmetic_v<T>;
 template <class T>
 concept execution_policy = std::is_execution_policy_v<T>;
 
-template <template <class...> class Tpl, class... Ts>
-void specialization_test(Tpl<Ts...> const&);
-
-template <class T, template <class...> class Tpl>
-concept specialized = requires(T v) { specialization_test<Tpl>(v); };
+template <class T, template <class...> class U>
+concept specialized = requires(T v) { []<class... Ts>(U<Ts...> const&) {}(v); };
 
 template <class T>
 concept ostream = specialized<T, std::basic_ostream>;

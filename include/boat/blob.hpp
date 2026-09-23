@@ -24,7 +24,7 @@ struct blob : std::basic_string<std::byte> {
 };
 
 template <class I, class O>
-    requires std::same_as<std::remove_cvref_t<I>, blob_view>
+    requires std::same_as<std::remove_reference_t<I>, blob_view>
 decltype(auto) operator>>(I && in, O & out)
 {
     if constexpr (arithmetic<O>) {
@@ -38,7 +38,7 @@ decltype(auto) operator>>(I && in, O & out)
 }
 
 template <class O, class I>
-    requires std::same_as<std::remove_cvref_t<O>, blob>
+    requires std::same_as<std::remove_reference_t<O>, blob>
 decltype(auto) operator<<(O && out, I const& in)
 {
     if constexpr (arithmetic<I>)
@@ -74,7 +74,7 @@ struct hex {
 
     friend auto& operator<<(ostream auto& out, hex const& in)
     {
-        using char_t = std::decay_t<decltype(out)>::char_type;
+        using char_t = std::remove_cvref_t<decltype(out)>::char_type;
         auto os = std::basic_ostringstream<char_t>{};
         os << std::uppercase << std::hex << std::setfill<char_t>('0');
         for (auto byte : in.bytes)

@@ -18,7 +18,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     auto cat = make_catalog(lyr.address);
     if (lyr.layer.raster) {
         auto rast = cat->get_raster(lyr.layer);
-        auto crs = geo::srs::epsg(rast.epsg);
+        auto crs = geo::to_srs_variant(rast);
         auto x = rast.xorig + (rast.width / 2.) * rast.xscale;
         auto y = rast.yorig + (rast.height / 2.) * rast.yscale;
         return geo::transform(geo::srs_inverse(geo::transformation(crs)))(
@@ -30,7 +30,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
     if (it == tbl.columns.end())
         return {};
-    auto crs = geo::srs::epsg(it->epsg);
+    auto crs = geo::to_srs_variant(*it);
     if (tok.stop_requested())
         return {};
     auto rs =

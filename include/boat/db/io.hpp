@@ -11,7 +11,7 @@ namespace boat::db {
 
 auto& operator<<(ostream auto& out, rowset const& in)
 {
-    using char_t = std::decay_t<decltype(out)>::char_type;
+    using char_t = std::remove_cvref_t<decltype(out)>::char_type;
     auto sizes = std::vector<size_t>(in.columns.size());
     auto cols = in.columns | std::ranges::to<std::vector<variant>>();
     auto line = std::vector<variant>(cols.size());

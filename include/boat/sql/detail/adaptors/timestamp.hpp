@@ -31,7 +31,7 @@ struct timestamp : impl<std::chrono::sys_seconds> {
             qry << "cast(cast(" << id
                 << " at time zone 'UTC' as timestamp) as varchar(50)) " << id;
         else if (is_sqlite(dbms_))
-            qry << "datetime(" << id << ", 'subsec') " << id;
+            qry << "cast(" << id << " as text) " << id;
         else
             qry << "cast(" << id << " as varchar(50)) " << id;
     }
@@ -41,6 +41,9 @@ struct timestamp : impl<std::chrono::sys_seconds> {
         if (is_mysql(dbms_))
             qry << "str_to_date(" << std::move(var)
                 << ", '%Y-%m-%d %H:%i:%s.%f')";
+        else if (is_postgres(dbms_) && type() == "timestamp with time zone")
+            qry << "cast(" << std::move(var)
+                << " as timestamp) at time zone 'UTC'";
         else if (is_sqlite(dbms_))
             qry << std::move(var);
         else

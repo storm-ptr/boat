@@ -57,7 +57,7 @@ public:
             [&](blob_view v) { os << "x'" << hex{v} << "'"; }};
         auto item_vis = overloaded{
             [&](std::string const& v) { os << v; },
-            [&](id const& v) { os << unicode::quoted(v, id_quote); },
+            [&](id const& v) { os << unicode::quoted(v, id_quote, id_quote); },
             [&](variant const& v) {
                 if (param_mark.empty() or not v)
                     std::visit(param_vis, v);

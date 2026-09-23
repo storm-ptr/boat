@@ -48,8 +48,7 @@ using any_image = boost::mp11::mp_rename<  //
             boost::gil::rgba_layout_t>>,
     boost::gil::any_image>;
 
-using any_image_view =
-    std::decay_t<decltype(const_view(std::declval<any_image>()))>;
+using any_image_view = typename any_image::const_view_t;
 
 template <class T>
     requires requires { boost::gil::view(std::declval<T&>()); }

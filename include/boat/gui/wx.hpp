@@ -46,10 +46,10 @@ void draw_image(  //
     execution_policy auto policy,
     boost::gil::rgba8c_view_t in,
     geometry::matrix const& in_affine,
-    geometry::srs_params auto&& in_crs,
+    geometry::srs_spec auto&& in_crs,
     wxGraphicsContext& out,
     geometry::matrix const& out_affine,
-    geometry::srs_params auto&& out_crs)
+    geometry::srs_spec auto&& out_crs)
 {
     auto [fwd, inv] = bidirectional(in_affine, in_crs, out_affine, out_crs);
     auto intersect = [&](geometry::box auto&& v) {

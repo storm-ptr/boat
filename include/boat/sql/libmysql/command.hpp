@@ -40,6 +40,7 @@ public:
                   CLIENT_MULTI_STATEMENTS) == dbc_.get(),
               dbc_);
         check(!mysql_set_character_set(dbc_.get(), "utf8"), dbc_);
+        check(!mysql_query(dbc_.get(), "set time_zone = '+00:00'"), dbc_);
     }
 
     db::rowset exec(db::query const& qry, std::stop_token = {}) override

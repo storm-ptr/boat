@@ -4,7 +4,6 @@
 #define TREE_H
 
 #include <QBrush>
-#include <QDataStream>
 #include <QPen>
 #include <QString>
 #include <boat/db/meta.hpp>

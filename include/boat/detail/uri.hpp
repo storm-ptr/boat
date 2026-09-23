@@ -27,7 +27,7 @@ struct uri {
     static uri parse(std::string_view str)
     {
         static auto const regex = std::regex{
-            R"(^(\w+):\/\/(([^:@]*)(:([^@]*))?\@)?([^/?#]+)?(\/([^?#]*))?(\?([^#]*))?(\#(.*))?$)"};
+            R"(^([A-Za-z][A-Za-z0-9+.-]*):\/\/(([^:@]*)(:([^@]*))?\@)?([^/?#]+)?(\/([^?#]*))?(\?([^#]*))?(\#(.*))?$)"};
         auto m = std::cmatch{};
         return std::regex_match(str.data(), str.data() + str.size(), m, regex)
                    ? uri{.scheme{m[1].first, m[1].second},

@@ -102,12 +102,16 @@ inline void insert(OGRLayerH lyr, db::rowset const& rs, std::stop_token tok)
 {
     auto flds = fields::make(lyr, rs.columns);
     auto fd = OGR_L_GetLayerDefn(lyr);
+    auto drv = GDALGetDriverShortName(
+        GDALGetDatasetDriver(OGR_L_GetDataset(lyr)));
+    auto tz = std::string_view{drv} == "MySQL" ? OGR_TZFLAG_UNKNOWN
+                                                : OGR_TZFLAG_UTC;
     for (auto const& row : rs) {
         if (tok.stop_requested())
             break;
         auto feat = feature_ptr{OGR_F_Create(fd)};
         for (auto&& [fld, var] : std::views::zip(flds, row))
-            std::visit([&](auto& v) { v.write(feat.get(), var); }, fld);
+            std::visit([&](auto& v) { v.write(feat.get(), var, tz); }, fld);
         check(OGR_L_CreateFeature(lyr, feat.get()));
     }
 }

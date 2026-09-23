@@ -19,13 +19,22 @@ template <class T>
 using tag = boost::geometry::tag<T>::type;
 
 template <class T>
-struct has_tag : std::negation<std::is_same<tag<T>, void>> {};
+constexpr bool has_tag = !std::is_same_v<tag<T>, void>;
 
 template <class... Ts>
-struct has_tag<std::variant<Ts...>> : std::conjunction<has_tag<Ts>...> {};
+constexpr bool has_tag<std::variant<Ts...>> = (has_tag<Ts> && ...);
 
 template <class T>
-concept tagged = has_tag<T>::value;
+concept tagged = has_tag<std::remove_cvref_t<T>>;
+
+template <class T>
+constexpr bool is_srs_spec = std::is_constructible_v<srs::projection<>, T>;
+
+template <class... Ts>
+constexpr bool is_srs_spec<std::variant<Ts...>> = (is_srs_spec<Ts> && ...);
+
+template <class T>
+concept srs_spec = is_srs_spec<std::remove_cvref_t<T>>;
 
 template <class T>
 concept box = std::same_as<tag<T>, boost::geometry::box_tag>;
@@ -60,9 +69,6 @@ concept curve = single<T> && point<std::ranges::range_value_t<T>>;
 template <class T>
 concept projection_or_transformation =
     specialized<T, srs::projection> || specialized<T, srs::transformation>;
-
-template <class T>
-concept srs_params = std::constructible_from<srs::projection<>, T>;
 
 template <class CoordSys>
 struct d2 {

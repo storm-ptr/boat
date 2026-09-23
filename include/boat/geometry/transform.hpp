@@ -13,7 +13,7 @@ namespace boat::geometry {
 
 static auto const lonlat = srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
 
-inline auto ortho(geographic::point const& center)
+inline auto ortho(geographic::point const& v)
 {
     return srs::proj4{concat(  //
         " +proj=ortho +x_0=0 +y_0=0 +units=m +no_defs +a=",
@@ -21,64 +21,81 @@ inline auto ortho(geographic::point const& center)
         " +b=",
         numbers::earth::polar_radius,
         " +lat_0=",
-        center.y(),
+        v.y(),
         " +lon_0=",
-        center.x())};
+        v.x())};
 }
 
-auto transformation(srs_params auto const& crs)
+inline srs_variant to_srs_variant(auto const& meta)
 {
-    return srs::transformation<>(lonlat, crs);
+    return meta.epsg > 0         ? srs_variant{srs::epsg{meta.epsg}}
+           : !meta.proj4.empty() ? srs_variant{srs::proj4{meta.proj4}}
+                                 : throw std::runtime_error("no SRS");
+}
+
+auto transformation(srs_spec auto const& a, srs_spec auto const& b)
+{
+    if constexpr (specialized<decltype(a), std::variant>)
+        return std::visit([&](auto&& a) { return transformation(a, b); }, a);
+    else if constexpr (specialized<decltype(b), std::variant>)
+        return std::visit([&](auto&& b) { return transformation(a, b); }, b);
+    else
+        return srs::transformation<>(a, b);
+}
+
+auto transformation(srs_spec auto const& v)
+{
+    return transformation(lonlat, v);
 }
 
 template <projection_or_transformation T>
-auto srs_forward(T const& tf)
+auto srs_forward(T const& v)
 {
-    return boost::geometry::strategy::transform::srs_forward_transformer<T>{tf};
+    return boost::geometry::strategy::transform::srs_forward_transformer<T>{v};
 }
 
 template <projection_or_transformation T>
-auto srs_inverse(T const& tf)
+auto srs_inverse(T const& v)
 {
-    return boost::geometry::strategy::transform::srs_inverse_transformer<T>{tf};
+    return boost::geometry::strategy::transform::srs_inverse_transformer<T>{v};
 }
 
 using mat_forward =
     boost::geometry::strategy::transform::matrix_transformer<double, 2, 2>;
 
-inline auto mat_inverse(matrix const& mat)
+inline auto mat_inverse(matrix const& v)
 {
-    return mat_forward{boost::qvm::inverse(mat)};
+    return mat_forward{inverse(v)};
 }
 
 template <tagged T1, same_tag<T1> T2, class Strategy>
 bool transform(T1 const& geom1, T2& geom2, Strategy const& strategy)
 {
     return overloaded{
-        [&](single auto const& g1, single auto& g2) {
-            return boost::geometry::transform(g1, g2 = {}, strategy);
+        [&](single auto const& a, single auto& b) {
+            return boost::geometry::transform(a, b = {}, strategy);
         },
-        [](this auto&& self, multi auto const& g1, multi auto& g2) -> bool {
-            g2 = {};
-            for (auto const& g : g1)
-                if (!self(g, g2.emplace_back()))
-                    g2.pop_back();
-            return !g2.empty();
+        [](this auto&& self, multi auto const& a, multi auto& b) -> bool {
+            b = {};
+            for (auto const& v : a)
+                if (!self(v, b.emplace_back()))
+                    b.pop_back();
+            return !b.empty();
         },
-        [](this auto&& self, dynamic auto const& g1, dynamic auto& g2) -> bool {
-            auto vis = [&]<class T>(T const& g) {
-                return self(g, g2.template emplace<variant_index_v<T>>());
+        [](this auto&& self, dynamic auto const& a, dynamic auto& b) -> bool {
+            auto vis = [&]<class T>(T const& v) {
+                return self(v, b.template emplace<variant_index_v<T>>());
             };
-            return std::visit(vis, g1);
+            return std::visit(vis, a);
         }}(geom1, geom2);
 }
 
 auto transform(auto const&... strategies)
 {
-    return [=]<tagged T>(T g1) {
-        T g2;
-        return (... && (g2 = std::move(g1), transform(g2, g1, strategies)))
-                   ? std::optional{std::move(g1)}
+    return [=]<tagged T>(T a) {
+        T b;
+        return (... && (b = std::move(a), transform(b, a, strategies)))
+                   ? std::optional{std::move(a)}
                    : std::nullopt;
     };
 }

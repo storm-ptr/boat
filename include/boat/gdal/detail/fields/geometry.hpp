@@ -41,7 +41,7 @@ struct geometry {
         return wkb.empty() ? db::variant{} : db::variant{std::move(wkb)};
     }
 
-    void write(OGRFeatureH feat, db::variant const& var) const
+    void write(OGRFeatureH feat, db::variant const& var, int) const
     {
         if (var)
             set_geometry(feat, index, std::get<blob>(var));

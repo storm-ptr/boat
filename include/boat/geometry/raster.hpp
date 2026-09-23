@@ -14,7 +14,7 @@ geographic::grid geographic_interpolate(  //
     int width,
     int height,
     matrix const& mat,
-    srs_params auto const& crs,
+    srs_spec auto const& crs,
     size_t num_points)
 {
     auto tf = transformation(crs);

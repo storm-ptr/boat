@@ -30,11 +30,18 @@ inline time_point get_date_time(OGRFeatureH feat, int index)
         "OGR_F_GetFieldAsDateTimeEx");
     auto ymd =
         sc::year_month_day(sc::year(year), sc::month(month), sc::day(day));
+    auto offset = tz > OGR_TZFLAG_LOCALTIME
+                      ? sc::minutes{15 * (tz - OGR_TZFLAG_UTC)}
+                      : sc::minutes{};
     return time_point(sc::sys_days(ymd).time_since_epoch() + sc::hours(hour) +
-                      sc::minutes(minute) + duration(second));
+                      sc::minutes(minute) + duration(second) - offset);
 }
 
-inline void set_date_time(OGRFeatureH feat, int index, time_point tp)
+inline void set_date_time(  //
+    OGRFeatureH feat,
+    int index,
+    time_point tp,
+    int tz)
 {
     namespace sc = std::chrono;
     auto epoch = tp.time_since_epoch();
@@ -50,7 +57,7 @@ inline void set_date_time(OGRFeatureH feat, int index, time_point tp)
         hms.hours().count(),
         hms.minutes().count(),
         static_cast<float>(hms.seconds().count() + hms.subseconds().count()),
-        0);  // mysql doesn't support 100
+        tz);
 }
 
 }  // namespace boat::gdal

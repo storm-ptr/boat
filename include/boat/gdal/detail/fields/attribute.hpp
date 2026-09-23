@@ -20,7 +20,7 @@ inline OGRFieldType to_type(std::string_view kind)
         return OFTBinary;
     if (kind == db::kind<time_point>::value)
         return OFTDateTime;
-    throw concat("OGRFieldType ", kind);
+    throw std::runtime_error(concat("OGRFieldType ", kind));
 }
 
 struct attribute {
@@ -84,13 +84,14 @@ struct attribute {
         }
     }
 
-    void write(OGRFeatureH feat, db::variant const& var) const
+    void write(OGRFeatureH feat, db::variant const& var, int tz) const
     {
         if (!var)
             return OGR_F_SetFieldNull(feat, index);
         switch (type) {
             case OFTDateTime:
-                return set_date_time(feat, index, db::get<time_point>(var));
+                return set_date_time(
+                    feat, index, db::get<time_point>(var), tz);
             case OFTInteger:
             case OFTInteger64:
                 return OGR_F_SetFieldInteger64(

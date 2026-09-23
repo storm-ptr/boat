@@ -14,7 +14,7 @@ auto tiles(  //
     int width,
     int height,
     geometry::matrix const& affine,
-    geometry::srs_params auto const& crs)
+    geometry::srs_spec auto const& crs)
 {
     namespace geo = geometry;
     static constexpr auto margin = 1.17;

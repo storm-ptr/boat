@@ -37,7 +37,7 @@ private:
         auto& col = layer.column_name;
         auto it = std::ranges::find(tbl.columns, col, &db::column::column_name);
         check(it != tbl.columns.end(), col);
-        auto crs = geometry::srs::epsg(it->epsg);
+        auto crs = geometry::to_srs_variant(*it);
         auto voids = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
         auto gen = std::mt19937{std::random_device()()};
         for (auto& box : boxes(grid, crs)) {
@@ -80,7 +80,7 @@ private:
             {r.yskew, r.yscale, r.yorig},
             {0., 0., 1.},
         }};
-        auto crs = geometry::srs::epsg(r.epsg);
+        auto crs = geometry::to_srs_variant(r);
         auto uncached = std::vector<tile>{};
         for (auto& t : tiles(grid, r.width, r.height, affine, crs)) {
             auto any = cache ? cache->get(std::tuple{key, t}) : std::any{};

@@ -72,15 +72,19 @@ namespace detail {
 
 inline auto odbc_drivers(std::initializer_list<std::string> servers)
 {
-    static auto const regex = std::regex(R"(\b\d+(?:\.\d+)?\b)");
+    static auto const regex =
+        std::regex(R"(\b(\d+)(?:\.(\d+))?(?:\.(\d+))?\b)");
     constexpr auto priority = [](std::string const& lo) {
         auto match = std::cmatch{};
+        std::regex_search(lo.data(), lo.data() + lo.size(), match, regex);
+        auto part = [&](size_t i) {
+            return match[i].matched ? std::stoi(match.str(i)) : 0;
+        };
         return std::tuple{
             lo.contains("x64"),
             lo.contains("unicode"),
-            std::regex_search(lo.data(), lo.data() + lo.size(), match, regex)
-                ? std::stod(match.str())
-                : 0.};
+            std::tuple{part(1), part(2), part(3)},
+        };
     };
     auto ret = std::unordered_map<std::string, std::string>{};
     for (auto drv : sql::odbc::drivers()) {
@@ -106,7 +110,8 @@ inline std::vector<std::string> odbc_address()
                 password,
                 "@",
                 mysql_host,
-                "/mysql?MULTI_STATEMENTS=1&DRIVER=",
+                "/mysql?MULTI_STATEMENTS=1"
+                "&INITSTMT=SET time_zone='+00:00'&DRIVER=",
                 drv));
         else if (srv == "postgres")
             ret.push_back(boat::concat(  //

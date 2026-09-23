@@ -1,6 +1,5 @@
 // Andrew Naplavkov
 
-#include <QDebug>
 #include <QFile>
 #include <boat/detail/string.hpp>
 #include <boat/gui/caches/cache.hpp>

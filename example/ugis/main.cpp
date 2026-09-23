@@ -1,8 +1,6 @@
 // Andrew Naplavkov
 
 #include <QApplication>
-#include <QDir>
-#include <QFileInfo>
 #include "main_window.h"
 
 int main(int argc, char* argv[])

@@ -22,7 +22,7 @@ struct fid {
 
     db::variant read(OGRFeatureH feat) const { return OGR_F_GetFID(feat); }
 
-    void write(OGRFeatureH feat, db::variant const& var) const
+    void write(OGRFeatureH feat, db::variant const& var, int) const
     {
         check(OGR_F_SetFID(feat, var ? db::get<int64_t>(var) : OGRNullFID));
     }

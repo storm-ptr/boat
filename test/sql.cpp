@@ -8,6 +8,14 @@
 
 using namespace boat;
 
+BOOST_AUTO_TEST_CASE(sql_sqlite_empty_tail)
+{
+    auto cmd = sql::sqlite::command{":memory:"};
+    auto rs = cmd.exec("select 1; -- trailing comment\n  ");
+    BOOST_REQUIRE(!rs.empty());
+    BOOST_CHECK_EQUAL(db::get<int>(rs.value()), 1);
+}
+
 BOOST_AUTO_TEST_CASE(sql_odbc_drivers)
 {
     for (auto drv : sql::odbc::drivers()) {
@@ -107,7 +115,7 @@ create table "datatypes" (
     "smallint" smallint,
     -- smallserial,
     "text" text,
-    -- timestamp (6) with time zone,
+    "timestamp with time zone" timestamp (6) with time zone,
     "timestamp without time zone" timestamp (6) without time zone);
 insert into "datatypes" values (
     9223372036854775807,
@@ -120,6 +128,7 @@ insert into "datatypes" values (
     1234.5,
     32767,
     'text',
+    '2004-10-19 10:23:54.123456+00',
     '2004-10-19 10:23:54.123456');)";
 
 constexpr auto sqlite_datatypes = R"(
@@ -136,7 +145,7 @@ insert into "datatypes" values (
     123.45,
     1234567.89012345,
     'text',
-    '2004-10-19 10:23:54.123');)";
+    '2004-10-19 10:23:54.123456');)";
 
 auto datatypes_query(std::string_view dbms)
 {
@@ -167,13 +176,19 @@ BOOST_AUTO_TEST_CASE(sql_datatypes)
         tbl_b.table_name = tbl_b_name;
         tbl_b = cat.create(tbl_b);
         cat.insert(tbl_b, rs);
-        rs = cat.command->exec({
-            "select count(*) from (select * from ",
-            sql::id{tbl_a},
-            " except select * from ",
-            sql::id{tbl_b},
-            ") as t",
-        });
-        BOOST_CHECK_EQUAL(db::get<int>(rs.value()), 0);
+        auto check = [&](auto& a, auto& b) {
+            auto res = cat.command->exec({
+                "select count(*) from (select * from ",
+                sql::id{a},
+                " except select * from ",
+                sql::id{b},
+                ") as t",
+            });
+            BOOST_CHECK_EQUAL(db::get<int>(res.value()), 0);
+        };
+        check(tbl_a, tbl_b);
+        cat.command->exec({"delete from ", sql::id{tbl_a}});
+        cat.insert(tbl_a, cat.select(tbl_b, page));
+        check(tbl_a, tbl_b);
     }
 }

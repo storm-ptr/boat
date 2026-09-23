@@ -9,6 +9,23 @@
 #include <boost/test/unit_test.hpp>
 #include "data.hpp"
 
+BOOST_AUTO_TEST_CASE(gdal_date_time)
+{
+    namespace sc = std::chrono;
+    auto fd = boat::unique_ptr<void, OGR_FD_Release>{OGR_FD_Create("")};
+    OGR_FD_Reference(fd.get());
+    auto fld = boat::unique_ptr<void, OGR_Fld_Destroy>{
+        OGR_Fld_Create("timestamp", OFTDateTime)};
+    OGR_FD_AddFieldDefn(fd.get(), fld.get());
+    auto feat = boat::gdal::feature_ptr{OGR_F_Create(fd.get())};
+    OGR_F_SetFieldDateTimeEx(
+        feat.get(), 0, 2004, 10, 19, 13, 23, 54, OGR_TZFLAG_UTC + 12);
+    auto expected = boat::gdal::time_point{
+        sc::sys_days{sc::year{2004} / 10 / 19}.time_since_epoch() +
+        sc::hours{10} + sc::minutes{23} + sc::seconds{54}};
+    BOOST_CHECK(boat::gdal::get_date_time(feat.get(), 0) == expected);
+}
+
 BOOST_AUTO_TEST_CASE(gdal_source)
 {
     auto cat = boat::gdal::catalog{};

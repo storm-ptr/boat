@@ -24,30 +24,21 @@ auto draw_variant(  //
 {
     return overloaded{
         [=, &out](geometry::geographic::geometry_collection const& in) {
-            auto fwd = std::visit(
-                [&](auto& crs) {
-                    return geometry::transform(
-                        geometry::srs_forward(geometry::transformation(crs)),
-                        geometry::mat_inverse(out_affine));
-                },
-                out_crs);
+            auto fwd = geometry::transform(
+                geometry::srs_forward(geometry::transformation(out_crs)),
+                geometry::mat_inverse(out_affine));
             auto drw = draw_geometry(out);
             if (auto g = fwd(in))
                 drw(*g);
         },
         [=, &out](raster const& in) {
-            std::visit(
-                [&](auto& crs1, auto& crs2) {
-                    draw_image(  //
-                        policy,
-                        const_view(in.rgba),
-                        in.affine,
-                        crs1,
-                        out,
-                        out_affine,
-                        crs2);
-                },
+            draw_image(  //
+                policy,
+                const_view(in.rgba),
+                in.affine,
                 in.crs,
+                out,
+                out_affine,
                 out_crs);
         }};
 }

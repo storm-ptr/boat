@@ -9,11 +9,11 @@ namespace boat::gui {
 
 auto bidirectional(  //
     geometry::matrix const& affine1,
-    geometry::srs_params auto const& crs1,
+    geometry::srs_spec auto const& crs1,
     geometry::matrix const& affine2,
-    geometry::srs_params auto const& crs2)
+    geometry::srs_spec auto const& crs2)
 {
-    auto tf = geometry::srs::transformation<>(crs1, crs2);
+    auto tf = geometry::transformation(crs1, crs2);
     return std::pair{
         geometry::transform(  //
             geometry::mat_forward(affine1),
@@ -28,7 +28,7 @@ auto bidirectional(  //
 
 auto boxes(  //
     geometry::geographic::grid const& grid,
-    geometry::srs_params auto const& crs)
+    geometry::srs_spec auto const& crs)
 {
     auto ret = std::vector<geometry::cartesian::box>{};
     auto fwd = geometry::transform(

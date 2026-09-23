@@ -83,7 +83,7 @@ public:
                 }
                 q << ")";
             }
-            command->exec(q);
+            command->exec(q, tok);
         }
     }
 
