@@ -46,14 +46,14 @@ inline std::generator<boat::gui::provider> providers()
 {
     using namespace boat;
     auto cache = std::make_shared<gui::caches::lru>(10'000);
-    auto key = size_t{};
+    auto cache_key = size_t{};
     for (auto cat : catalogs())
         for (auto& lyr : cat->layers())
             co_yield gui::provider{
                 .catalog = [=] -> db::catalog& { return *cat; },
                 .layer = std::move(lyr),
                 .cache = cache,
-                .key = ++key};
+                .cache_key = ++cache_key};
 }
 
 #endif  // BOAT_TEST_GUI_PROVIDERS_HPP

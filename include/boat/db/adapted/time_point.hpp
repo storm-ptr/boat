@@ -10,6 +10,8 @@
 
 namespace boat::db {
 
+/// Parses "YYYY-MM-DD HH:MM:SS[.ffffff]" without a time-zone conversion.
+/// NULL is converted to the clock epoch; excess fractional digits are ignored.
 template <class Clock, class Duration>
 void read(variant const& in, std::chrono::time_point<Clock, Duration>& out)
 {
@@ -43,6 +45,7 @@ void read(variant const& in, std::chrono::time_point<Clock, Duration>& out)
         sc::microseconds{us});
 }
 
+/// Formats a time point with microsecond precision and no time-zone suffix.
 template <class Clock, class Duration>
 void write(variant& out, std::chrono::time_point<Clock, Duration> in)
 {

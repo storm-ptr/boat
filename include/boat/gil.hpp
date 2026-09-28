@@ -59,6 +59,7 @@ T to(any_image_view img)
     return ret;
 }
 
+/// Decodes PNG or JPEG by signature.
 template <class T>
     requires requires { boost::gil::view(std::declval<T&>()); }
 T read(blob_view img)

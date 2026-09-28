@@ -1,0 +1,12 @@
+PROJECT_NAME             = boat
+PROJECT_BRIEF            = "C++23 geospatial library"
+OUTPUT_DIRECTORY         = _doxygen
+INPUT                    = include/boat README.md
+USE_MDFILE_AS_MAINPAGE   = README.md
+RECURSIVE                = YES
+EXCLUDE_PATTERNS         = */detail/*
+EXCLUDE_SYMBOLS          = *::detail
+EXTRACT_ALL              = YES
+GENERATE_LATEX           = NO
+GENERATE_TREEVIEW        = YES
+HAVE_DOT                 = YES

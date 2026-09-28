@@ -106,7 +106,8 @@ void map_view::redraw()
             (w * h) / (boat::tile::size * boat::tile::size) + 1);
         auto pvd = boat::gui::provider{
             .cache = cache_,
-            .grid = geo::geographic_interpolate(w, h, mat, crs, num_points)};
+            .filter = geo::geographic_interpolate(
+                w, h, mat, crs, num_points)};
         auto img = QImage{w, h, QImage::Format_RGBA8888};
         img.fill(Qt::white);
         auto art = QPainter{&img};
@@ -124,10 +125,10 @@ void map_view::redraw()
                     return *cat;
                 };
                 pvd.layer = l.layer;
-                pvd.key = l.cache;
+                pvd.cache_key = l.cache;
                 art.setPen(l.pen);
                 art.setBrush(l.brush);
-                for (auto var : pvd.variants()) {
+                for (auto var : pvd.renderables()) {
                     if (tok.stop_requested())
                         return;
                     std::visit(drw, var);

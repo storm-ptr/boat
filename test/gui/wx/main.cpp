@@ -51,12 +51,12 @@ BOOST_AUTO_TEST_CASE(wx_draw)
         std::memset(img.GetAlpha(), wxIMAGE_ALPHA_TRANSPARENT, num_pixels);
         std::memset(img.GetData(), UCHAR_MAX, 3 * num_pixels);
         for (auto& pvd : pvds) {
-            pvd.grid = ctx.grid;
+            pvd.filter = ctx.filter;
             auto tmp = img.Copy();
             auto art = make_graphics_context(tmp);
             auto drw = boat::gui::draw_variant(
                 std::execution::par, *art, ctx.affine, ctx.crs);
-            for (auto var : pvd.variants())
+            for (auto var : pvd.renderables())
                 std::visit(drw, var);
             art.reset();
             compose_darken(img, tmp);

@@ -28,6 +28,7 @@ inline dataset_ptr create(char const* file, char const* driver)
     return ret;
 }
 
+/// rast must contain at least one band.
 inline dataset_ptr create(  //
     char const* file,
     char const* driver,

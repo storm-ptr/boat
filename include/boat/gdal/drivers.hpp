@@ -15,12 +15,13 @@ namespace boat::gdal {
 struct driver {
     std::string short_name;
     std::string long_name;
-    std::string extensions;
+    std::string extensions;  ///< Space-separated filename extensions.
 };
 
 enum class driver_type { Raster, Vector };
 enum class driver_op { Create, Open };
 
+/// Skips drivers without filename extensions.
 inline std::generator<driver> drivers(  //
     [[maybe_unused]] driver_type type,
     [[maybe_unused]] driver_op op)

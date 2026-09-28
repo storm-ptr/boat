@@ -22,8 +22,8 @@ BOOST_AUTO_TEST_CASE(qt_draw)
         auto drw = boat::gui::draw_variant(
             std::execution::par, art, ctx.affine, ctx.crs);
         for (auto& pvd : pvds) {
-            pvd.grid = ctx.grid;
-            for (auto var : pvd.variants())
+            pvd.filter = ctx.filter;
+            for (auto var : pvd.renderables())
                 std::visit(drw, var);
         }
         auto path =

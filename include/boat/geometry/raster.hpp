@@ -10,6 +10,7 @@
 
 namespace boat::geometry {
 
+/// Approximates a raster footprint with points from a fixed global grid.
 geographic::grid geographic_interpolate(  //
     int width,
     int height,
@@ -50,6 +51,7 @@ geographic::grid geographic_interpolate(  //
     return ret;
 }
 
+/// Maps pixel coordinates to spatial coordinates.
 inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
 {
     namespace qvm = boost::qvm;
@@ -63,6 +65,7 @@ inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
            qvm::translation_mat(-qvm::vec{{0., height * 1.}});
 }
 
+/// Maps pixel coordinates to spatial coordinates.
 inline matrix affine(int width, int height, cartesian::box const& mbr)
 {
     return boost::qvm::inverse(

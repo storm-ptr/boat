@@ -12,7 +12,10 @@ namespace boat::gui::caches {
 
 struct cache {
     virtual ~cache() = default;
+
+    /// Returns an empty std::any on a miss.
     virtual std::any get(any_hashable const&) = 0;
+
     virtual void put(any_hashable, std::any) = 0;
 };
 

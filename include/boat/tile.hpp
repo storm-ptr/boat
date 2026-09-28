@@ -13,12 +13,13 @@ namespace boat {
 struct tile {
     int z, y, x;
 
-    static constexpr int size = 256;
+    static constexpr int size = 256;  ///< Maximum tile side in pixels.
 
     friend auto operator<=>(tile const&, tile const&) = default;
 
     friend auto hash_value(tile const& v) { return boost::pfr::hash_fields(v); }
 
+    /// Finest zoom, with one raster pixel per tile pixel.
     static int zmax(int width, int height)
     {
         auto px = static_cast<size_t>(std::max<>({width, height, size}));
@@ -36,6 +37,7 @@ struct tile {
         return 0;
     }
 
+    /// Raster pixels per tile pixel.
     static int scale(int width, int height, int zoom)
     {
         return pow2(zmax(width, height) - zoom);
@@ -54,6 +56,7 @@ struct tile {
                 co_yield {.z = zoom, .y = y, .x = x};
     }
 
+    /// Clipped raster-pixel rectangle `{x, y, width, height}`.
     std::tuple<int, int, int, int> rect(int width, int height) const
     {
         int px = scale(width, height, z);
@@ -65,6 +68,7 @@ struct tile {
         return {x1, y1, x2 - x1, y2 - y1};
     }
 
+    /// Maps tile pixels to raster pixels.
     auto affine(int width, int height) const
     {
         double px = scale(width, height, z);

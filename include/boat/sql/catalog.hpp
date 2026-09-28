@@ -8,6 +8,7 @@
 
 namespace boat::sql {
 
+/// Raster operations throw std::logic_error.
 class catalog : public db::catalog {
     inline static auto err = std::logic_error{"sql"};
 
@@ -87,6 +88,7 @@ public:
         }
     }
 
+    /// Adapts column types and adds missing spatial indexes.
     db::table create(db::table const& tbl) override
     {
         auto t = migrate(*command, tbl);

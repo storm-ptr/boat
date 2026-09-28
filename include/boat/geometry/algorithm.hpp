@@ -65,6 +65,7 @@ inline auto buffer(double distance, size_t num_points)
     };
 }
 
+/// Approximate degrees per meter of latitude, or longitude at a given latitude.
 constexpr auto meter = overloaded{
     [] { return numbers::radian / numbers::earth::mean_radius; },
     [](this auto&& self, double lat) {
@@ -105,6 +106,7 @@ polygon auto to_polygon(T const& geom)
     return ret;
 }
 
+/// Normalizes longitude and latitude across the antimeridian and poles.
 inline geographic::point wrap(geographic::point const& p)
 {
     auto [y, reflected] = reflect(p.y(), -90., 90.);

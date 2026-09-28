@@ -10,6 +10,7 @@
 
 namespace boat::db {
 
+/// Creates a `std::array` from `kind<Field>::value` for each field of `T`.
 template <class T>
 constexpr auto kinds_as_array()
 {

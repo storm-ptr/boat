@@ -10,7 +10,7 @@ namespace boat::gui {
 
 struct raster {
     boost::gil::rgba8_image_t rgba;
-    geometry::matrix affine;
+    geometry::matrix affine;  ///< Maps image pixels to spatial coordinates.
     geometry::srs_variant crs;
 };
 

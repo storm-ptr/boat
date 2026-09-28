@@ -16,10 +16,10 @@ struct provider {
     std::move_only_function<db::catalog&()> catalog;
     db::layer layer;
     std::shared_ptr<caches::cache> cache;
-    size_t key;
-    geometry::geographic::grid grid;
+    size_t cache_key;
+    geometry::geographic::grid filter;
 
-    std::generator<variant> variants()
+    std::generator<variant> renderables()
     {
         if (layer.raster)
             co_yield std::ranges::elements_of(rasters());
@@ -31,7 +31,7 @@ private:
     std::generator<geometry::geographic::geometry_collection> vectors()
     {
         namespace bgi = boost::geometry::index;
-        auto tbl = get_or_invoke(cache.get(), key, [&] {
+        auto tbl = get_or_invoke(cache.get(), cache_key, [&] {
             return catalog().get_table(layer.schema_name, layer.table_name);
         });
         auto& col = layer.column_name;
@@ -40,12 +40,14 @@ private:
         auto crs = geometry::to_srs_variant(*it);
         auto voids = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
         auto gen = std::mt19937{std::random_device()()};
-        for (auto& box : boxes(grid, crs)) {
+        for (auto& box : boxes(filter, crs)) {
             if (bgi::qbegin(voids, bgi::contains(box)) != bgi::qend(voids))
                 continue;
             auto a = box.min_corner(), b = box.max_corner();
             auto geoms = get_or_invoke(
-                cache.get(), std::tuple{key, a.x(), a.y(), b.x(), b.y()}, [&] {
+                cache.get(),
+                std::tuple{cache_key, a.x(), a.y(), b.x(), b.y()},
+                [&] {
                     auto rs = catalog().select(
                         tbl,
                         db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 4096});
@@ -73,8 +75,9 @@ private:
 
     std::generator<raster> rasters()
     {
-        auto r = get_or_invoke(
-            cache.get(), key, [&] { return catalog().get_raster(layer); });
+        auto r = get_or_invoke(cache.get(), cache_key, [&] {
+            return catalog().get_raster(layer);
+        });
         auto affine = geometry::matrix{{
             {r.xscale, r.xskew, r.xorig},
             {r.yskew, r.yscale, r.yorig},
@@ -82,8 +85,9 @@ private:
         }};
         auto crs = geometry::to_srs_variant(r);
         auto uncached = std::vector<tile>{};
-        for (auto& t : tiles(grid, r.width, r.height, affine, crs)) {
-            auto any = cache ? cache->get(std::tuple{key, t}) : std::any{};
+        for (auto& t : tiles(filter, r.width, r.height, affine, crs)) {
+            auto any =
+                cache ? cache->get(std::tuple{cache_key, t}) : std::any{};
             if (!any.has_value()) {
                 uncached.push_back(t);
                 continue;
@@ -96,7 +100,7 @@ private:
         for (auto [t, img] : catalog().read(r, std::move(uncached))) {
             auto rgba = gil::to<boost::gil::rgba8_image_t>(const_view(img));
             if (cache)
-                cache->put(std::tuple{key, t}, rgba);
+                cache->put(std::tuple{cache_key, t}, rgba);
             co_yield {
                 std::move(rgba), affine * t.affine(r.width, r.height), crs};
         }

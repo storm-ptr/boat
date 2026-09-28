@@ -23,6 +23,7 @@ struct blob : std::basic_string<std::byte> {
     friend auto hash_value(blob const& v) { return boost::hash_value(v); }
 };
 
+/// Arithmetic reads use native byte order and advance the view.
 template <class I, class O>
     requires std::same_as<std::remove_reference_t<I>, blob_view>
 decltype(auto) operator>>(I && in, O & out)
@@ -37,6 +38,7 @@ decltype(auto) operator>>(I && in, O & out)
     return std::forward<I>(in);
 }
 
+/// Arithmetic values are appended in native byte order.
 template <class O, class I>
     requires std::same_as<std::remove_reference_t<O>, blob>
 decltype(auto) operator<<(O && out, I const& in)
@@ -69,6 +71,7 @@ T get(blob_view& in, std::endian e)
     return ret;
 }
 
+/// Formats bytes as uppercase hex, two digits per byte.
 struct hex {
     blob_view bytes;
 

@@ -16,9 +16,12 @@ struct rowset {
     bool empty() const { return rows.empty(); }
     auto begin() const { return rows.begin(); }
     auto end() const { return rows.end(); }
+
+    /// First cell; throws std::out_of_range when absent.
     variant const& value() const { return rows.at(0).at(0); }
 };
 
+/// Converts a rowset row to a structure.
 template <class T>
 constexpr auto view = std::views::transform([](range_of<variant> auto&& r) {
     T ret;
@@ -31,6 +34,7 @@ constexpr auto view = std::views::transform([](range_of<variant> auto&& r) {
     return ret;
 });
 
+/// Converts a range of structures to a rowset.
 rowset to_rowset(std::ranges::input_range auto&& r)
 {
     auto ret = rowset{

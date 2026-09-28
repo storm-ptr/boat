@@ -2,6 +2,7 @@
 
 [![Ubuntu](https://github.com/storm-ptr/boat/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/storm-ptr/boat/actions/workflows/ubuntu.yml)
 [![Windows](https://github.com/storm-ptr/boat/actions/workflows/windows.yml/badge.svg)](https://github.com/storm-ptr/boat/actions/workflows/windows.yml)
+[![Latest GitHub Release](https://img.shields.io/github/release/storm-ptr/boat.svg)](https://github.com/storm-ptr/boat/releases/latest)
 
 # boat
 
@@ -15,14 +16,15 @@ A cross-platform, header-only C++23 library for working with geospatial data.
 - **gdal** — GDAL/OGR wrappers for raster and vector I/O
 - **gui** — Qt and wxWidgets providers for map rendering and tile caching
 
+## Documentation
+
+[API reference](https://storm-ptr.github.io/boat/). Generate it locally with
+`doxygen Doxyfile`.
+
 ## ugis
 
 A micro GIS application built on top of the boat library —
 browse, inspect and copy geospatial data from a variety of sources.
-
-### Download
-
-- [latest](https://github.com/storm-ptr/boat/releases/latest)
 
 ### Run
 

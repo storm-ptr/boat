@@ -13,6 +13,7 @@ namespace boat::geometry {
 
 static auto const lonlat = srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
 
+/// Orthographic SRS centered at v.
 inline auto ortho(geographic::point const& v)
 {
     return srs::proj4{concat(  //
@@ -26,6 +27,7 @@ inline auto ortho(geographic::point const& v)
         v.x())};
 }
 
+/// Prefers a positive epsg code to proj4; throws if neither is available.
 inline srs_variant to_srs_variant(auto const& meta)
 {
     return meta.epsg > 0         ? srs_variant{srs::epsg{meta.epsg}}
@@ -33,6 +35,7 @@ inline srs_variant to_srs_variant(auto const& meta)
                                  : throw std::runtime_error("no SRS");
 }
 
+/// Creates a transformation from source a to target b.
 auto transformation(srs_spec auto const& a, srs_spec auto const& b)
 {
     if constexpr (specialized<decltype(a), std::variant>)
@@ -43,6 +46,7 @@ auto transformation(srs_spec auto const& a, srs_spec auto const& b)
         return srs::transformation<>(a, b);
 }
 
+/// Creates a transformation from WGS 84 longitude/latitude to v.
 auto transformation(srs_spec auto const& v)
 {
     return transformation(lonlat, v);
@@ -90,6 +94,7 @@ bool transform(T1 const& geom1, T2& geom2, Strategy const& strategy)
         }}(geom1, geom2);
 }
 
+/// Composes strategies and returns std::nullopt if a transformation fails.
 auto transform(auto const&... strategies)
 {
     return [=]<tagged T>(T a) {

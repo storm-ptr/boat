@@ -8,6 +8,7 @@
 
 namespace boat::db {
 
+/// NULL becomes std::nullopt.
 template <class T>
 void read(variant const& in, std::optional<T>& out)
     requires requires { read(in, out.emplace()); }
@@ -15,6 +16,7 @@ void read(variant const& in, std::optional<T>& out)
     in.has_value() ? read(in, out.emplace()) : out.reset();
 }
 
+/// std::nullopt becomes NULL.
 template <class T>
 void write(variant& out, std::optional<T> const& in)
     requires requires { write(out, *in); }

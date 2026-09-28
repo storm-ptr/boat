@@ -27,7 +27,7 @@ struct layer {
 struct column {
     std::string kind;
     std::string column_name;
-    std::string type_name;  //< lower case
+    std::string type_name;  ///< lower case
     int length;
     int srid;
     int epsg;
@@ -48,11 +48,11 @@ struct index_key {
     bool partial;
     bool primary;
     bool unique;
-    int ordinal;  //< one-based
+    int ordinal;  ///< one-based
 };
 
 struct table {
-    std::string dbms;  //< lower case
+    std::string dbms;  ///< lower case
     std::string schema_name;
     std::string table_name;
     std::vector<column> columns;
@@ -66,6 +66,7 @@ struct table {
     }
 };
 
+/// Spatial filter for row selection.
 struct bbox {
     std::vector<std::string> select_list;
     std::string layer_column;
@@ -81,6 +82,7 @@ struct order_key {
     bool descending;
 };
 
+/// Pagination filter for row selection.
 struct page {
     std::vector<std::string> select_list;
     std::vector<order_key> order_by;
@@ -89,8 +91,8 @@ struct page {
 };
 
 struct band {
-    std::string color_name;  //< lower case
-    std::string type_name;   //< lower case
+    std::string color_name;  ///< lower case
+    std::string type_name;   ///< lower case
 };
 
 struct raster {

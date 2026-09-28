@@ -3,7 +3,7 @@
 #ifndef BOAT_TEST_COMMANDS_HPP
 #define BOAT_TEST_COMMANDS_HPP
 
-#include <boat/address.hpp>
+#include <boat/detail/address.hpp>
 #include <boat/sql/commands.hpp>
 
 inline std::generator<std::unique_ptr<boat::db::command>> commands()

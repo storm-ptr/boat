@@ -12,9 +12,11 @@
 
 namespace boat::db {
 
+/// Uniform access to vector and raster data.
 struct catalog {
     virtual ~catalog() = default;
 
+    /// May include nested data sources.
     virtual std::vector<source> sources() = 0;
 
     virtual std::vector<layer> layers() = 0;
@@ -27,8 +29,10 @@ struct catalog {
 
     virtual rowset select(table const&, bbox const&) = 0;
 
+    /// Cancellation may leave a partially inserted range.
     virtual void insert(table const&, rowset const&, std::stop_token = {}) = 0;
 
+    /// Returns metadata reported by the backend after creation.
     virtual table create(table const&) = 0;
 
     virtual void drop(  //
@@ -41,6 +45,7 @@ struct catalog {
         raster,
         std::vector<tile>) = 0;
 
+    /// rect coordinates are pixels.
     virtual void write(raster const&, rect const&, gil::any_image_view) = 0;
 
     virtual void set_autocommit(bool) = 0;

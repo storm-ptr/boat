@@ -15,8 +15,12 @@ struct command {
     virtual void set_autocommit(bool) = 0;
     virtual void commit() = 0;
     virtual char id_quote() = 0;
+
+    /// "{}" in the result is replaced with the parameter number.
     virtual std::string param_mark() = 0;
-    virtual std::string dbms() = 0;  //< lower case
+
+    /// The result is lower-case.
+    virtual std::string dbms() = 0;
 };
 
 }  // namespace boat::db

@@ -10,7 +10,7 @@
 #include <QPushButton>
 #include <QStandardItemModel>
 #include <QVBoxLayout>
-#include <boat/address.hpp>
+#include <boat/detail/address.hpp>
 #include <boat/detail/uri.hpp>
 #include <boat/sql/commands.hpp>
 #include "formats.h"

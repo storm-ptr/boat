@@ -1,6 +1,6 @@
 // Andrew Naplavkov
 
-#include <boat/address.hpp>
+#include <boat/detail/address.hpp>
 #include <boat/gdal/catalog.hpp>
 #include <boat/gdal/command.hpp>
 #include <boat/gdal/detail/image_io.hpp>

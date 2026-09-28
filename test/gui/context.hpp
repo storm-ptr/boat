@@ -13,7 +13,7 @@ constexpr auto transparent_tolerance = .002;
 struct context {
     int width;
     int height;
-    boat::geometry::geographic::grid grid;
+    boat::geometry::geographic::grid filter;
     boat::geometry::matrix affine;
     boat::geometry::srs_variant crs;
 };
@@ -36,9 +36,9 @@ inline std::generator<context> contexts()
                     auto pixel =
                         cartesian::segment{{a.x(), a.y()}, {b.x(), b.y()}};
                     auto mat = affine(width, height, pixel);
-                    auto grid = geographic_interpolate(
+                    auto filter = geographic_interpolate(
                         width, height, mat, crs, num_points);
-                    co_yield {width, height, grid, mat, crs};
+                    co_yield {width, height, filter, mat, crs};
                 }
 }
 

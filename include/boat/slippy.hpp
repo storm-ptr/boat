@@ -13,11 +13,11 @@ class catalog : public db::catalog {
     inline static auto err = std::logic_error{"slippy"};
 
 public:
-    std::string url;
-    std::string agent;
-    int epsg = 3857;  //< or 3395
-    int ssl = 1;
-    int zmax = 19;
+    std::string url;    ///< URL template with `{z}`, `{x}`, and `{y}`.
+    std::string agent;  ///< HTTP User-Agent.
+    int epsg = 3857;    ///< Tiled Mercator projection: 3857 or 3395.
+    int ssl = 1;        ///< Verify peer certificate.
+    int zmax = 19;      ///< Maximum server zoom.
 
     std::vector<db::source> sources() override { return {}; }
 
