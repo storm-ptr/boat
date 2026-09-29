@@ -1,6 +1,7 @@
 // Andrew Naplavkov
 
 #include <QFile>
+#include <QSaveFile>
 #include <boat/detail/string.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include "tree.h"
@@ -71,9 +72,8 @@ node get<node>(QDataStream& in)
     throw std::runtime_error("invalid node");
 }
 
-bool with_file(QString const& path, QIODevice::OpenMode mode, auto&& fn)
+bool with_file(QIODevice& file, QIODevice::OpenMode mode, auto&& fn)
 {
-    auto file = QFile{path};
     if (!file.open(mode))
         return false;
     auto io = QDataStream{&file};
@@ -106,14 +106,18 @@ QDataStream& operator<<(QDataStream& out, tree const& in)
 
 bool read(QString const& path, tree& out)
 {
+    auto file = QFile{path};
     return with_file(
-        path, QIODevice::ReadOnly, [&](QDataStream& in) { in >> out; });
+        file, QIODevice::ReadOnly, [&](QDataStream& in) { in >> out; });
 }
 
 bool write(QString const& path, tree const& in)
 {
-    return with_file(
-        path, QIODevice::WriteOnly, [&](QDataStream& out) { out << in; });
+    auto file = QSaveFile{path};
+    return with_file(file,
+                     QIODevice::WriteOnly,
+                     [&](QDataStream& out) { out << in; }) &&
+           file.commit();
 }
 
 QString to_string(tree* ptr)

@@ -1,17 +1,51 @@
 // Andrew Naplavkov
 
+#include <QFileDialog>
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QMouseEvent>
+#include <QPixmap>
 #include <QStatusBar>
 #include <QWheelEvent>
+#include <boat/gdal/dataset.hpp>
 #include <boat/gui/qt.hpp>
 #include <boost/gil.hpp>
+#include <array>
+#include "formats.h"
 #include "geometry.h"
 #include "map_view.h"
 
 constexpr auto lat_max = 85.;
 namespace geo = boat::geometry;
 using point = geo::geographic::point;
+
+namespace {
+
+void save_png(  //
+    QString const& path,
+    QPixmap const& image,
+    geo::matrix const& mat,
+    geo::srs::proj4 const& crs)
+{
+    if (!image.save(path))
+        throw std::runtime_error("save map failed");
+    auto ds = boat::gdal::open(path.toUtf8().constData());
+    auto px = 1. / image.devicePixelRatio();
+    auto a = std::array{
+        mat.a[0][2],
+        mat.a[0][0] * px,
+        mat.a[0][1] * px,
+        mat.a[1][2],
+        mat.a[1][0] * px,
+        mat.a[1][1] * px,
+    };
+    boat::gdal::check(GDALSetGeoTransform(ds.get(), a.data()));
+    auto srs = boat::gdal::make_srs(0, {}, crs.str());
+    boat::gdal::check(GDALSetSpatialRef(ds.get(), srs.get()));
+    boat::gdal::check(GDALClose(ds.release()));
+}
+
+}  // namespace
 
 map_view::map_view(QWidget* parent)
     : QWidget(parent)
@@ -22,6 +56,20 @@ map_view::map_view(QWidget* parent)
 {
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent);
+    setContextMenuPolicy(Qt::ActionsContextMenu);
+    addAction("save map as PNG", this, [this] {
+        auto path = QFileDialog::getSaveFileName(this, {}, {}, "PNG (*.png)");
+        if (path.isEmpty())
+            return;
+        try {
+            auto crs = geo::ortho(map_mid_);
+            auto mat = affine(width(), height(), map_mid_, map_res_, crs);
+            save_png(ensure_extension(std::move(path), ".png"), grab(), mat, crs);
+        }
+        catch (std::exception const& e) {
+            QMessageBox::warning(this, {}, QString::fromUtf8(e.what()));
+        }
+    });
 }
 
 void map_view::leaveEvent(QEvent*)

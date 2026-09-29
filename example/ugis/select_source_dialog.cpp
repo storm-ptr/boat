@@ -3,6 +3,7 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFont>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -131,8 +132,11 @@ void select_source_dialog::browse_file()
 {
     auto path = QFileDialog::getOpenFileName(
         this, {}, {}, open_filter(), nullptr, QFileDialog::DontUseNativeDialog);
-    if (!path.isEmpty())
-        address_->setEditText(path);
+    if (path.isEmpty())
+        return;
+    address_->setEditText(path);
+    if (name_->text().trimmed().isEmpty())
+        name_->setText(QFileInfo(path).fileName());
 }
 
 void select_source_dialog::update_ok()

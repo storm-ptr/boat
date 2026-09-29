@@ -12,7 +12,7 @@ inline dataset_ptr open(char const* file)
 {
     init();
     char const* opts[] = {"MSSQLSPATIAL_USE_BCP=NO", nullptr};
-    auto ret = dataset_ptr{GDALOpenEx(file, 0, 0, 0, opts)};
+    auto ret = dataset_ptr{GDALOpenEx(file, 0, 0, opts, 0)};
     boat::check(!!ret, error_or(concat("GDALOpenEx ", file)));
     return ret;
 }

@@ -9,6 +9,9 @@
 #include "tree_model.h"
 
 class QContextMenuEvent;
+class QDragEnterEvent;
+class QDragMoveEvent;
+class QDropEvent;
 class QPaintEvent;
 class map_view;
 
@@ -21,9 +24,13 @@ public:
 
 protected:
     void contextMenuEvent(QContextMenuEvent*) override;
+    void dragEnterEvent(QDragEnterEvent*) override;
+    void dragMoveEvent(QDragMoveEvent*) override;
+    void dropEvent(QDropEvent*) override;
     void paintEvent(QPaintEvent*) override;
 
 private:
+    void replace_workspace(QString const& path);
     map_view* map_{};
     std::function<void(boat::db::source const&)> sql_handler_;
     tree_model model_;
