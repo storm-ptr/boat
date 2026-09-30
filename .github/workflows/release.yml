@@ -96,7 +96,6 @@ jobs:
             "$GITHUB_REF_NAME" \
             "$WINDOWS_ARCHIVE" \
             "$UBUNTU_ARTIFACT" \
-            --draft \
             --verify-tag \
             --title "ugis $GITHUB_REF_NAME" \
             --notes "Windows and Ubuntu 26.04 builds of ugis."
