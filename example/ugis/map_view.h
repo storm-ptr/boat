@@ -15,6 +15,8 @@
 #include "task_group.h"
 #include "tree.h"
 
+class QContextMenuEvent;
+
 struct viewport {
     boat::geometry::geographic::point mid_point;
     double resolution;
@@ -30,6 +32,7 @@ public:
     viewport view() const;
 
 protected:
+    void contextMenuEvent(QContextMenuEvent*) override;
     void leaveEvent(QEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;

@@ -1,7 +1,11 @@
 // Andrew Naplavkov
 
+#include <QClipboard>
+#include <QContextMenuEvent>
 #include <QFileDialog>
+#include <QGuiApplication>
 #include <QMainWindow>
+#include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPixmap>
@@ -45,6 +49,16 @@ void save_png(  //
     boat::gdal::check(GDALClose(ds.release()));
 }
 
+QString coordinate_text(viewport const& vp, QPointF cursor)
+{
+    auto tf = geo::transformation(geo::ortho(vp.mid_point));
+    auto mat = affine(vp.width, vp.height, vp.mid_point, vp.resolution, tf);
+    auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
+    if (auto ll = inv(point(cursor.x(), cursor.y())))
+        return QString::asprintf("lon: %.6f, lat: %.6f", ll->x(), ll->y());
+    return {};
+}
+
 }  // namespace
 
 map_view::map_view(QWidget* parent)
@@ -56,8 +70,12 @@ map_view::map_view(QWidget* parent)
 {
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent);
-    setContextMenuPolicy(Qt::ActionsContextMenu);
-    addAction("save map as PNG", this, [this] {
+}
+
+void map_view::contextMenuEvent(QContextMenuEvent* event)
+{
+    auto menu = QMenu{this};
+    menu.addAction("save map as PNG", this, [this] {
         auto path = QFileDialog::getSaveFileName(this, {}, {}, "PNG (*.png)");
         if (path.isEmpty())
             return;
@@ -70,6 +88,11 @@ map_view::map_view(QWidget* parent)
             QMessageBox::warning(this, {}, QString::fromUtf8(e.what()));
         }
     });
+    if (auto text = coordinate_text(view(), event->pos()); !text.isEmpty())
+        menu.addAction("copy coordinates", this, [text] {
+            QGuiApplication::clipboard()->setText(text);
+        });
+    menu.exec(event->globalPos());
 }
 
 void map_view::leaveEvent(QEvent*)
@@ -177,15 +200,9 @@ void map_view::timerEvent(QTimerEvent* event)
 
 void map_view::update_status(QPointF cursor)
 {
-    auto msg = QString{};
-    auto tf = geo::transformation(geo::ortho(map_mid_));
-    auto mat = affine(width(), height(), map_mid_, map_res_, tf);
-    auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
-    if (auto ll = inv(point(cursor.x(), cursor.y())))
-        msg = QString::asprintf("lon: %.6f  lat: %.6f", ll->x(), ll->y());
     if (auto mw = qobject_cast<QMainWindow*>(window()))
         if (auto sb = mw->statusBar())
-            sb->showMessage(msg);
+            sb->showMessage(coordinate_text(view(), cursor));
 }
 
 viewport map_view::view() const
