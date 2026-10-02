@@ -19,8 +19,10 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     if (lyr.layer.raster) {
         auto rast = cat->get_raster(lyr.layer);
         auto crs = geo::to_srs_variant(rast);
-        auto x = rast.xorig + (rast.width / 2.) * rast.xscale;
-        auto y = rast.yorig + (rast.height / 2.) * rast.yscale;
+        auto x = rast.xorig + (rast.width / 2.) * rast.xscale +
+                 (rast.height / 2.) * rast.xskew;
+        auto y = rast.yorig + (rast.width / 2.) * rast.yskew +
+                 (rast.height / 2.) * rast.yscale;
         return geo::transform(geo::srs_inverse(geo::transformation(crs)))(
             point{x, y});
     }

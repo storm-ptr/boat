@@ -47,30 +47,30 @@ void image_io(  //
         bands.assign_range(std::views::iota(0, num_channels));
     for (int& i : bands)
         ++i;
-    void* data;
-    if constexpr (planar)
-        data = (void*)boost::gil::planar_view_get_raw_data(img, 0);
-    else
-        data = (void*)boost::gil::interleaved_view_get_raw_data(img);
-    auto pixel = sizeof(value_t) * (planar ? 1 : num_channels);
-    auto line = pixel * img.width();
-    auto band = planar ? line * img.height() : sizeof(value_t);
-    check(GDALDatasetRasterIO(  //
-        ds,
-        rw,
-        x,
-        y,
-        width,
-        height,
-        data,
-        static_cast<int>(img.width()),
-        static_cast<int>(img.height()),
-        as_data_type<value_t>(),
-        static_cast<int>(bands.size()),
-        bands.data(),
-        static_cast<int>(pixel),
-        static_cast<int>(line),
-        static_cast<int>(band)));
+    for (size_t i{}; i < (planar ? bands.size() : 1); ++i) {
+        void* data;
+        if constexpr (planar)
+            data = (void*)boost::gil::planar_view_get_raw_data(
+                img, static_cast<int>(i));
+        else
+            data = (void*)boost::gil::interleaved_view_get_raw_data(img);
+        check(GDALDatasetRasterIO(  //
+            ds,
+            rw,
+            x,
+            y,
+            width,
+            height,
+            data,
+            static_cast<int>(img.width()),
+            static_cast<int>(img.height()),
+            as_data_type<value_t>(),
+            static_cast<int>(planar ? 1 : bands.size()),
+            bands.data() + i,
+            static_cast<int>(img.pixels().pixel_size()),
+            static_cast<int>(img.pixels().row_size()),
+            sizeof(value_t)));
+    }
 }
 
 }  // namespace boat::gdal

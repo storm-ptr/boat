@@ -71,10 +71,12 @@ struct tile {
     /// Maps tile pixels to raster pixels.
     auto affine(int width, int height) const
     {
-        double px = scale(width, height, z);
-        double tl = size * px;
-        return boost::qvm::translation_mat(boost::qvm::vec{{x * tl, y * tl}}) *
-               boost::qvm::diag_mat(boost::qvm::vec{{px, px, 1.}});
+        auto [x, y, w, h] = rect(width, height);
+        auto px = scale(width, height, z);
+        double sx = double(w) / ((w + px - 1) / px);
+        double sy = double(h) / ((h + px - 1) / px);
+        return boost::qvm::translation_mat(boost::qvm::vec{{x * 1., y * 1.}}) *
+               boost::qvm::diag_mat(boost::qvm::vec{{sx, sy, 1.}});
     }
 };
 

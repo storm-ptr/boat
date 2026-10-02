@@ -8,34 +8,35 @@
 
 namespace {
 
+constexpr auto max_workspace_depth = 128u;
+constexpr auto max_workspace_nodes = quint32{100'000};
+
 QDataStream& operator<<(QDataStream& out, node const& in)
 {
-    out << static_cast<quint8>(in.index());
-    std::visit(  //
-        boat::overloaded{
-            [&](branch const& v) {
-                out << QString::fromStdString(v.source.source_name)
-                    << QString::fromStdString(v.source.address)
-                    << (v.state == branch_state::ready);
-            },
-            [&](leaf const& v) {
-                out << QString::fromStdString(v.address)
-                    << QString::fromStdString(v.layer.schema_name)
-                    << QString::fromStdString(v.layer.table_name)
-                    << QString::fromStdString(v.layer.column_name)
-                    << v.layer.raster << v.pen << v.brush
-                    << (v.state == Qt::Checked);
-            },
+    auto vis = boat::overloaded{
+        [&](branch const& v) {
+            out << QString::fromStdString(v.source.source_name)
+                << QString::fromStdString(v.source.address)
+                << (v.state == branch_state::ready);
         },
-        in);
+        [&](leaf const& v) {
+            out << QString::fromStdString(v.address)
+                << QString::fromStdString(v.layer.schema_name)
+                << QString::fromStdString(v.layer.table_name)
+                << QString::fromStdString(v.layer.column_name) << v.layer.raster
+                << v.pen << v.brush << (v.state == Qt::Checked);
+        }};
+    out << static_cast<quint8>(in.index());
+    std::visit(vis, in);
     return out;
 }
 
 template <class T>
 T get(QDataStream& in)
 {
-    T ret;
+    T ret{};
     in >> ret;
+    boat::check(in.status() == QDataStream::Ok, "invalid workspace");
     return ret;
 }
 
@@ -82,16 +83,19 @@ bool with_file(QIODevice& file, QIODevice::OpenMode mode, auto&& fn)
     return io.status() == QDataStream::Ok;
 }
 
-QDataStream& operator>>(QDataStream& in, tree& out)
+void read_tree(QDataStream& in, tree& out, quint32& remaining, unsigned depth)
 {
+    boat::check(depth < max_workspace_depth, "workspace too deep");
     out.data = get<node>(in);
-    out.children.resize(get<quint32>(in));
+    auto count = get<quint32>(in);
+    boat::check(count <= remaining, "too many workspace nodes");
+    remaining -= count;
+    out.children.resize(count);
     for (auto& ch : out.children) {
         ch = std::make_unique<tree>();
-        in >> *ch;
+        read_tree(in, *ch, remaining, depth + 1);
         ch->parent = &out;
     }
-    return in;
 }
 
 QDataStream& operator<<(QDataStream& out, tree const& in)
@@ -105,10 +109,15 @@ QDataStream& operator<<(QDataStream& out, tree const& in)
 }  // namespace
 
 bool read(QString const& path, tree& out)
-{
+try {
     auto file = QFile{path};
-    return with_file(
-        file, QIODevice::ReadOnly, [&](QDataStream& in) { in >> out; });
+    return with_file(file, QIODevice::ReadOnly, [&](QDataStream& in) {
+        auto remaining = max_workspace_nodes - 1;
+        read_tree(in, out, remaining, 0);
+    });
+}
+catch (std::exception const&) {
+    return false;
 }
 
 bool write(QString const& path, tree const& in)
@@ -122,19 +131,17 @@ bool write(QString const& path, tree const& in)
 
 QString to_string(tree* ptr)
 {
-    return std::visit(
-        boat::overloaded{
-            [](branch const& v) {
-                return QString::fromStdString(v.source.source_name);
-            },
-            [](leaf const& v) {
-                return QString::fromStdString(boat::concat(  //
-                    v.layer.schema_name,
-                    v.layer.schema_name.empty() ? "" : ".",
-                    v.layer.table_name,
-                    ".",
-                    v.layer.column_name));
-            },
+    auto vis = boat::overloaded{
+        [](branch const& v) {
+            return QString::fromStdString(v.source.source_name);
         },
-        ptr->data);
+        [](leaf const& v) {
+            return QString::fromStdString(boat::concat(  //
+                v.layer.schema_name,
+                v.layer.schema_name.empty() ? "" : ".",
+                v.layer.table_name,
+                ".",
+                v.layer.column_name));
+        }};
+    return std::visit(vis, ptr->data);
 }

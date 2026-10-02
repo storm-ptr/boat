@@ -15,7 +15,8 @@
 
 namespace boat {
 
-inline std::unique_ptr<db::catalog> make_catalog(std::string_view address)
+inline std::unique_ptr<db::catalog> make_catalog(
+    std::string_view address, bool update = false)
 {
     if (is_http_url(address))
 #if __has_include(<curl/curl.h>)
@@ -64,7 +65,7 @@ inline std::unique_ptr<db::catalog> make_catalog(std::string_view address)
     }
 #if __has_include(<gdal.h>)
     auto ret = std::make_unique<gdal::catalog>();
-    ret->dataset = gdal::open(std::string{address}.data());
+    ret->dataset = gdal::open(std::string{address}.data(), update);
     return ret;
 #else
     throw std::runtime_error("compiled without gdal");

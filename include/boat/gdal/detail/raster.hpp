@@ -89,7 +89,7 @@ inline gil::any_image read(  //
     }();
     auto [x, y, w, h] = t.rect(rast.width, rast.height);
     auto scale = tile::scale(rast.width, rast.height, t.z);
-    ret.recreate(w / scale, h / scale);
+    ret.recreate((w + scale - 1) / scale, (h + scale - 1) / scale);
     visit([&](auto v) { image_io(ds, GF_Read, x, y, w, h, v); }, view(ret));
     return ret;
 }

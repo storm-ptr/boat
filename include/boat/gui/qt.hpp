@@ -60,10 +60,12 @@ void draw_image(  //
     if (!mbr || mbr->isEmpty())
         return;
     auto img = QImage{mbr->size(), QImage::Format_RGBA8888};
+    auto bits = img.bits();
+    auto stride = img.bytesPerLine();
     auto ys = std::views::iota(0, img.height());
     auto pixel = get_pixel(in);
     std::for_each(policy, ys.begin(), ys.end(), [&](int y) {
-        auto ln = reinterpret_cast<uint8_t*>(img.scanLine(y));
+        auto ln = bits + y * stride;
         for (int x{}; x < img.width(); ++x) {
             auto px =
                 inv(geometry::geographic::point(x + mbr->x(), y + mbr->y()))

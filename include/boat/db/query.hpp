@@ -48,12 +48,12 @@ public:
     {
         auto os = std::ostringstream{};
         os.imbue(std::locale::classic());
-        os.precision(std::numeric_limits<double>::digits10);
+        os.precision(std::numeric_limits<double>::max_digits10);
         auto num_params = 0;
         auto param_vis = overloaded{
             [&](null) { os << "null"; },
             [&](arithmetic auto v) { os << v; },
-            [&](std::string_view v) { os << unicode::quoted(v, '\''); },
+            [&](std::string_view v) { os << unicode::quoted(v, '\'', '\''); },
             [&](blob_view v) { os << "x'" << hex{v} << "'"; }};
         auto item_vis = overloaded{
             [&](std::string const& v) { os << v; },

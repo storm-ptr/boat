@@ -6,7 +6,7 @@ HEADERS = *.h
 INCLUDEPATH += ../../include
 
 windows:{
-QMAKE_CXXFLAGS += -EHsc -bigobj -MP
+QMAKE_CXXFLAGS += -EHsc -bigobj -MP2
 LIBS += \
   -L$$(LIB)\
   -lgdal_i\

@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(gdal_vector)
             continue;
         auto cat = boat::gdal::catalog{};
         if (driver.empty())
-            cat.dataset = boat::gdal::open(path.data());
+            cat.dataset = boat::gdal::open(path.data(), true);
         else
             cat.dataset = boat::gdal::create(path.data(), driver.data());
         check(cat);
@@ -115,33 +115,93 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
 BOOST_AUTO_TEST_CASE(gdal_image_io)
 {
     namespace gil = boost::gil;
-    auto ds1 = boat::gdal::open(
-        "/vsicurl/https://download.osgeo.org/gdal/data/gtiff/small_world.tif");
-    auto rast = boat::gdal::get_raster(ds1.get());
-    BOOST_CHECK_EQUAL(rast.width, 400);
-    BOOST_CHECK_EQUAL(rast.height, 200);
-    auto ds2 = boat::gdal::create("./drop.gdal_image_io.tif", "GTiff", rast);
-    auto copy = [&](int x, int y, int w, int h, auto&& img) {
-        boat::gdal::image_io(ds1.get(), GF_Read, x, y, w, h, gil::view(img));
-        boat::gdal::image_io(ds2.get(), GF_Write, x, y, w, h, gil::view(img));
+    boat::gdal::init();
+    auto ds = boat::gdal::dataset_ptr{
+        GDALCreate(GDALGetDriverByName("MEM"), "", 4, 4, 3, GDT_Byte, nullptr)};
+    BOOST_REQUIRE(ds);
+    auto expected = gil::rgb8_image_t{4, 4};
+    for (int y = 0; y < 4; ++y)
+        for (int x = 0; x < 4; ++x)
+            gil::view(expected)(x, y) = gil::rgb8_pixel_t(
+                1 + x + 4 * y, 21 + x + 4 * y, 41 + x + 4 * y);
+    auto check = [&](auto img, int margin) {
+        auto v = gil::view(img);
+        auto n = 4 - 2 * margin;
+        auto crop = gil::subimage_view(v, margin, margin, n, n);
+        auto background = gil::rgb8_pixel_t{201, 202, 203};
+        gil::fill_pixels(v, background);
+        gil::copy_pixels(gil::subimage_view(gil::const_view(expected),
+                                           margin, margin, n, n), crop);
+        auto want = img;
+        auto actual = gil::rgb8_image_t{4, 4};
+        for (int i = 0; i < 3; ++i)
+            BOOST_REQUIRE_EQUAL(
+                GDALFillRaster(GDALGetRasterBand(ds.get(), i + 1), 201 + i, 0),
+                CE_None);
+        boat::gdal::image_io(ds.get(), GF_Write, margin, margin, n, n, crop);
+        boat::gdal::image_io(ds.get(), GF_Read, 0, 0, 4, 4, gil::view(actual));
+        boat::gdal::image_io(
+            ds.get(), GF_Write, 0, 0, 4, 4, gil::const_view(expected));
+        gil::fill_pixels(v, background);
+        boat::gdal::image_io(ds.get(), GF_Read, margin, margin, n, n, crop);
+        for (int y = 0; y < 4; ++y)
+            for (int x = 0; x < 4; ++x) {
+                BOOST_CHECK(gil::const_view(actual)(x, y) ==
+                            gil::const_view(want)(x, y));
+                BOOST_CHECK(v(x, y) == gil::const_view(want)(x, y));
+            }
     };
-    auto tiles = std::vector<boat::tile>{
-        {.z = 1, .y = 0, .x = 0},
-        {.z = 1, .y = 0, .x = 1},
-    };
-    for (auto [i, tile] : std::views::enumerate(tiles)) {
-        auto scale = boat::tile::scale(rast.width, rast.height, tile.z);
-        auto [x, y, w, h] = tile.rect(rast.width, rast.height);
-        if (i % 2)
-            copy(x, y, w, h, gil::rgb8_image_t{w / scale, h / scale});
-        else
-            copy(x, y, w, h, gil::rgb8_planar_image_t{w / scale, h / scale});
+    for (size_t alignment : {0, 16})
+        for (int margin : {0, 1}) {
+            check(gil::rgb8_image_t{4, 4, alignment}, margin);
+            check(gil::rgb8_planar_image_t{4, 4, alignment}, margin);
+        }
+}
+
+BOOST_AUTO_TEST_CASE(gdal_raster_edge_tiles)
+{
+    for (auto [width, height] : {
+             std::pair{512, 512},
+             {513, 513},
+             {515, 515},
+             {513, 1},
+             {1, 515},
+             {1, 1},
+         }) {
+        auto cat = boat::gdal::catalog{};
+        auto rast = boat::db::raster{
+            .bands{{"gray", "byte"}},
+            .width = width,
+            .height = height,
+            .xscale = 1,
+            .yscale = -1,
+            .epsg = 4326,
+        };
+        cat.dataset = boat::gdal::create("", "MEM", rast);
+        BOOST_REQUIRE_EQUAL(
+            GDALFillRaster(GDALGetRasterBand(cat.dataset.get(), 1), 29, 0),
+            CE_None);
+        for (int z = 0; z <= boat::tile::zmax(width, height); ++z) {
+            auto tiles = boat::tile::all(width, height, z) |
+                         std::ranges::to<std::vector>();
+            auto images = cat.read(rast, tiles) | std::ranges::to<std::map>();
+            BOOST_REQUIRE_EQUAL(images.size(), tiles.size());
+            for (auto& [t, img] : images) {
+                auto [x, y, w, h] = t.rect(width, height);
+                auto scale = boat::tile::scale(width, height, z);
+                BOOST_REQUIRE_EQUAL(img.width(), std::ceil(double(w) / scale));
+                BOOST_REQUIRE_EQUAL(img.height(), std::ceil(double(h) / scale));
+                auto [a] = t.affine(width, height);
+                BOOST_CHECK_EQUAL(a[0][2], x);
+                BOOST_CHECK_EQUAL(a[1][2], y);
+                BOOST_CHECK_SMALL(a[0][2] + a[0][0] * img.width() - (x + w),
+                                  1e-10);
+                BOOST_CHECK_SMALL(a[1][2] + a[1][1] * img.height() - (y + h),
+                                  1e-10);
+                auto v = const_view(get<boost::gil::gray8_image_t>(img));
+                BOOST_CHECK_EQUAL(v(0, 0)[0], 29);
+                BOOST_CHECK_EQUAL(v(v.width() - 1, v.height() - 1)[0], 29);
+            }
+        }
     }
-    auto img1 = gil::rgb8_image_t{rast.width, rast.height};
-    boat::gdal::image_io(
-        ds1.get(), GF_Read, 0, 0, rast.width, rast.height, gil::view(img1));
-    auto img2 = gil::rgb8_image_t{rast.width, rast.height};
-    boat::gdal::image_io(
-        ds2.get(), GF_Read, 0, 0, rast.width, rast.height, gil::view(img2));
-    BOOST_CHECK(img1 == img2);
 }

@@ -59,7 +59,7 @@ leaf copy_vector(  //
         return ret;
     auto cat2 = [&] -> std::unique_ptr<boat::db::catalog> {
         if (!drv)
-            return make_catalog(dst);
+            return make_catalog(dst, true);
         auto ret = std::make_unique<boat::gdal::catalog>();
         ret->dataset = boat::gdal::create(dst, drv);
         return ret;

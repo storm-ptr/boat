@@ -8,11 +8,12 @@
 
 namespace boat::gdal {
 
-inline dataset_ptr open(char const* file)
+inline dataset_ptr open(char const* file, bool update = false)
 {
     init();
     char const* opts[] = {"MSSQLSPATIAL_USE_BCP=NO", nullptr};
-    auto ret = dataset_ptr{GDALOpenEx(file, 0, 0, opts, 0)};
+    auto flags = update ? GDAL_OF_UPDATE : GDAL_OF_READONLY;
+    auto ret = dataset_ptr{GDALOpenEx(file, flags, 0, opts, 0)};
     boat::check(!!ret, error_or(concat("GDALOpenEx ", file)));
     return ret;
 }

@@ -26,10 +26,14 @@ template <class T>
 constexpr auto view = std::views::transform([](range_of<variant> auto&& r) {
     T ret;
     auto it = std::ranges::begin(r);
+    auto vis = [&](auto& v) {
+        check(it != std::ranges::end(r), "out of fields");
+        read(*it++, v);
+    };
     if constexpr (requires { read(*it, ret); })
-        read(*it++, ret);
+        vis(ret);
     else
-        boost::pfr::for_each_field(ret, [&](auto& v) { read(*it++, v); });
+        boost::pfr::for_each_field(ret, vis);
     check(it == std::ranges::end(r), "out of fields");
     return ret;
 });

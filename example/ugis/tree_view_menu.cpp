@@ -18,7 +18,7 @@ template <class Get, class Set>
 void pick_color(  //
     tree_view* self,
     tree_model& model,
-    QModelIndex const& idx,
+    QPersistentModelIndex const& idx,
     char const* title,
     Get get,
     Set set)
@@ -36,7 +36,7 @@ void pick_color(  //
 
 void tree_view::contextMenuEvent(QContextMenuEvent* event)
 {
-    auto idx = indexAt(event->pos());
+    auto idx = QPersistentModelIndex{indexAt(event->pos())};
     auto menu = QMenu{this};
     auto opt = model_.get_leaf(idx);
     auto is_vector = opt && !opt->layer.raster;
@@ -88,7 +88,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
                 idx,
                 "filling color",
                 [](leaf const& l) { return l.brush.color(); },
-                [](leaf& l, QColor c) { l.brush.setColor(c); });
+                [](leaf& l, QColor c) { l.brush = QBrush{c}; });
         });
         add(true, "outline color", [this, idx] {
             pick_color(

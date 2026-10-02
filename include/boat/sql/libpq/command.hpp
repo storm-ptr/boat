@@ -11,7 +11,6 @@ namespace boat::sql::libpq {
 
 class command : public db::command {
     unique_ptr<PGconn, PQfinish> dbc_;
-    std::string prepared_;
 
 public:
     explicit command(char const* connection) : dbc_(PQconnectdb(connection))
@@ -34,7 +33,7 @@ public:
                 unique_ptr<PGresult, PQclear>{PQexec(dbc_.get(), txt.data())};
             return fetch(res.get());
         }
-        if (prepared_ != txt) {
+        else {
             auto types = std::vector<Oid>(ps.size());
             for (size_t i{}; i < ps.size(); ++i)
                 types[i] = params::type(ps[i]);
@@ -46,7 +45,6 @@ public:
                 types.data())};
             auto ec = PQresultStatus(res.get());
             check(ec == PGRES_COMMAND_OK || ec == PGRES_TUPLES_OK, dbc_.get());
-            prepared_ = txt;
         }
         auto values = std::vector<char const*>(ps.size());
         auto lengths = std::vector<int>(ps.size());

@@ -36,3 +36,11 @@ BOOST_AUTO_TEST_CASE(db_time_point_precision)
         BOOST_CHECK_EQUAL(std::get<std::string>(var), str);
     }
 }
+
+BOOST_AUTO_TEST_CASE(db_query_string_literal)
+{
+    auto qry = boat::db::query{
+        boat::db::variant{std::string{R"(O'Brien\map.tif)"}}};
+    BOOST_CHECK_EQUAL(qry.text('"', {}), R"('O''Brien\map.tif')");
+    BOOST_CHECK_EQUAL(qry.text('"', "?"), "?");
+}

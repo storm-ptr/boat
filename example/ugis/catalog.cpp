@@ -87,9 +87,10 @@ public:
 
 }  // namespace
 
-std::unique_ptr<boat::db::catalog> make_catalog(std::string_view address)
+std::unique_ptr<boat::db::catalog> make_catalog(
+    std::string_view address, bool update)
 {
     if (address == "echo://")
         return std::make_unique<echo>();
-    return boat::make_catalog(address);
+    return boat::make_catalog(address, update);
 }
