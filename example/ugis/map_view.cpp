@@ -11,19 +11,23 @@
 #include <QPixmap>
 #include <QStatusBar>
 #include <QWheelEvent>
+#include <array>
 #include <boat/gdal/dataset.hpp>
 #include <boat/gui/qt.hpp>
 #include <boost/gil.hpp>
-#include <array>
 #include "formats.h"
 #include "geometry.h"
 #include "map_view.h"
 
-constexpr auto lat_max = 85.;
 namespace geo = boat::geometry;
 using point = geo::geographic::point;
 
 namespace {
+
+constexpr auto longitude_max = 180.;
+constexpr auto latitude_max = 85.;
+constexpr auto resolution_min = 0.5972;
+constexpr auto resolution_max = 19'567.88;
 
 void save_png(  //
     QString const& path,
@@ -31,8 +35,7 @@ void save_png(  //
     geo::matrix const& mat,
     geo::srs::proj4 const& crs)
 {
-    if (!image.save(path))
-        throw std::runtime_error("save map failed");
+    boat::check(image.save(path), "save png");
     auto ds = boat::gdal::open(path.toUtf8().constData());
     auto px = 1. / image.devicePixelRatio();
     auto a = std::array{
@@ -51,8 +54,8 @@ void save_png(  //
 
 QString coordinate_text(viewport const& vp, QPointF cursor)
 {
-    auto tf = geo::transformation(geo::ortho(vp.mid_point));
-    auto mat = affine(vp.width, vp.height, vp.mid_point, vp.resolution, tf);
+    auto tf = geo::transformation(geo::ortho(vp.view.center));
+    auto mat = affine(vp.width, vp.height, vp.view, tf);
     auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
     if (auto ll = inv(point(cursor.x(), cursor.y())))
         return QString::asprintf("lon: %.6f, lat: %.6f", ll->x(), ll->y());
@@ -64,8 +67,6 @@ QString coordinate_text(viewport const& vp, QPointF cursor)
 map_view::map_view(QWidget* parent)
     : QWidget(parent)
     , cache_(std::make_shared<boat::gui::caches::lru>(10'000))
-    , map_mid_{}
-    , map_res_{9'783.94}
     , tasks_{1}
 {
     setMouseTracking(true);
@@ -80,9 +81,10 @@ void map_view::contextMenuEvent(QContextMenuEvent* event)
         if (path.isEmpty())
             return;
         try {
-            auto crs = geo::ortho(map_mid_);
-            auto mat = affine(width(), height(), map_mid_, map_res_, crs);
-            save_png(ensure_extension(std::move(path), ".png"), grab(), mat, crs);
+            auto crs = geo::ortho(map_.center);
+            auto mat = affine(width(), height(), map_, crs);
+            save_png(
+                ensure_extension(std::move(path), ".png"), grab(), mat, crs);
         }
         catch (std::exception const& e) {
             QMessageBox::warning(this, {}, QString::fromUtf8(e.what()));
@@ -109,25 +111,25 @@ void map_view::mouseMoveEvent(QMouseEvent* event)
     if (!panning_pos_)
         return;
     auto delta = pos - *std::exchange(panning_pos_, pos);
-    auto tf = geo::transformation(geo::ortho(map_mid_));
+    auto tf = geo::transformation(geo::ortho(map_.center));
     auto fwd = geo::transform(geo::srs_forward(tf));
-    auto xy = fwd(map_mid_);
+    auto xy = fwd(map_.center);
     if (!xy)
         return;
-    auto mat = affine(width(), height(), map_mid_, map_res_, fwd);
+    auto mat = affine(width(), height(), map_, fwd);
     auto cursor =
         geo::transform(geo::mat_forward(mat))(point(pos.x(), pos.y()));
     auto pole_y = boat::numbers::earth::mean_radius *
-                  std::cos(map_mid_.y() * boat::numbers::degree);
+                  std::cos(map_.center.y() * boat::numbers::degree);
     auto flip =
-        cursor && std::copysign(1., map_mid_.y()) * cursor->y() > pole_y;
-    auto eastward = (flip ? delta.x() : -delta.x()) * map_res_;
-    auto northward = delta.y() * map_res_;
-    auto ll = geo::transform(geo::srs_inverse(tf))(
-        point(xy->x() + eastward, xy->y() + northward));
-    if (!ll || std::abs(ll->y()) > lat_max)
+        cursor && std::copysign(1., map_.center.y()) * cursor->y() > pole_y;
+    auto dx = (flip ? delta.x() : -delta.x()) * map_.resolution;
+    auto dy = delta.y() * map_.resolution;
+    auto ll =
+        geo::transform(geo::srs_inverse(tf))(point(xy->x() + dx, xy->y() + dy));
+    if (!ll)
         return;
-    map_mid_ = geo::wrap(*ll);
+    map_ = bounded({*ll, map_.resolution}).value_or(map_);
     schedule_paint();
 }
 
@@ -153,14 +155,14 @@ void map_view::paintEvent(QPaintEvent*)
     art.fillRect(rect(), Qt::white);
     if (img_.isNull())
         return;
-    if (boost::geometry::equals(img_mid_, map_mid_) && img_res_ == map_res_ &&
-        img_.width() == width() && img_.height() == height())
+    if (boost::geometry::equals(img_view_.center, map_.center) &&
+        img_view_.resolution == map_.resolution && img_.width() == width() &&
+        img_.height() == height())
         return art.drawImage(0, 0, img_);
-    auto img_crs = geo::ortho(img_mid_);
-    auto img_mat =
-        affine(img_.width(), img_.height(), img_mid_, img_res_, img_crs);
-    auto map_crs = geo::ortho(map_mid_);
-    auto map_mat = affine(width(), height(), map_mid_, map_res_, map_crs);
+    auto img_crs = geo::ortho(img_view_.center);
+    auto img_mat = affine(img_.width(), img_.height(), img_view_, img_crs);
+    auto map_crs = geo::ortho(map_.center);
+    auto map_mat = affine(width(), height(), map_, map_crs);
     if (img_.format() != QImage::Format_RGBA8888)
         img_ = img_.convertToFormat(QImage::Format_RGBA8888);
     auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
@@ -207,10 +209,7 @@ void map_view::update_status(QPointF cursor)
 
 viewport map_view::view() const
 {
-    return {.mid_point = map_mid_,
-            .resolution = map_res_,
-            .width = width(),
-            .height = height()};
+    return {map_, width(), height()};
 }
 
 void map_view::watch_task(QFuture<void> fut)
@@ -223,23 +222,43 @@ void map_view::watch_task(QFuture<void> fut)
     });
 }
 
+void map_view::set_view(boat::gui::view const& v)
+{
+    auto valid = std::abs(v.center.x()) <= longitude_max &&
+                 std::abs(v.center.y()) <= latitude_max &&
+                 v.resolution >= resolution_min &&
+                 v.resolution <= resolution_max;
+    map_ = valid ? v : boat::gui::view{};
+    redraw();
+}
+
+std::optional<boat::gui::view> map_view::bounded(boat::gui::view v)
+{
+    for (auto x : {v.center.x(), v.center.y(), v.resolution})
+        if (!std::isfinite(x))
+            return {};
+    v.center = geo::wrap(
+        {v.center.x(), std::clamp(v.center.y(), -latitude_max, latitude_max)});
+    v.resolution = std::clamp(v.resolution, resolution_min, resolution_max);
+    return v;
+}
+
 void map_view::wheelEvent(QWheelEvent* event)
 {
     auto pos = event->position();
-    auto degrees = event->angleDelta().y() / 8.;
-    auto factor = std::pow(2., degrees / 60.);
-    auto new_res = std::clamp(map_res_ / factor, 0.5972, 19'567.88);
-    auto tf = geo::transformation(geo::ortho(map_mid_));
+    auto factor = std::pow(2., event->angleDelta().y() / 8. / 60.);
+    auto next = bounded({map_.center, map_.resolution / factor}).value_or(map_);
+    auto tf = geo::transformation(geo::ortho(map_.center));
     auto ll = [&](auto res) {
-        auto mat = affine(width(), height(), map_mid_, res, tf);
+        auto mat = affine(width(), height(), {map_.center, res}, tf);
         auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
         return inv(point(pos.x(), pos.y()));
     };
-    auto a = ll(map_res_), b = ll(new_res);
-    if (a && b && std::abs(map_mid_.y() + a->y() - b->y()) <= lat_max)
-        map_mid_ = geo::wrap(
-            {map_mid_.x() + a->x() - b->x(), map_mid_.y() + a->y() - b->y()});
-    map_res_ = new_res;
+    auto a = ll(map_.resolution), b = ll(next.resolution);
+    if (a && b)
+        next.center = {map_.center.x() + a->x() - b->x(),
+                       map_.center.y() + a->y() - b->y()};
+    map_ = bounded(next).value_or(map_);
     schedule_paint();
     update_status(pos);
 }

@@ -1,4 +1,4 @@
-QT = core gui
+QT = concurrent core gui widgets
 CONFIG += c++latest console warn_off
 CONFIG -= app_bundle
 DEFINES += QT_NO_KEYWORDS

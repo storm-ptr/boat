@@ -31,13 +31,12 @@ public:
     bool is_branch(QModelIndex const&) const;
     bool is_mounted(QModelIndex const&) const;
     void mount(boat::db::source const&);
-    void new_workspace();
-    bool open_workspace(QString const& path);
+    void set_scene(boat::gui::scene const&);
+    boat::gui::scene get_scene() const { return to_scene(*root_); }
     void paste_layer(QModelIndex const&, QString const& name);
     void request_stop();
     void refresh(QModelIndex const&);
     void sample(QModelIndex const& idx, viewport const& vp);
-    bool save_workspace(QString const& path) const;
     void unmount(QModelIndex const&);
 
     void mutate_leaf(QModelIndex const& idx, std::invocable<leaf&> auto&& fn)
@@ -48,12 +47,12 @@ public:
         }
     }
 
+    bool canFetchMore(QModelIndex const&) const override;
     int columnCount(QModelIndex const&) const override { return 1; }
     QVariant data(QModelIndex const&, int = Qt::DisplayRole) const override;
     void fetchMore(QModelIndex const&) override;
     Qt::ItemFlags flags(QModelIndex const&) const override;
     bool hasChildren(QModelIndex const&) const override;
-    bool canFetchMore(QModelIndex const&) const override;
     QModelIndex index(int, int, QModelIndex const& = {}) const override;
     QModelIndex parent(QModelIndex const&) const override;
     bool removeRows(int, int, QModelIndex const& = {}) override;

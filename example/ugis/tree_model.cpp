@@ -89,7 +89,7 @@ void tree_model::mount(boat::db::source const& val)
     auto& children = root_->children;
     int row = static_cast<int>(children.size());
     beginInsertRows({}, row, row);
-    auto ch = std::make_unique<tree>(branch{val});
+    auto ch = std::make_unique<tree>(branch{named_source(val)});
     ch->parent = root_.get();
     children.push_back(std::move(ch));
     endInsertRows();
@@ -112,33 +112,19 @@ void tree_model::refresh(QModelIndex const& idx)
         Q_EMIT dataChanged(idx, idx);
 }
 
-void tree_model::new_workspace()
+void tree_model::set_scene(boat::gui::scene const& scene)
 {
-    beginResetModel();
-    root_ = std::make_unique<tree>(branch{.state = branch_state::ready});
-    endResetModel();
-}
-
-bool tree_model::open_workspace(QString const& path)
-{
-    auto root = std::make_unique<tree>(branch{.state = branch_state::ready});
-    if (!read(path, *root))
-        return false;
+    auto root = from_scene(scene);
     beginResetModel();
     root_ = std::move(root);
     endResetModel();
-    return true;
-}
-
-bool tree_model::save_workspace(QString const& path) const
-{
-    return write(path, *root_);
 }
 
 QVariant tree_model::data(QModelIndex const& idx, int role) const
 {
     switch (role) {
         case Qt::DisplayRole:
+        case Qt::EditRole:
             return to_string(to_tree(idx));
         case Qt::CheckStateRole:
             if (auto l = to_leaf(idx))
@@ -164,6 +150,8 @@ Qt::ItemFlags tree_model::flags(QModelIndex const& idx) const
     auto ret = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
     if (to_leaf(idx))
         ret |= Qt::ItemIsUserCheckable;
+    if (is_branch(idx))
+        ret |= Qt::ItemIsEditable;
     return ret;
 }
 
@@ -196,8 +184,19 @@ int tree_model::rowCount(QModelIndex const& parent) const
     return static_cast<int>(to_tree(parent)->children.size());
 }
 
-bool tree_model::setData(QModelIndex const& idx, QVariant const&, int role)
+bool tree_model::setData(  //
+    QModelIndex const& idx,
+    QVariant const& value,
+    int role)
 {
+    if (role == Qt::EditRole && is_branch(idx)) {
+        auto name = value.toString().trimmed();
+        if (name.isEmpty())
+            return false;
+        to_branch(idx)->source.source_name = name.toStdString();
+        Q_EMIT dataChanged(idx, idx, {Qt::DisplayRole, Qt::EditRole});
+        return true;
+    }
     if (role != Qt::CheckStateRole)
         return false;
     if (auto l = to_leaf(idx)) {

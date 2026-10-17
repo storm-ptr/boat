@@ -68,6 +68,8 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     populated |= add(model_.can_refresh(idx), "refresh source", [this, idx] {
         model_.refresh(idx);
     });
+    populated |=
+        add(model_.is_branch(idx), "rename source", [this, idx] { edit(idx); });
     populated |= add(is_vector && map_, "sample from map to log", [this, idx] {
         if (map_)
             model_.sample(idx, map_->view());
@@ -161,35 +163,38 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     });
     menu.addSeparator();
 
-    // workspace
-    add(true, "new workspace", [this] { replace_workspace({}); });
-    add(true, "open workspace", [this] {
+    // scene
+    add(true, "new scene", [this] { replace_scene({}); });
+    add(true, "open scene", [this] {
         auto path = QFileDialog::getOpenFileName(  //
             this,
             {},
             {},
-            workspace_filter,
+            scene_filter,
             nullptr,
             QFileDialog::DontUseNativeDialog);
         if (path.isEmpty())
             return;
-        replace_workspace(path);
+        replace_scene(path);
     });
-    add(true, "save workspace", [this] {
+    add(true, "save scene", [this] {
         auto path = QFileDialog::getSaveFileName(  //
             this,
             {},
-            workspace_path_,
-            workspace_filter,
+            scene_path_,
+            scene_filter,
             nullptr,
             QFileDialog::DontUseNativeDialog);
         if (path.isEmpty())
             return;
         path = ensure_extension(std::move(path), ".ugis");
-        if (!model_.save_workspace(path))
-            QMessageBox::warning(this, {}, "save workspace failed");
+        auto scene = model_.get_scene();
+        if (map_)
+            scene.view = map_->view().view;
+        if (!write_scene(path, scene))
+            QMessageBox::warning(this, {}, "save scene failed");
         else
-            workspace_path_ = path;
+            scene_path_ = path;
     });
 
     // cancel

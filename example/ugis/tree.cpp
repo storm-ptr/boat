@@ -1,132 +1,124 @@
 // Andrew Naplavkov
 
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSaveFile>
 #include <boat/detail/string.hpp>
+#include <boat/detail/uri.hpp>
 #include <boat/gui/caches/cache.hpp>
+#include <boat/gui/scene_json.hpp>
 #include "tree.h"
 
 namespace {
 
-constexpr auto max_workspace_depth = 128u;
-constexpr auto max_workspace_nodes = quint32{100'000};
-
-QDataStream& operator<<(QDataStream& out, node const& in)
+std::unique_ptr<tree> from_source(  //
+    boat::gui::source const& in,
+    tree* parent)
 {
-    auto vis = boat::overloaded{
-        [&](branch const& v) {
-            out << QString::fromStdString(v.source.source_name)
-                << QString::fromStdString(v.source.address)
-                << (v.state == branch_state::ready);
-        },
-        [&](leaf const& v) {
-            out << QString::fromStdString(v.address)
-                << QString::fromStdString(v.layer.schema_name)
-                << QString::fromStdString(v.layer.table_name)
-                << QString::fromStdString(v.layer.column_name) << v.layer.raster
-                << v.pen << v.brush << (v.state == Qt::Checked);
-        }};
-    out << static_cast<quint8>(in.index());
-    std::visit(vis, in);
-    return out;
-}
-
-template <class T>
-T get(QDataStream& in)
-{
-    T ret{};
-    in >> ret;
-    boat::check(in.status() == QDataStream::Ok, "invalid workspace");
+    auto ret = std::make_unique<tree>(
+        branch{.source = named_source(in.db),
+               .state = in.children.empty() ? branch_state::blank
+                                            : branch_state::ready});
+    ret->parent = parent;
+    for (auto const& child : in.children)
+        if (auto l = std::get_if<boat::gui::layer>(&child)) {
+            auto ptr = std::make_unique<tree>(
+                leaf{.address = in.db.address,
+                     .layer = l->db,
+                     .pen = QPen{QColor::fromRgba(l->color), l->width},
+                     .brush = l->fill ? QBrush{QColor::fromRgba(*l->fill)}
+                                      : QBrush{},
+                     .state = l->hidden ? Qt::Unchecked : Qt::Checked,
+                     .cache = boat::gui::caches::next_key()});
+            ptr->parent = ret.get();
+            ret->children.push_back(std::move(ptr));
+        }
+        else
+            ret->children.push_back(
+                from_source(std::get<boat::gui::source>(child), ret.get()));
     return ret;
 }
 
-template <>
-node get<node>(QDataStream& in)
+boat::gui::source to_source(tree const& in)
 {
-    switch (get<quint8>(in)) {
-        case boat::variant_index<node, branch>():
-            return branch{
-                .source =
-                    boat::db::source{
-                        .source_name = get<QString>(in).toStdString(),
-                        .address = get<QString>(in).toStdString(),
-                    },
-                .state =
-                    get<bool>(in) ? branch_state::ready : branch_state::blank,
-            };
-        case boat::variant_index<node, leaf>():
-            return leaf{
-                .address = get<QString>(in).toStdString(),
-                .layer =
-                    boat::db::layer{
-                        .schema_name = get<QString>(in).toStdString(),
-                        .table_name = get<QString>(in).toStdString(),
-                        .column_name = get<QString>(in).toStdString(),
-                        .raster = get<bool>(in),
-                    },
-                .pen = get<QPen>(in),
-                .brush = get<QBrush>(in),
-                .state = get<bool>(in) ? Qt::Checked : Qt::Unchecked,
-                .cache = boat::gui::caches::next_key(),
-            };
-    }
-    throw std::runtime_error("invalid node");
-}
-
-bool with_file(QIODevice& file, QIODevice::OpenMode mode, auto&& fn)
-{
-    if (!file.open(mode))
-        return false;
-    auto io = QDataStream{&file};
-    io.setVersion(QDataStream::Qt_DefaultCompiledVersion);
-    std::invoke(fn, io);
-    return io.status() == QDataStream::Ok;
-}
-
-void read_tree(QDataStream& in, tree& out, quint32& remaining, unsigned depth)
-{
-    boat::check(depth < max_workspace_depth, "workspace too deep");
-    out.data = get<node>(in);
-    auto count = get<quint32>(in);
-    boat::check(count <= remaining, "too many workspace nodes");
-    remaining -= count;
-    out.children.resize(count);
-    for (auto& ch : out.children) {
-        ch = std::make_unique<tree>();
-        read_tree(in, *ch, remaining, depth + 1);
-        ch->parent = &out;
-    }
-}
-
-QDataStream& operator<<(QDataStream& out, tree const& in)
-{
-    out << in.data << static_cast<quint32>(in.children.size());
-    for (auto& ch : in.children)
-        out << *ch;
-    return out;
+    auto ret = boat::gui::source{std::get<branch>(in.data).source};
+    for (auto const& child : in.children)
+        if (auto l = std::get_if<leaf>(&child->data))
+            ret.children.emplace_back(boat::gui::layer{
+                .db = l->layer,
+                .color = l->pen.color().rgba(),
+                .width = l->pen.widthF(),
+                .fill = l->brush.style() == Qt::NoBrush
+                            ? std::nullopt
+                            : std::optional<uint32_t>{l->brush.color().rgba()},
+                .hidden = l->state != Qt::Checked});
+        else
+            ret.children.emplace_back(to_source(*child));
+    return ret;
 }
 
 }  // namespace
 
-bool read(QString const& path, tree& out)
-try {
+boat::db::source named_source(boat::db::source source, std::string fallback)
+{
+    if (!QString::fromStdString(source.source_name).trimmed().isEmpty())
+        return source;
+    auto file = QFileInfo(QString::fromStdString(source.address));
+    if (file.isFile() || file.isDir()) {
+        auto name = file.fileName();
+        source.source_name =
+            (name.isEmpty() ? file.dir().dirName() : name).toStdString();
+        return source;
+    }
+    source.source_name = std::move(fallback);
+    try {
+        auto uri = boat::uri::parse(source.address);
+        if (!uri.host_spec.empty() || !uri.path.empty())
+            source.source_name = boat::concat(
+                uri.host_spec, uri.path.empty() ? "" : "/", uri.path);
+    }
+    catch (std::exception const&) {
+    }
+    return source;
+}
+
+std::unique_ptr<tree> from_scene(boat::gui::scene const& in)
+{
+    auto ret = std::make_unique<tree>(branch{.state = branch_state::ready});
+    for (auto const& source : in.sources)
+        ret->children.push_back(from_source(source, ret.get()));
+    return ret;
+}
+
+boat::gui::scene to_scene(tree const& in)
+{
+    auto ret = boat::gui::scene{};
+    for (auto const& source : in.children)
+        ret.sources.push_back(to_source(*source));
+    return ret;
+}
+
+boat::gui::scene read_scene(QString const& path)
+{
     auto file = QFile{path};
-    return with_file(file, QIODevice::ReadOnly, [&](QDataStream& in) {
-        auto remaining = max_workspace_nodes - 1;
-        read_tree(in, out, remaining, 0);
-    });
+    boat::check(file.open(QIODevice::ReadOnly), "cannot open scene");
+    auto text = file.readAll();
+    boat::check(file.error() == QFileDevice::NoError, "cannot read scene");
+    return boat::gui::read_scene_json(text.toStdString());
+}
+
+bool write_scene(QString const& path, boat::gui::scene const& in)
+try {
+    auto text = boat::gui::write_scene_json(in);
+    auto file = QSaveFile{path};
+    return file.open(QIODevice::WriteOnly) &&
+           file.write(text.data(), static_cast<qint64>(text.size())) ==
+               static_cast<qint64>(text.size()) &&
+           file.commit();
 }
 catch (std::exception const&) {
     return false;
-}
-
-bool write(QString const& path, tree const& in)
-{
-    auto file = QSaveFile{path};
-    return with_file(file,
-                     QIODevice::WriteOnly,
-                     [&](QDataStream& out) { out << in; }) &&
-           file.commit();
 }
 
 QString to_string(tree* ptr)

@@ -4,16 +4,14 @@
 #define BOAT_GEOMETRY_VOCABULARY_HPP
 
 #include <boat/detail/utility.hpp>
-#include <boost/geometry.hpp>
 #include <boost/geometry/geometries/adapted/std_variant.hpp>
-#include <boost/geometry/srs/epsg.hpp>
-#include <boost/geometry/srs/transformation.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+#include <boost/qvm/mat.hpp>
 #include <map>
 
 namespace boat::geometry {
 
 namespace model = boost::geometry::model;
-namespace srs = boost::geometry::srs;
 
 template <class T>
 using tag = boost::geometry::tag<T>::type;
@@ -26,15 +24,6 @@ constexpr bool has_tag<std::variant<Ts...>> = (has_tag<Ts> && ...);
 
 template <class T>
 concept tagged = has_tag<std::remove_cvref_t<T>>;
-
-template <class T>
-constexpr bool is_srs_spec = std::is_constructible_v<srs::projection<>, T>;
-
-template <class... Ts>
-constexpr bool is_srs_spec<std::variant<Ts...>> = (is_srs_spec<Ts> && ...);
-
-template <class T>
-concept srs_spec = is_srs_spec<std::remove_cvref_t<T>>;
 
 template <class T>
 concept box = std::same_as<tag<T>, boost::geometry::box_tag>;
@@ -65,10 +54,6 @@ concept single = std::derived_from<tag<T>, boost::geometry::single_tag>;
 
 template <class T>
 concept curve = single<T> && point<std::ranges::range_value_t<T>>;
-
-template <class T>
-concept projection_or_transformation =
-    specialized<T, srs::projection> || specialized<T, srs::transformation>;
 
 template <class CoordSys>
 struct d2 {
@@ -112,7 +97,6 @@ struct d2 {
 using cartesian = d2<boost::geometry::cs::cartesian>;
 using geographic = d2<boost::geometry::cs::geographic<boost::geometry::degree>>;
 using matrix = boost::qvm::mat<double, 3, 3>;
-using srs_variant = std::variant<srs::epsg, srs::proj4>;
 
 template <class T>
 using d2_of = d2<typename boost::geometry::coordinate_system<T>::type>;

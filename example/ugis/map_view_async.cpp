@@ -48,14 +48,12 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         [](geo::point auto&& v) -> std::optional<point> {
             return point{v.x(), v.y()};
         },
-        [](this auto&& self, geo::curve auto&& v) -> std::optional<point> {
+        [](this auto&& self,
+           std::ranges::range auto&& v) -> std::optional<point> {
             return v.empty() ? std::nullopt : self(v.front());
         },
         [](this auto&& self, geo::polygon auto&& v) -> std::optional<point> {
             return self(v.outer());
-        },
-        [](this auto&& self, geo::multi auto&& v) -> std::optional<point> {
-            return v.empty() ? std::nullopt : self(v.front());
         },
         [](this auto&& self, geo::dynamic auto&& v) -> std::optional<point> {
             return std::visit(self, v);
@@ -78,7 +76,7 @@ void map_view::locate(leaf lyr)
                     if (tok.stop_requested())
                         return;
                     if (mid)
-                        map_mid_ = geo::wrap(*mid);
+                        map_ = bounded({*mid, map_.resolution}).value_or(map_);
                     update();
                     redraw();
                 },
@@ -95,21 +93,19 @@ void map_view::redraw()
     auto w = width(), h = height();
     if (w <= 0 || h <= 0)
         return;
-    auto mid = map_mid_;
-    auto res = map_res_;
+    auto view = map_;
     tasks_.request_stop();
     watch_task(tasks_.run([=, lyrs = layers_](auto tok) {
         if (tok.stop_requested())
             return;
         auto cats = std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
-        auto crs = geo::ortho(mid);
-        auto mat = affine(w, h, mid, res, crs);
+        auto crs = geo::ortho(view.center);
+        auto mat = affine(w, h, view, crs);
         auto num_points = static_cast<size_t>(
             (w * h) / (boat::tile::size * boat::tile::size) + 1);
         auto pvd = boat::gui::provider{
             .cache = cache_,
-            .filter = geo::geographic_interpolate(
-                w, h, mat, crs, num_points)};
+            .filter = geo::geographic_interpolate(w, h, mat, crs, num_points)};
         auto img = QImage{w, h, QImage::Format_RGBA8888};
         img.fill(Qt::white);
         auto art = QPainter{&img};
@@ -145,8 +141,7 @@ void map_view::redraw()
                 if (tok.stop_requested())
                     return;
                 img_ = std::move(img);
-                img_mid_ = mid;
-                img_res_ = res;
+                img_view_ = view;
                 update();
             },
             Qt::QueuedConnection);

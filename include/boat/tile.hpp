@@ -6,6 +6,8 @@
 #include <boat/detail/utility.hpp>
 #include <boost/pfr/ops_fields.hpp>
 #include <boost/qvm/map_vec_mat.hpp>
+#include <boost/qvm/mat_operations.hpp>
+#include <boost/qvm/vec.hpp>
 #include <generator>
 
 namespace boat {

@@ -7,7 +7,7 @@
 #include <optional>
 #include <vector>
 
-constexpr auto workspace_filter = "ugis workspace (*.ugis)";
+constexpr auto scene_filter = "ugis scene (*.ugis)";
 
 struct copy_format {
     QString filter;

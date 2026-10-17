@@ -3,7 +3,8 @@
 #ifndef BOAT_GUI_GEOMETRY_HPP
 #define BOAT_GUI_GEOMETRY_HPP
 
-#include <boat/geometry/raster.hpp>
+#include <boat/geometry/algorithm.hpp>
+#include <boat/geometry/transform.hpp>
 
 namespace boat::gui {
 

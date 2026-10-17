@@ -68,8 +68,6 @@ inline static auto const postgres_gdal_address = boat::concat(  //
     postgres_host,
     "/postgres");
 
-namespace detail {
-
 inline auto odbc_drivers(std::initializer_list<std::string> servers)
 {
     static auto const regex =
@@ -98,12 +96,10 @@ inline auto odbc_drivers(std::initializer_list<std::string> servers)
     return ret;
 }
 
-}  // namespace detail
-
 inline std::vector<std::string> odbc_address()
 {
     auto ret = std::vector<std::string>{};
-    for (auto [srv, drv] : detail::odbc_drivers({"mysql", "postgres"})) {
+    for (auto [srv, drv] : odbc_drivers({"mysql", "postgres"})) {
         if (srv == "mysql")
             ret.push_back(boat::concat(  //
                 "odbc://root:",
@@ -128,7 +124,7 @@ inline std::vector<std::string> odbc_address()
 inline std::string mssql_gdal_address()
 {
 #if defined(BOAT_TEST_MSSQL_HOST)
-    for (auto [srv, drv] : detail::odbc_drivers({"sql server"}))
+    for (auto [srv, drv] : odbc_drivers({"sql server"}))
         if (srv == "sql server")
             return boat::concat(  //
                 "mssql:driver={",

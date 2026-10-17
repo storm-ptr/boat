@@ -36,7 +36,7 @@ void message_handler(  //
 
 }  // namespace
 
-main_window::main_window()
+main_window::main_window(QString const& scene_path)
 {
     setWindowTitle("ugis");
     auto height = 600;
@@ -75,9 +75,9 @@ main_window::main_window()
     tree->set_map_view(map_);
     tree->set_sql_handler([tabs](boat::db::source const& source) {
         auto view = new sql_view{source.address, tabs};
-        auto index =
-            tabs->addTab(view, QString::fromStdString(source.source_name));
-        tabs->setTabToolTip(index, QString::fromStdString(source.source_name));
+        auto name = QString::fromStdString(source.source_name);
+        auto index = tabs->addTab(view, name);
+        tabs->setTabToolTip(index, name);
         view->set_close_handler([tabs, view] {
             if (auto index = tabs->indexOf(view); index >= 0)
                 tabs->removeTab(index);
@@ -90,6 +90,11 @@ main_window::main_window()
     qSetMessagePattern("[%{time hh:mm:ss}] %{type}: %{message}");
     log_ptr = log_;
     old_handler = qInstallMessageHandler(message_handler);
+    if (!scene_path.isEmpty())
+        QMetaObject::invokeMethod(
+            tree,
+            [tree, scene_path] { tree->replace_scene(scene_path); },
+            Qt::QueuedConnection);
 }
 
 main_window::~main_window()

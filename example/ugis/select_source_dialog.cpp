@@ -16,6 +16,7 @@
 #include <boat/sql/commands.hpp>
 #include "formats.h"
 #include "select_source_dialog.h"
+#include "tree.h"
 
 namespace {
 
@@ -37,6 +38,7 @@ preset_address make_preset_address()
         "sqlite:///C:/home/gis_data/sqlite/california_roads.sqlite",
         R"(wms:https://gibs.earthdata.nasa.gov/twms/epsg4326/best/twms.cgi?request=GetTileService)",
         "/vsicurl/https://download.osgeo.org/gdal/data/gtiff/small_world.tif",
+        R"(/vsicurl/https://raw.githubusercontent.com/OSGeo/gdal/master/autotest/ogr/data/shp/CoHI_GCS12.shp)",
     };
     for (auto adr : boat::config::odbc_address())
         all.push_back(adr.data());
@@ -112,6 +114,12 @@ select_source_dialog::select_source_dialog(QWidget* parent) : QDialog(parent)
             &QLineEdit::textChanged,
             this,
             &select_source_dialog::update_ok);
+    connect(address_, &QComboBox::activated, this, [this] {
+        if (name_->text().trimmed().isEmpty())
+            name_->setText(QString::fromStdString(
+                named_source({.address = address().toStdString()}, "")
+                    .source_name));
+    });
     auto layout = new QVBoxLayout{this};
     layout->addLayout(form);
     layout->addWidget(buttons);

@@ -5,7 +5,7 @@
 
 #include <boat/db/catalog.hpp>
 #include <boat/detail/curl.hpp>
-#include <boat/geometry/raster.hpp>
+#include <boat/detail/numbers.hpp>
 
 namespace boat::slippy {
 
@@ -51,9 +51,7 @@ public:
     {
         auto lim =
             std::nexttoward(numbers::pi * numbers::earth::equatorial_radius, 0);
-        auto mbr = geometry::cartesian::box{{-lim, -lim}, {lim, lim}};
         auto sz = tile::size * pow2(zmax);
-        auto [a] = geometry::affine(sz, sz, mbr);
         return {
             .table_name{"_layer"},
             .column_name{"raster"},
@@ -63,12 +61,10 @@ public:
                    {"alpha", "byte"}},
             .width = sz,
             .height = sz,
-            .xorig = a[0][2],
-            .yorig = a[1][2],
-            .xscale = a[0][0],
-            .yscale = a[1][1],
-            .xskew = a[0][1],
-            .yskew = a[1][0],
+            .xorig = -lim,
+            .yorig = lim,
+            .xscale = 2 * lim / sz,
+            .yscale = -2 * lim / sz,
             .srid = epsg,
             .epsg = epsg,
         };

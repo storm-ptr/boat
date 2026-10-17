@@ -6,10 +6,30 @@
 #include <boat/detail/numbers.hpp>
 #include <boat/detail/string.hpp>
 #include <boat/geometry/vocabulary.hpp>
+#include <boost/geometry/algorithms/transform.hpp>
+#include <boost/geometry/srs/epsg.hpp>
+#include <boost/geometry/srs/transformation.hpp>
+#include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 #include <boost/geometry/strategies/transform/srs_transformer.hpp>
 #include <optional>
 
 namespace boat::geometry {
+
+namespace srs = boost::geometry::srs;
+using srs_variant = std::variant<srs::epsg, srs::proj4>;
+
+template <class T>
+constexpr bool is_srs_spec = std::is_constructible_v<srs::projection<>, T>;
+
+template <class... Ts>
+constexpr bool is_srs_spec<std::variant<Ts...>> = (is_srs_spec<Ts> && ...);
+
+template <class T>
+concept srs_spec = is_srs_spec<std::remove_cvref_t<T>>;
+
+template <class T>
+concept projection_or_transformation =
+    specialized<T, srs::projection> || specialized<T, srs::transformation>;
 
 static auto const lonlat = srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
 
@@ -35,7 +55,6 @@ inline srs_variant to_srs_variant(auto const& meta)
                                  : throw std::runtime_error("no SRS");
 }
 
-/// Creates a transformation from source a to target b.
 auto transformation(srs_spec auto const& a, srs_spec auto const& b)
 {
     if constexpr (specialized<decltype(a), std::variant>)

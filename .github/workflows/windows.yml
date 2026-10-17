@@ -72,6 +72,12 @@ jobs:
           }
           Remove-Item "$env:WX_ROOT\lib\vc14x_x64_dll\*.pdb" -ErrorAction SilentlyContinue
 
+      - name: Install nlohmann/json
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force "$env:OSGEO4W_ROOT\include\nlohmann" | Out-Null
+          Invoke-WebRequest https://raw.githubusercontent.com/nlohmann/json/v3.12.0/single_include/nlohmann/json.hpp -OutFile "$env:OSGEO4W_ROOT\include\nlohmann\json.hpp"
+
       - name: Install MySQL
         shell: pwsh
         run: |

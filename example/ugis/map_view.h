@@ -18,8 +18,7 @@
 class QContextMenuEvent;
 
 struct viewport {
-    boat::geometry::geographic::point mid_point;
-    double resolution;
+    boat::gui::view view;
     int width;
     int height;
 };
@@ -29,6 +28,7 @@ public:
     explicit map_view(QWidget* parent = nullptr);
     void locate(leaf);
     void set_layers(std::vector<leaf>);
+    void set_view(boat::gui::view const&);
     viewport view() const;
 
 protected:
@@ -43,6 +43,7 @@ protected:
     void wheelEvent(QWheelEvent*) override;
 
 private:
+    static std::optional<boat::gui::view> bounded(boat::gui::view);
     void redraw();
     void schedule_paint();
     void update_status(QPointF cursor);
@@ -51,14 +52,12 @@ private:
     std::shared_ptr<boat::gui::caches::lru> cache_;
 
     QImage img_;
-    boat::geometry::geographic::point img_mid_;
-    double img_res_;
+    boat::gui::view img_view_;
     QBasicTimer img_timer_;
 
     std::vector<leaf> layers_;
 
-    boat::geometry::geographic::point map_mid_;
-    double map_res_;
+    boat::gui::view map_;
     QBasicTimer map_timer_;
 
     std::optional<QPoint> panning_pos_;

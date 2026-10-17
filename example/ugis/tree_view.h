@@ -18,6 +18,7 @@ class map_view;
 class tree_view : public QTreeView {
 public:
     explicit tree_view(QWidget* parent = nullptr);
+    void replace_scene(QString const& path);
     tree_model& model() { return model_; }
     void set_map_view(map_view* map) { map_ = map; }
     void set_sql_handler(std::function<void(boat::db::source const&)>);
@@ -30,11 +31,10 @@ protected:
     void paintEvent(QPaintEvent*) override;
 
 private:
-    void replace_workspace(QString const& path);
     map_view* map_{};
     std::function<void(boat::db::source const&)> sql_handler_;
     tree_model model_;
-    QString workspace_path_;
+    QString scene_path_;
 };
 
 #endif  // TREE_VIEW_H

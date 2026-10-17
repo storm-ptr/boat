@@ -5,6 +5,7 @@
 
 #include <boat/detail/numbers.hpp>
 #include <boat/geometry/vocabulary.hpp>
+#include <boost/geometry.hpp>
 
 namespace boat::geometry {
 
@@ -106,7 +107,7 @@ polygon auto to_polygon(T const& geom)
     return ret;
 }
 
-/// Normalizes longitude and latitude across the antimeridian and poles.
+/// Wraps at the poles and antimeridian.
 inline geographic::point wrap(geographic::point const& p)
 {
     auto [y, reflected] = reflect(p.y(), -90., 90.);

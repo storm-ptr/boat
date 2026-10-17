@@ -65,15 +65,6 @@ inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
            qvm::translation_mat(-qvm::vec{{0., height * 1.}});
 }
 
-/// Maps pixel coordinates to spatial coordinates.
-inline matrix affine(int width, int height, cartesian::box const& mbr)
-{
-    return boost::qvm::inverse(
-        boost::geometry::strategy::transform::
-            map_transformer<double, 2, 2, true, false>{mbr, width, height}
-                .matrix());
-}
-
 }  // namespace boat::geometry
 
 #endif  // BOAT_GEOMETRY_RASTER_HPP

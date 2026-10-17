@@ -19,13 +19,13 @@ tree_view::tree_view(QWidget* parent) : QTreeView(parent), model_(this)
     header()->hide();
 }
 
-void tree_view::replace_workspace(QString const& path)
+void tree_view::replace_scene(QString const& path)
 {
     if (model_.rowCount()) {
         auto box = QMessageBox{
             QMessageBox::Question,
             {},
-            "replace workspace?",
+            "replace scene?",
             QMessageBox::Cancel,
             this,
         };
@@ -35,13 +35,18 @@ void tree_view::replace_workspace(QString const& path)
         if (box.clickedButton() != replace)
             return;
     }
-    if (path.isEmpty())
-        model_.new_workspace();
-    else if (!model_.open_workspace(path)) {
-        QMessageBox::warning(this, {}, "open workspace failed");
+    try {
+        auto scene = path.isEmpty() ? boat::gui::scene{} : read_scene(path);
+        model_.set_scene(scene);
+        if (map_)
+            map_->set_view(scene.view);
+    }
+    catch (std::exception const& e) {
+        QMessageBox::warning(
+            this, "open scene failed", QString::fromUtf8(e.what()));
         return;
     }
-    workspace_path_ = path;
+    scene_path_ = path;
 }
 
 void tree_view::dragEnterEvent(QDragEnterEvent* event)
@@ -65,7 +70,7 @@ void tree_view::dropEvent(QDropEvent* event)
     auto urls = event->mimeData()->urls();
     if (urls.size() == 1 && urls.front().isLocalFile() &&
         urls.front().fileName().endsWith(".ugis", Qt::CaseInsensitive)) {
-        replace_workspace(urls.front().toLocalFile());
+        replace_scene(urls.front().toLocalFile());
         event->setDropAction(Qt::CopyAction);
         event->accept();
         return;
@@ -87,7 +92,7 @@ void tree_view::paintEvent(QPaintEvent* event)
     art.setPen(palette().color(QPalette::PlaceholderText));
     art.drawText(viewport()->rect(),
                  Qt::AlignCenter | Qt::TextSingleLine,
-                 "right-click to mount a source or open a workspace");
+                 "right-click to mount a source or open a scene");
 }
 
 void tree_view::set_sql_handler(std::function<void(boat::db::source const&)> fn)

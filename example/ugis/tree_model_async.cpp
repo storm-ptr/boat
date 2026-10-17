@@ -116,7 +116,8 @@ void tree_model::fetchMore(QModelIndex const& idx)
             if (!tok.stop_requested()) {
                 auto cat = make_catalog(src.address);
                 for (auto& item : cat->sources())
-                    children.push_back(std::make_unique<tree>(branch{item}));
+                    children.push_back(
+                        std::make_unique<tree>(branch{named_source(item)}));
                 for (auto& item : cat->layers())
                     children.push_back(std::make_unique<tree>(
                         leaf{.address = src.address,
@@ -177,8 +178,8 @@ void tree_model::sample(QModelIndex const& idx, viewport const& vp)
         auto w = vp.width, h = vp.height;
         if (w <= 0 || h <= 0)
             return;
-        auto ortho = boat::geometry::ortho(vp.mid_point);
-        auto mat = affine(w, h, vp.mid_point, vp.resolution, ortho);
+        auto ortho = boat::geometry::ortho(vp.view.center);
+        auto mat = affine(w, h, vp.view, ortho);
         auto num_points = static_cast<size_t>(
             (w * h) / (boat::tile::size * boat::tile::size) + 1);
         auto grid = boat::geometry::geographic_interpolate(

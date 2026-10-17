@@ -21,6 +21,8 @@ A cross-platform, header-only C++23 library for working with geospatial data.
 [API reference](https://storm-ptr.github.io/boat/). Generate it locally with
 `doxygen Doxyfile`.
 
+[Scene JSON](include/boat/gui/scene_json.md): fields, defaults and constraints.
+
 ## ugis
 
 A micro GIS application built on top of the boat library —
@@ -76,6 +78,7 @@ sudo apt-get install --yes --no-install-recommends \
   libspatialite-dev \
   libsqlite3-dev \
   libtbb-dev \
+  nlohmann-json3-dev \
   odbc-postgresql \
   unixodbc-dev
 ```
@@ -91,6 +94,8 @@ Install the following:
 - [Git](https://git-scm.com/downloads/win)
 - [Qt 6](https://www.qt.io/download) (MSVC 64-bit)
 - [Boost](https://www.boost.org/users/download/) (headers only)
+- [nlohmann/json](https://github.com/nlohmann/json)
+  (headers only; put `single_include/nlohmann` in `C:\json\include`)
 - [OSGeo4W](https://trac.osgeo.org/osgeo4w/) —
   GDAL, libcurl, libjpeg, libmysql, libpng, libpq, libspatialite, sqlite3, zlib
   (development packages)
@@ -99,7 +104,7 @@ Run the following commands from the **x64 Native Tools Command Prompt for
 Visual Studio 2026**:
 
 ```cmd
-set INCLUDE=C:\boost_1_91_0;C:\OSGeo4W\include;%INCLUDE%
+set INCLUDE=C:\json\include;C:\boost_1_91_0;C:\OSGeo4W\include;%INCLUDE%
 set LIB=C:\OSGeo4W\lib;%LIB%
 set PATH=C:\Qt\6.10.3\msvc2022_64\bin;C:\OSGeo4W\bin;%PATH%
 set QT_PLUGIN_PATH=C:\Qt\6.10.3\msvc2022_64\plugins
