@@ -32,6 +32,8 @@ auto tiles(  //
     auto z = tile::zoom(width, height, scale);
     auto k = 1. / tile::scale(width, height, z) / tile::size;
     auto snap = [k](auto v) { return static_cast<int>(k * v); };
+    auto nx = static_cast<int>(std::ceil(width * k));
+    auto ny = static_cast<int>(std::ceil(height * k));
     for (auto& a : grid | std::views::values | std::views::join) {
         auto b = fwd(a);
         if (!b)
@@ -46,7 +48,9 @@ auto tiles(  //
             queue.pop();
             ret.insert(top);
             for (auto [dx, dy] : std::views::cartesian_product(d, d)) {
-                auto t = tile{.z = z, .y = top.y + dy, .x = top.x + dx};
+                auto t = tile{.z = z,
+                              .y = (top.y + dy + ny) % ny,
+                              .x = (top.x + dx + nx) % nx};
                 auto [x, y, w, h] = t.rect(width, height);
                 if (!w || !h || !done.insert(t).second)
                     continue;
