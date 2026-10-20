@@ -24,20 +24,17 @@ std::unique_ptr<boat::db::command> make_command(std::string const& address)
     return ret;
 }
 
-QString format(boat::db::rowset const& rows)
+QString format(boat::db::rowset rows)
 {
     if (rows.columns.empty())
         return "completed";
-    constexpr auto limit = size_t{100};
-    auto shown = rows;
-    if (shown.rows.size() > limit)
-        shown.rows.resize(limit);
-    auto ret = QString::fromStdString(boat::concat(shown));
-    ret += shown.rows.size() == rows.rows.size()
-               ? QString("%1 rows").arg(rows.rows.size())
-               : QString("%1 of %2 rows shown")
-                     .arg(shown.rows.size())
-                     .arg(rows.rows.size());
+    auto count = rows.rows.size();
+    rows.rows.resize(std::min<>(count, 100uz));
+    auto ret = QString::fromStdString(boat::concat(rows));
+    ret +=
+        rows.rows.size() == count
+            ? QString("%1 rows").arg(count)
+            : QString("%1 of %2 rows shown").arg(rows.rows.size()).arg(count);
     return ret;
 }
 
@@ -46,13 +43,13 @@ QString format(boat::db::rowset const& rows)
 sql_view::sql_view(std::string address, QWidget* parent)
     : QWidget(parent), address_(std::move(address))
 {
-    run_ = new QPushButton{"run", this};
+    auto run_button = new QPushButton{"run", this};
     cancel_ = new QPushButton{"cancel", this};
     cancel_->setEnabled(false);
     auto close = new QPushButton{"close", this};
     auto show_address = new QPushButton{"address", this};
     show_address->setCheckable(true);
-    for (auto button : {run_, cancel_, close, show_address})
+    for (auto button : {run_button, cancel_, close, show_address})
         button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     auto address_field = new QLineEdit{QString::fromStdString(address_), this};
     address_field->setReadOnly(true);
@@ -61,7 +58,7 @@ sql_view::sql_view(std::string address, QWidget* parent)
     address_field->setSizePolicy(policy);
     address_field->hide();
     auto bar = new QHBoxLayout{};
-    bar->addWidget(run_);
+    bar->addWidget(run_button);
     bar->addWidget(cancel_);
     bar->addWidget(close);
     bar->addWidget(show_address);
@@ -80,7 +77,7 @@ sql_view::sql_view(std::string address, QWidget* parent)
     auto layout = new QVBoxLayout{this};
     layout->addLayout(bar);
     layout->addWidget(split, 1);
-    connect(run_, &QPushButton::clicked, this, [this] { run(); });
+    connect(run_button, &QPushButton::clicked, this, [this] { run(); });
     connect(cancel_, &QPushButton::clicked, this, [this] {
         tasks_.request_stop();
     });
@@ -114,29 +111,23 @@ void sql_view::run()
     auto fut = tasks_.run([this, sql = std::move(sql)](auto tok) {
         if (tok.stop_requested())
             return;
+        auto text = QString{};
         try {
             auto rows = make_command(address_)->exec(sql, tok);
             if (tok.stop_requested())
                 return;
-            auto text = format(rows);
-            QMetaObject::invokeMethod(
-                this,
-                [this, tok, text = std::move(text)] {
-                    if (!tok.stop_requested())
-                        output_->setPlainText(text);
-                },
-                Qt::QueuedConnection);
+            text = format(std::move(rows));
         }
         catch (std::exception const& e) {
-            auto text = QString::fromUtf8(e.what());
-            QMetaObject::invokeMethod(
-                this,
-                [this, tok, text = std::move(text)] {
-                    if (!tok.stop_requested())
-                        output_->setPlainText("error: " + text);
-                },
-                Qt::QueuedConnection);
+            text = "error: " + QString::fromUtf8(e.what());
         }
+        QMetaObject::invokeMethod(
+            this,
+            [this, tok, text = std::move(text)] {
+                if (!tok.stop_requested())
+                    output_->setPlainText(text);
+            },
+            Qt::QueuedConnection);
     });
     watch_task(std::move(fut));
 }

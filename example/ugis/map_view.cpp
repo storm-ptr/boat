@@ -163,8 +163,6 @@ void map_view::paintEvent(QPaintEvent*)
     auto img_mat = affine(img_.width(), img_.height(), img_view_, img_crs);
     auto map_crs = geo::ortho(map_.center);
     auto map_mat = affine(width(), height(), map_, map_crs);
-    if (img_.format() != QImage::Format_RGBA8888)
-        img_ = img_.convertToFormat(QImage::Format_RGBA8888);
     auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
     auto gil = boost::gil::interleaved_view(
         img_.width(), img_.height(), bits, img_.bytesPerLine());

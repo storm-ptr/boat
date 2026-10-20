@@ -33,32 +33,22 @@ public:
                 unique_ptr<PGresult, PQclear>{PQexec(dbc_.get(), txt.data())};
             return fetch(res.get());
         }
-        else {
-            auto types = std::vector<Oid>(ps.size());
-            for (size_t i{}; i < ps.size(); ++i)
-                types[i] = params::type(ps[i]);
-            auto res = unique_ptr<PGresult, PQclear>{PQprepare(  //
-                dbc_.get(),
-                "",
-                txt.data(),
-                static_cast<int>(types.size()),
-                types.data())};
-            auto ec = PQresultStatus(res.get());
-            check(ec == PGRES_COMMAND_OK || ec == PGRES_TUPLES_OK, dbc_.get());
-        }
+        auto types = std::vector<Oid>(ps.size());
         auto values = std::vector<char const*>(ps.size());
         auto lengths = std::vector<int>(ps.size());
         auto formats = std::vector<int>(ps.size());
         for (size_t i{}; i < ps.size(); ++i) {
             auto& p = ps[i];
+            types[i] = params::type(p);
             values[i] = params::value(p);
             lengths[i] = params::length(p);
             formats[i] = params::format(p);
         }
-        auto res = unique_ptr<PGresult, PQclear>{PQexecPrepared(  //
+        auto res = unique_ptr<PGresult, PQclear>{PQexecParams(  //
             dbc_.get(),
-            "",
+            txt.data(),
             int(ps.size()),
+            types.data(),
             values.data(),
             lengths.data(),
             formats.data(),

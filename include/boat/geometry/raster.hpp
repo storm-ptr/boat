@@ -59,10 +59,8 @@ inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
     auto scale = boost::geometry::distance(a, b);
     return qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
            qvm::rotz_mat<3>(.5 * numbers::pi - boost::geometry::azimuth(a, b)) *
-           qvm::diag_mat(qvm::vec{{scale, scale, 1.}}) *
-           qvm::translation_mat(-qvm::vec{{width * .5, height * .5}}) *
-           qvm::diag_mat(qvm::vec{{1., -1., 1.}}) *
-           qvm::translation_mat(-qvm::vec{{0., height * 1.}});
+           qvm::diag_mat(qvm::vec{{scale, -scale, 1.}}) *
+           qvm::translation_mat(-qvm::vec{{width * .5, height * .5}});
 }
 
 }  // namespace boat::geometry

@@ -53,9 +53,10 @@ struct select_list {
     {
         in.cols.empty()
             ? in.print(out, in.tbl.columns)
-            : in.print(out, in.cols | std::views::transform([&](auto& col) {
-                                return find(in.tbl.columns, col);
-                            }));
+            : in.print(out,
+                       in.cols | std::views::transform([&](auto& col) -> auto& {
+                           return find(in.tbl.columns, col);
+                       }));
         return out;
     }
 };

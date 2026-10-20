@@ -50,7 +50,7 @@ private:
                 [&] {
                     auto rs = catalog().select(
                         tbl,
-                        db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 4096});
+                        db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 1024});
                     auto wkb = std::vector<blob>(128);
                     auto end = std::ranges::sample(
                         rs | db::view<blob>, wkb.begin(), wkb.size(), gen);
@@ -58,12 +58,9 @@ private:
                     auto inv = geometry::transform(
                         geometry::srs_inverse(geometry::transformation(crs)));
                     auto ret = geometry::geographic::geometry_collection{};
-                    for (blob_view item : wkb) {
-                        auto g1 = geometry::geographic::variant{};
-                        item >> g1;
-                        if (auto g2 = inv(g1))
-                            ret.push_back(*g2);
-                    }
+                    for (blob_view v : wkb)
+                        if (auto g = inv(get<geometry::geographic::variant>(v)))
+                            ret.push_back(std::move(*g));
                     return ret;
                 });
             if (geoms.empty())
@@ -97,6 +94,8 @@ private:
             co_yield {
                 std::move(rgba), affine * t.affine(r.width, r.height), crs};
         }
+        if (uncached.empty())
+            co_return;
         for (auto [t, img] : catalog().read(r, std::move(uncached))) {
             auto rgba = gil::to<boost::gil::rgba8_image_t>(const_view(img));
             if (cache)

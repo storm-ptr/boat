@@ -26,12 +26,6 @@ public:
     iterator end() { return data_.end(); }
     void transfer(iterator from, iterator to) { data_.splice(to, data_, from); }
 
-    void clear()
-    {
-        data_.clear();
-        index_.clear();
-    }
-
     iterator find(Key const& key)
     {
         auto it = index_.find(key);

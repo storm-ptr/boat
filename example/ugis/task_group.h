@@ -18,12 +18,7 @@ public:
         pool_.setThreadPriority(QThread::LowPriority);
     }
 
-    ~task_group()
-    {
-        source_.request_stop();
-        for (auto& fut : futures_)
-            fut.waitForFinished();
-    }
+    ~task_group() { source_.request_stop(); }
 
     template <std::invocable<std::stop_token> F>
     QFuture<void> run(F&& fn)

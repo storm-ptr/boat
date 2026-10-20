@@ -23,7 +23,6 @@ constexpr auto geo = overloaded{
 db::column const& find(  //
     range_of<db::column> auto&& cols,
     std::string_view column_name)
-
 {
     auto it = std::ranges::find(cols, column_name, &db::column::column_name);
     check(it != cols.end(), column_name);
@@ -55,15 +54,9 @@ constexpr auto orderable = [](range_of<db::index_key> auto&& idx) {
     });
 };
 
-constexpr auto primary = overloaded{
-    [](range_of<db::index_key> auto&& idx) {
-        return std::ranges::all_of(idx, [](auto& key) { return key.primary; });
-    },
-    [](range_of<db::index_key> auto&& keys, std::string_view column_name) {
-        return std::ranges::any_of(keys, [=](auto& key) {
-            return key.primary && key.column_name == column_name;
-        });
-    }};
+constexpr auto primary = [](range_of<db::index_key> auto&& idx) {
+    return std::ranges::all_of(idx, [](auto& key) { return key.primary; });
+};
 
 }  // namespace boat::sql
 

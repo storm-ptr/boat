@@ -64,21 +64,15 @@ template <class T>
     requires requires { boost::gil::view(std::declval<T&>()); }
 T read(blob_view img)
 {
-    auto fit = [](std::initializer_list<int> bytes) {
-        return bytes | std::views::transform([](int i) {
-                   return static_cast<std::byte>(i);
-               }) |
-               std::ranges::to<blob>();
-    };
     auto is = std::istringstream(std::string(as_chars(img.data()), img.size()));
     auto ret = T{};
-    if (img.starts_with(fit({0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A})))
+    if (img.starts_with(blob_view{as_bytes("\x89PNG\r\n\x1a\n"), 8}))
 #if __has_include(<png.h>) && __has_include(<zlib.h>)
         read_and_convert_image(is, ret, boost::gil::png_tag());
 #else
         throw std::runtime_error("compiled without libpng/zlib");
 #endif
-    else if (img.starts_with(fit({0xFF, 0xD8, 0xFF})))
+    else if (img.starts_with(blob_view{as_bytes("\xFF\xD8\xFF"), 3}))
 #if __has_include(<jpeglib.h>)
         read_and_convert_image(is, ret, boost::gil::jpeg_tag());
 #else

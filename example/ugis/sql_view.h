@@ -24,7 +24,6 @@ private:
     std::string address_;
     QPlainTextEdit* query_;
     QPlainTextEdit* output_;
-    QPushButton* run_;
     QPushButton* cancel_;
     std::function<void()> close_handler_;
     bool closing_{};

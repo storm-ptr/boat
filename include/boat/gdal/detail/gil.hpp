@@ -28,17 +28,14 @@ consteval GDALColorInterp as_color()
 template <class T>
 consteval auto as_colors()
 {
-    constexpr int num_channels = boost::gil::num_channels<T>::value;
-    auto ret = std::array<GDALColorInterp, num_channels>{};
-    [&]<int... Is>(std::integer_sequence<int, Is...>) {
-        ((ret[Is] = as_color<boost::mp11::mp_at_c<
-              typename boost::gil::color_space_type<T>::type,
-              boost::mp11::mp_at_c<
-                  typename boost::gil::channel_mapping_type<T>::type,
-                  Is>::value>>()),
-         ...);
-    }(std::make_integer_sequence<int, num_channels>{});
-    return ret;
+    return []<int... Is>(std::integer_sequence<int, Is...>) {
+        return std::array<GDALColorInterp, sizeof...(Is)>{
+            as_color<boost::mp11::mp_at_c<
+                typename boost::gil::color_space_type<T>::type,
+                boost::mp11::mp_at_c<
+                    typename boost::gil::channel_mapping_type<T>::type,
+                    Is>::value>>()...};
+    }(std::make_integer_sequence<int, boost::gil::num_channels<T>::value>{});
 }
 
 template <class T, range_of<GDALColorInterp> R>

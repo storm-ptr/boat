@@ -43,16 +43,14 @@ std::optional<boat::db::source> tree_model::get_source(
 std::vector<leaf> tree_model::checked_leaves() const
 {
     auto ret = std::vector<leaf>{};
-    auto collect = [&](auto& self, tree* ptr) -> void {
-        if (!ptr)
-            return;
-        if (auto l = std::get_if<leaf>(&ptr->data);
+    auto collect = [&](auto& self, tree const& node) -> void {
+        if (auto l = std::get_if<leaf>(&node.data);
             l && l->state == Qt::Checked)
             ret.push_back(*l);
-        for (auto& ch : ptr->children)
-            self(self, ch.get());
+        for (auto& ch : node.children)
+            self(self, *ch);
     };
-    collect(collect, root_.get());
+    collect(collect, *root_);
     return ret;
 }
 
@@ -68,7 +66,7 @@ bool tree_model::is_mounted(QModelIndex const& idx) const
 
 bool tree_model::can_paste_to(QModelIndex const& idx) const
 {
-    return clipboard_ && !clipboard_->layer.raster && is_branch(idx);
+    return clipboard_ && is_branch(idx);
 }
 
 QString tree_model::clipboard_name() const

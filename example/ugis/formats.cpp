@@ -1,29 +1,18 @@
 // Andrew Naplavkov
 
-#include <QTextStream>
+#include <QStringList>
 #include <boat/detail/string.hpp>
 #include <boat/gdal/drivers.hpp>
-#include <set>
 #include "formats.h"
 
 namespace {
 
-std::string make_filter(std::string_view long_name, std::string_view extensions)
+QString make_filter(std::string const& long_name, std::string const& extensions)
 {
-    auto os = std::ostringstream{};
-    os << long_name << " (";
-    for (auto sep{"*."}; auto ext : std::views::split(extensions, ' '))
-        os << std::exchange(sep, " *.")
-           << std::string_view{ext.data(), ext.size()};
-    os << ")";
-    return std::move(os).str();
-}
-
-std::string make_extension(std::string_view extensions)
-{
-    for (auto ext : std::views::split(extensions, ' '))
-        return boat::concat(".", std::string_view{ext.data(), ext.size()});
-    return {};
+    auto pattern = QString::fromStdString(extensions);
+    pattern.replace(' ', " *.");
+    return QString::fromStdString(long_name) + " (" +
+           (extensions.empty() ? "" : "*.") + pattern + ')';
 }
 
 boat::gdal::driver_type format_type(bool raster)
@@ -39,9 +28,10 @@ std::vector<copy_format> make_formats(  //
     auto ret = std::vector<copy_format>{};
     for (auto drv : boat::gdal::drivers(type, op))
         ret.emplace_back(
-            QString::fromStdString(make_filter(drv.long_name, drv.extensions)),
+            make_filter(drv.long_name, drv.extensions),
             QString::fromStdString(drv.short_name),
-            QString::fromStdString(make_extension(drv.extensions)));
+            QString::fromStdString(
+                "." + drv.extensions.substr(0, drv.extensions.find(' '))));
     return ret;
 }
 
@@ -61,27 +51,22 @@ QString copy_as_filter(bool raster)
     auto fmts =
         make_formats(format_type(raster), boat::gdal::driver_op::Create);
     std::ranges::sort(fmts);
-    auto ret = QString{};
-    auto os = QTextStream{&ret};
-    for (auto sep{""}; auto& fmt : fmts)
-        os << std::exchange(sep, ";;") << fmt.filter;
-    return ret;
+    return (fmts | std::views::transform(&copy_format::filter) |
+            std::ranges::to<QStringList>())
+        .join(";;");
 }
 
 QString open_filter()
 {
-    auto filters = std::set<QString>{};
+    auto filters = QStringList{};
     for (auto type :
          {boat::gdal::driver_type::Raster, boat::gdal::driver_type::Vector})
-        for (auto& fmt : make_formats(type, boat::gdal::driver_op::Open))
-            filters.insert(fmt.filter);
-    auto ret = QString{};
-    auto os = QTextStream{&ret};
-    auto sep{""};
-    for (auto const& filter : filters)
-        os << std::exchange(sep, ";;") << filter;
-    os << std::exchange(sep, ";;") << "All files (*.*)";
-    return ret;
+        for (auto drv : boat::gdal::drivers(type, boat::gdal::driver_op::Open))
+            filters.push_back(make_filter(drv.long_name, drv.extensions));
+    filters.removeDuplicates();
+    filters.sort();
+    filters.push_back("All files (*.*)");
+    return filters.join(";;");
 }
 
 QString ensure_extension(QString path, QString const& extension)

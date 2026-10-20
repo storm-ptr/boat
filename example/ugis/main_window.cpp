@@ -44,18 +44,18 @@ main_window::main_window(QString const& scene_path)
     resize(width, height);
 
     auto tree = new tree_view{this};
-    log_ = new QPlainTextEdit{this};
-    log_->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-    log_->setReadOnly(true);
-    log_->setMaximumBlockCount(10'000);
+    auto log = new QPlainTextEdit{this};
+    log->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    log->setReadOnly(true);
+    log->setMaximumBlockCount(10'000);
 
-    auto map_ = new map_view{this};
+    auto map = new map_view{this};
 
     auto tabs = new QTabWidget{this};
     tabs->setTabPosition(QTabWidget::East);
     tabs->setElideMode(Qt::ElideRight);
-    tabs->addTab(map_, "map");
-    tabs->addTab(log_, "log");
+    tabs->addTab(map, "map");
+    tabs->addTab(log, "log");
 
     auto splitter = new QSplitter{Qt::Horizontal, this};
     splitter->addWidget(tree);
@@ -66,13 +66,13 @@ main_window::main_window(QString const& scene_path)
     statusBar();  //< show status bar at startup
 
     auto model = &tree->model();
-    auto sync = [map_, model] { map_->set_layers(model->checked_leaves()); };
+    auto sync = [map, model] { map->set_layers(model->checked_leaves()); };
     sync();
-    connect(model, &QAbstractItemModel::dataChanged, map_, sync);
-    connect(model, &QAbstractItemModel::rowsInserted, map_, sync);
-    connect(model, &QAbstractItemModel::rowsRemoved, map_, sync);
-    connect(model, &QAbstractItemModel::modelReset, map_, sync);
-    tree->set_map_view(map_);
+    connect(model, &QAbstractItemModel::dataChanged, map, sync);
+    connect(model, &QAbstractItemModel::rowsInserted, map, sync);
+    connect(model, &QAbstractItemModel::rowsRemoved, map, sync);
+    connect(model, &QAbstractItemModel::modelReset, map, sync);
+    tree->set_map_view(map);
     tree->set_sql_handler([tabs](boat::db::source const& source) {
         auto view = new sql_view{source.address, tabs};
         auto name = QString::fromStdString(source.source_name);
@@ -88,7 +88,7 @@ main_window::main_window(QString const& scene_path)
     });
 
     qSetMessagePattern("[%{time hh:mm:ss}] %{type}: %{message}");
-    log_ptr = log_;
+    log_ptr = log;
     old_handler = qInstallMessageHandler(message_handler);
     if (!scene_path.isEmpty())
         QMetaObject::invokeMethod(

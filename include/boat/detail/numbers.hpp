@@ -22,7 +22,6 @@ namespace earth {
 constexpr auto equatorial_radius = 6'378'137.;
 constexpr auto polar_radius = 6'356'752.3142451793;
 constexpr auto mean_radius = (2 * equatorial_radius + polar_radius) / 3;
-constexpr auto equator = 2 * pi * equatorial_radius;
 constexpr auto sqrt_area = 2 * sqrt_pi * mean_radius;
 
 }  // namespace earth

@@ -101,8 +101,6 @@ inline auto subdatasets(GDALDatasetH ds)
     -> std::generator<std::pair<char const*, char const*>>
 {
     auto meta = GDALGetMetadata(ds, "SUBDATASETS");
-    if (!CSLCount(meta))
-        co_return;
     for (int i = 1;; ++i) {
         auto desc =
             CSLFetchNameValue(meta, concat("SUBDATASET_", i, "_DESC").data());

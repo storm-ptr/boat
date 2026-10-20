@@ -9,13 +9,6 @@
 
 namespace boat::geometry {
 
-template <point T>
-T add_value(T geom, double value)
-{
-    boost::geometry::add_value(geom, value);
-    return geom;
-}
-
 template <box T>
 auto box_area_interpolate(T const& mbr, size_t num_points)
 {
