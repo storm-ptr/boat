@@ -32,48 +32,34 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Download the Windows artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TARGET_SHA: ${{ steps.commit.outputs.sha }}
+        uses: dawidd6/action-download-artifact@v27
+        with:
+          workflow: windows.yml
+          commit: ${{ steps.commit.outputs.sha }}
+          event: push
+          workflow_conclusion: success
+          name: ${{ env.WINDOWS_ARTIFACT }}
+          path: windows-artifact
+
+      - name: Archive the Windows artifact
         run: |
           set -euo pipefail
-          run_id=$(gh run list \
-            --workflow windows.yml \
-            --branch main \
-            --commit "$TARGET_SHA" \
-            --event push \
-            --status success \
-            --limit 1 \
-            --json databaseId \
-            --jq '.[0].databaseId // empty')
-          [[ -n "$run_id" ]] || { echo "A successful Windows main build is required for $TARGET_SHA" >&2; exit 1; }
-          mkdir windows-artifact
-          gh run download "$run_id" \
-            --name "$WINDOWS_ARTIFACT" \
-            --dir windows-artifact
           (cd windows-artifact && zip --recurse-paths "../$WINDOWS_ARCHIVE" .)
           unzip -t "$WINDOWS_ARCHIVE"
 
-      - name: Download and version the Ubuntu package
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TARGET_SHA: ${{ steps.commit.outputs.sha }}
+      - name: Download the Ubuntu package
+        uses: dawidd6/action-download-artifact@v27
+        with:
+          workflow: ubuntu.yml
+          commit: ${{ steps.commit.outputs.sha }}
+          event: push
+          workflow_conclusion: success
+          name: ${{ env.UBUNTU_ARTIFACT }}
+          path: ubuntu-artifact
+
+      - name: Version the Ubuntu package
         run: |
           set -euo pipefail
-          run_id=$(gh run list \
-            --workflow ubuntu.yml \
-            --branch main \
-            --commit "$TARGET_SHA" \
-            --event push \
-            --status success \
-            --limit 1 \
-            --json databaseId \
-            --jq '.[0].databaseId // empty')
-          [[ -n "$run_id" ]] || { echo "A successful Ubuntu main build is required for $TARGET_SHA" >&2; exit 1; }
-          mkdir ubuntu-artifact
-          gh run download "$run_id" \
-            --name "$UBUNTU_ARTIFACT" \
-            --dir ubuntu-artifact
           mv "ubuntu-artifact/$UBUNTU_ARTIFACT" .
           version=${GITHUB_REF_NAME#v}
           [[ $version =~ ^[0-9][0-9A-Za-z.+~-]*$ ]]
