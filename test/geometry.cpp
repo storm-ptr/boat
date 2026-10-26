@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(geometry_raster)
             if (!covered_by(in, ext))
                 continue;
             auto grid =
-                geographic_interpolate(width, height, mat, crs, num_points);
+                geographic_interpolate(width, height, mat, crs, num_points, 0.);
             BOOST_CHECK(!grid.empty());
             auto& lls = grid.begin()->second;
             BOOST_CHECK_LE(lls.size(), num_points * 2);
