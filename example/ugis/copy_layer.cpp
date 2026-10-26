@@ -5,6 +5,7 @@
 #include <boat/gui/caches/cache.hpp>
 #include "catalog.h"
 #include "copy_layer.h"
+#include "tree.h"
 
 void copy_raster(  //
     leaf const& src,

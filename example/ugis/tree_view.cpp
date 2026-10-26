@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QUrl>
 #include <algorithm>
+#include "map_view.h"
 #include "tree_view.h"
 
 tree_view::tree_view(QWidget* parent) : QTreeView(parent), model_(this)

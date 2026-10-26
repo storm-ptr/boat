@@ -3,6 +3,7 @@
 #include <QStringList>
 #include <boat/detail/string.hpp>
 #include <boat/gdal/drivers.hpp>
+#include <vector>
 #include "formats.h"
 
 namespace {

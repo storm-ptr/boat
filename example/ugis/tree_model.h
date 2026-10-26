@@ -7,9 +7,10 @@
 #include <QString>
 #include <concepts>
 #include <optional>
-#include "map_view.h"
 #include "task_group.h"
 #include "tree.h"
+
+struct viewport;
 
 class tree_model : public QAbstractItemModel {
 public:

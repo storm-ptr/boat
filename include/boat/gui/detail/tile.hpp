@@ -17,7 +17,6 @@ auto tiles(  //
     geometry::srs_spec auto const& crs)
 {
     namespace geo = geometry;
-    static constexpr auto margin = 1.17;
     static constexpr auto d = {-1, 0, 1};
     auto ret = std::unordered_set<tile>{};
     auto tf = geo::transformation(crs);
@@ -34,7 +33,7 @@ auto tiles(  //
     auto snap = [k](auto v) { return static_cast<int>(k * v); };
     auto nx = static_cast<int>(std::ceil(width * k));
     auto ny = static_cast<int>(std::ceil(height * k));
-    for (auto& a : grid | std::views::values | std::views::join) {
+    for (auto& a : grid.begin()->second) {
         auto b = fwd(a);
         if (!b)
             continue;
@@ -57,7 +56,7 @@ auto tiles(  //
                 auto xs = {x, x + w}, ys = {y, y + h};
                 for (auto [x, y] : std::views::cartesian_product(xs, ys))
                     if ((b = inv(geo::geographic::point(x, y))) &&
-                        margin * meters > distance(a, *b)) {
+                        meters > distance(a, *b)) {
                         queue.push(t);
                         break;
                     }

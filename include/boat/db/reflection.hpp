@@ -5,7 +5,8 @@
 
 #include <boat/db/adapted/adapted.hpp>
 #include <boat/db/meta.hpp>
-#include <boost/pfr.hpp>
+#include <boost/pfr/core.hpp>
+#include <boost/pfr/core_name.hpp>
 #include <boost/type_index/ctti_type_index.hpp>
 
 namespace boat::db {

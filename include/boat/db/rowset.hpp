@@ -4,7 +4,8 @@
 #define BOAT_DB_ROWSET_HPP
 
 #include <boat/db/adapted/adapted.hpp>
-#include <boost/pfr.hpp>
+#include <boost/pfr/core.hpp>
+#include <boost/pfr/core_name.hpp>
 #include <vector>
 
 namespace boat::db {

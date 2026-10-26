@@ -2,9 +2,12 @@
 
 #include <QPainter>
 #include <boat/gui/qt.hpp>
+// strictly ordered
+#include <boat/gui/provider.hpp>
 #include "catalog.h"
 #include "geometry.h"
 #include "map_view.h"
+#include "tree.h"
 
 namespace geo = boat::geometry;
 using point = geo::geographic::point;

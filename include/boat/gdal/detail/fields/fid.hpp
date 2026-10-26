@@ -3,8 +3,9 @@
 #ifndef BOAT_GDAL_FIELDS_FID_HPP
 #define BOAT_GDAL_FIELDS_FID_HPP
 
-#include <boat/db/adapted/adapted.hpp>
-#include <boat/gdal/detail/adapted/date_time.hpp>
+#include <boat/db/variant.hpp>
+#include <boat/gdal/detail/utility.hpp>
+#include <optional>
 
 namespace boat::gdal::fields {
 

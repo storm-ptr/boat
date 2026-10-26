@@ -5,7 +5,6 @@
 
 #include <QString>
 #include <optional>
-#include <vector>
 
 constexpr auto scene_filter = "ugis scene (*.ugis)";
 

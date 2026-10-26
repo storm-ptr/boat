@@ -6,7 +6,8 @@
 #include <sqlite3.h>
 // strictly ordered
 #include <spatialite.h>
-#include <boat/db/adapted/adapted.hpp>
+#include <boat/db/variant.hpp>
+#include <boat/detail/string.hpp>
 
 namespace boat::sql::sqlite {
 

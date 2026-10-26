@@ -7,25 +7,20 @@
 #include <QImage>
 #include <QPoint>
 #include <QWidget>
-#include <boat/geometry/raster.hpp>
-#include <boat/gui/caches/lru.hpp>
-#include <boat/gui/provider.hpp>
+#include <boat/gui/caches/cache.hpp>
 #include <memory>
 #include <optional>
+#include <vector>
 #include "task_group.h"
-#include "tree.h"
+#include "viewport.h"
 
 class QContextMenuEvent;
-
-struct viewport {
-    boat::gui::view view;
-    int width;
-    int height;
-};
+struct leaf;
 
 class map_view : public QWidget {
 public:
     explicit map_view(QWidget* parent = nullptr);
+    ~map_view() override;
     void locate(leaf);
     void set_layers(std::vector<leaf>);
     void set_view(boat::gui::view const&);
@@ -49,7 +44,7 @@ private:
     void update_status(QPointF cursor);
     void watch_task(QFuture<void>);
 
-    std::shared_ptr<boat::gui::caches::lru> cache_;
+    std::shared_ptr<boat::gui::caches::cache> cache_;
 
     QImage img_;
     boat::gui::view img_view_;

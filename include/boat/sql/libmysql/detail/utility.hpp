@@ -4,7 +4,7 @@
 #define BOAT_SQL_LIBMYSQL_UTILITY_HPP
 
 #include <mysql.h>
-#include <boat/db/adapted/adapted.hpp>
+#include <boat/db/variant.hpp>
 #include <boat/detail/string.hpp>
 
 namespace boat::sql::libmysql {

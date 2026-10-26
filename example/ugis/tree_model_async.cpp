@@ -9,6 +9,7 @@
 #include "copy_layer.h"
 #include "geometry.h"
 #include "tree_model.h"
+#include "viewport.h"
 
 namespace {
 

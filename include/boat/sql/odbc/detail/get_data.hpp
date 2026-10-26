@@ -3,8 +3,9 @@
 #ifndef BOAT_SQL_ODBC_GET_DATA_HPP
 #define BOAT_SQL_ODBC_GET_DATA_HPP
 
-#include <boat/db/adapted/adapted.hpp>
+#include <boat/db/variant.hpp>
 #include <boat/sql/odbc/detail/utility.hpp>
+#include <vector>
 
 namespace boat::sql::odbc {
 

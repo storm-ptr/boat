@@ -25,15 +25,9 @@
 #endif
 #include <boat/detail/string.hpp>
 #include <boat/detail/uri.hpp>
+#include <boat/sql/url.hpp>
 
 namespace boat::sql {
-
-/// Recognizes SQL URL schemes even without the corresponding client library.
-inline bool supported_url(std::string_view url)
-{
-    return any({"mysql://", "odbc://", "postgres://", "sqlite://"},
-               prefix(url));
-}
 
 /// Throws if the URL scheme is unknown or its client library is unavailable.
 inline std::unique_ptr<db::command> make_command(std::string_view url)

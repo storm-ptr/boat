@@ -13,11 +13,13 @@
 #include <QWheelEvent>
 #include <array>
 #include <boat/gdal/dataset.hpp>
+#include <boat/gui/caches/lru.hpp>
 #include <boat/gui/qt.hpp>
 #include <boost/gil.hpp>
 #include "formats.h"
 #include "geometry.h"
 #include "map_view.h"
+#include "tree.h"
 
 namespace geo = boat::geometry;
 using point = geo::geographic::point;
@@ -72,6 +74,8 @@ map_view::map_view(QWidget* parent)
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent);
 }
+
+map_view::~map_view() = default;
 
 void map_view::contextMenuEvent(QContextMenuEvent* event)
 {

@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <boat/detail/uri.hpp>
 #include "formats.h"
+#include "map_view.h"
 #include "select_source_dialog.h"
 #include "tree_view.h"
 

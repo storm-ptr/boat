@@ -4,7 +4,8 @@
 #define COPY_LAYER_H
 
 #include <stop_token>
-#include "tree.h"
+
+struct leaf;
 
 void copy_raster(  //
     leaf const& src,

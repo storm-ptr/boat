@@ -16,15 +16,17 @@ geographic::grid geographic_interpolate(  //
     int height,
     matrix const& mat,
     srs_spec auto const& crs,
-    size_t num_points)
+    size_t num_points,
+    double margin = .05)
 {
     auto tf = transformation(crs);
     auto fwd = transform(srs_forward(tf), mat_inverse(mat));
     auto inv = transform(mat_forward(mat), srs_inverse(tf));
+    auto dx = width * margin, dy = height * margin;
+    auto bounds = cartesian::box{{-dx, -dy}, {width + dx, height + dy}};
     auto sentinel = [&](auto& ll) {
         auto xy = fwd(ll).transform(cartesian{});
-        return !xy || !boost::geometry::covered_by(
-                          *xy, cartesian::box{{}, {width * 1., height * 1.}});
+        return !xy || !boost::geometry::covered_by(*xy, bounds);
     };
     auto points =
         inv(box_area_interpolate(geographic::box{{}, {width * 1., height * 1.}},

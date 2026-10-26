@@ -8,7 +8,6 @@
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/tile.hpp>
 #include <boat/gui/variant.hpp>
-#include <random>
 
 namespace boat::gui {
 
@@ -21,16 +20,14 @@ struct provider {
 
     std::generator<variant> renderables()
     {
-        if (layer.raster)
-            co_yield std::ranges::elements_of(rasters());
-        else
-            co_yield std::ranges::elements_of(vectors());
+        co_yield std::ranges::elements_of(layer.raster ? rasters() : vectors());
     }
 
 private:
-    std::generator<geometry::geographic::geometry_collection> vectors()
+    std::generator<variant> vectors()
     {
         namespace bgi = boost::geometry::index;
+        constexpr auto sample_size = 64, fetch_limit = 1024;
         auto tbl = get_or_invoke(cache.get(), cache_key, [&] {
             return catalog().get_table(layer.schema_name, layer.table_name);
         });
@@ -38,10 +35,9 @@ private:
         auto it = std::ranges::find(tbl.columns, col, &db::column::column_name);
         check(it != tbl.columns.end(), col);
         auto crs = geometry::to_srs_variant(*it);
-        auto voids = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
-        auto gen = std::mt19937{std::random_device()()};
+        auto done = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
         for (auto& box : boxes(filter, crs)) {
-            if (bgi::qbegin(voids, bgi::contains(box)) != bgi::qend(voids))
+            if (bgi::qbegin(done, bgi::contains(box)) != bgi::qend(done))
                 continue;
             auto a = box.min_corner(), b = box.max_corner();
             auto geoms = get_or_invoke(
@@ -50,27 +46,25 @@ private:
                 [&] {
                     auto rs = catalog().select(
                         tbl,
-                        db::bbox{{col}, col, a.x(), a.y(), b.x(), b.y(), 1024});
-                    auto wkb = std::vector<blob>(128);
-                    auto end = std::ranges::sample(
-                        rs | db::view<blob>, wkb.begin(), wkb.size(), gen);
-                    wkb.erase(end, wkb.end());
+                        db::bbox{
+                            {col}, col, a.x(), a.y(), b.x(), b.y(), fetch_limit});
                     auto inv = geometry::transform(
                         geometry::srs_inverse(geometry::transformation(crs)));
                     auto ret = geometry::geographic::geometry_collection{};
-                    for (blob_view v : wkb)
-                        if (auto g = inv(get<geometry::geographic::variant>(v)))
+                    for (auto& item :
+                         sample(rs | db::view<blob>, box, sample_size))
+                        if (auto g = inv(item))
                             ret.push_back(std::move(*g));
                     return ret;
                 });
-            if (geoms.empty())
-                voids.insert(box);
-            else
+            if (geoms.size() < sample_size)
+                done.insert(box);
+            if (!geoms.empty())
                 co_yield std::move(geoms);
         }
     }
 
-    std::generator<raster> rasters()
+    std::generator<variant> rasters()
     {
         auto r = get_or_invoke(cache.get(), cache_key, [&] {
             return catalog().get_raster(layer);
@@ -91,7 +85,7 @@ private:
             }
             auto rgba =
                 std::any_cast<boost::gil::rgba8_image_t>(std::move(any));
-            co_yield {
+            co_yield raster{
                 std::move(rgba), affine * t.affine(r.width, r.height), crs};
         }
         if (uncached.empty())
@@ -100,7 +94,7 @@ private:
             auto rgba = gil::to<boost::gil::rgba8_image_t>(const_view(img));
             if (cache)
                 cache->put(std::tuple{cache_key, t}, rgba);
-            co_yield {
+            co_yield raster{
                 std::move(rgba), affine * t.affine(r.width, r.height), crs};
         }
     }

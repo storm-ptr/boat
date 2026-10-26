@@ -3,7 +3,7 @@
 #ifndef BOAT_SQL_ODBC_PARAMS_HPP
 #define BOAT_SQL_ODBC_PARAMS_HPP
 
-#include <boat/db/adapted/adapted.hpp>
+#include <boat/db/variant.hpp>
 #include <boat/sql/odbc/detail/utility.hpp>
 #include <variant>
 
