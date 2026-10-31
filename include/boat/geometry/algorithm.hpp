@@ -59,6 +59,19 @@ inline auto buffer(double distance, size_t num_points)
     };
 }
 
+void for_each_point(tagged auto const& geom, auto fn)
+{
+    overloaded{
+        [&](single auto const& g) { boost::geometry::for_each_point(g, fn); },
+        [](this auto&& self, multi auto const& g) -> void {
+            std::ranges::for_each(g, self);
+        },
+        [](this auto&& self, dynamic auto const& g) -> void {
+            std::visit(self, g);
+        },
+    }(geom);
+}
+
 /// Approximate degrees per meter of latitude, or longitude at a given latitude.
 constexpr auto meter = overloaded{
     [] { return numbers::radian / numbers::earth::mean_radius; },
@@ -73,22 +86,12 @@ constexpr auto minmax = []<tagged T>(T const& geom) -> box auto {
     double ymin = INFINITY;
     double xmax = -INFINITY;
     double ymax = -INFINITY;
-    overloaded{
-        [&](single auto& g) {
-            boost::geometry::for_each_point(g, [&](point auto& p) {
-                xmin = std::min<>(xmin, p.x());
-                ymin = std::min<>(ymin, p.y());
-                xmax = std::max<>(xmax, p.x());
-                ymax = std::max<>(ymax, p.y());
-            });
-        },
-        [](this auto&& self, multi auto& g) -> void {
-            std::ranges::for_each(g, self);
-        },
-        [](this auto&& self, dynamic auto& var) -> void {
-            std::visit(self, var);
-        },
-    }(geom);
+    geometry::for_each_point(geom, [&](point auto const& p) {
+        xmin = std::min<>(xmin, p.x());
+        ymin = std::min<>(ymin, p.y());
+        xmax = std::max<>(xmax, p.x());
+        ymax = std::max<>(ymax, p.y());
+    });
     return typename d2_of<T>::box{{xmin, ymin}, {xmax, ymax}};
 };
 

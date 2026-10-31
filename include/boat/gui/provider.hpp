@@ -4,6 +4,7 @@
 #define BOAT_GUI_PROVIDER_HPP
 
 #include <boat/db/catalog.hpp>
+#include <boat/geometry/wkb.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/tile.hpp>
@@ -17,6 +18,7 @@ struct provider {
     std::shared_ptr<caches::cache> cache;
     size_t cache_key;
     geometry::geographic::grid filter;
+    int query_limit = 512;
 
     std::generator<variant> renderables()
     {
@@ -27,7 +29,7 @@ private:
     std::generator<variant> vectors()
     {
         namespace bgi = boost::geometry::index;
-        constexpr auto sample_size = 64, fetch_limit = 1024;
+        auto cells_per_side = std::max<int>(1, std::sqrt(query_limit));
         auto tbl = get_or_invoke(cache.get(), cache_key, [&] {
             return catalog().get_table(layer.schema_name, layer.table_name);
         });
@@ -35,29 +37,32 @@ private:
         auto it = std::ranges::find(tbl.columns, col, &db::column::column_name);
         check(it != tbl.columns.end(), col);
         auto crs = geometry::to_srs_variant(*it);
+        auto inv = geometry::transform(
+            geometry::srs_inverse(geometry::transformation(crs)));
         auto done = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
         for (auto& box : boxes(filter, crs)) {
             if (bgi::qbegin(done, bgi::contains(box)) != bgi::qend(done))
                 continue;
             auto a = box.min_corner(), b = box.max_corner();
-            auto geoms = get_or_invoke(
+            auto [geoms, all] = get_or_invoke(  //
                 cache.get(),
                 std::tuple{cache_key, a.x(), a.y(), b.x(), b.y()},
                 [&] {
                     auto rs = catalog().select(
                         tbl,
-                        db::bbox{
-                            {col}, col, a.x(), a.y(), b.x(), b.y(), fetch_limit});
-                    auto inv = geometry::transform(
-                        geometry::srs_inverse(geometry::transformation(crs)));
-                    auto ret = geometry::geographic::geometry_collection{};
-                    for (auto& item :
-                         sample(rs | db::view<blob>, box, sample_size))
-                        if (auto g = inv(item))
-                            ret.push_back(std::move(*g));
-                    return ret;
+                        {{col}, col, a.x(), a.y(), b.x(), b.y(), query_limit});
+                    auto geoms = geometry::geographic::geometry_collection{};
+                    for (auto&& wkb : rs | db::view<blob>)
+                        blob_view{wkb} >> geoms.emplace_back();
+                    auto all = geoms.size() < query_limit;
+                    if (!all)
+                        geoms = sample(std::move(geoms), box, cells_per_side);
+                    return std::pair{
+                        inv(geoms).value_or(
+                            geometry::geographic::geometry_collection{}),
+                        all};
                 });
-            if (geoms.size() < sample_size)
+            if (all)
                 done.insert(box);
             if (!geoms.empty())
                 co_yield std::move(geoms);

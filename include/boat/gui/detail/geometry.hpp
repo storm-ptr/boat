@@ -5,7 +5,6 @@
 
 #include <boat/geometry/algorithm.hpp>
 #include <boat/geometry/transform.hpp>
-#include <boat/geometry/wkb.hpp>
 
 namespace boat::gui {
 
@@ -70,37 +69,44 @@ inline auto multi_point(int width, int height)
     return ret;
 }
 
-auto sample(  //
-    std::ranges::input_range auto&& wkbs,
+inline auto sample(  //
+    geometry::geographic::geometry_collection geoms,
     geometry::cartesian::box const& box,
-    size_t limit)
+    size_t cells_per_side)
 {
+    namespace bg = boost::geometry;
     namespace geo = geometry;
     using collection = geo::geographic::geometry_collection;
-    auto cells = std::array<collection, 64>{};
+    auto cells =
+        std::vector<collection::value_type*>(cells_per_side * cells_per_side);
     auto a = box.min_corner(), b = box.max_corner();
-    for (auto&& wkb : wkbs) {
-        auto geom = geo::geographic::variant{};
-        blob_view{wkb} >> geom;
-        auto clip = geo::cartesian::box{};
-        if (!boost::geometry::intersection(
-                box, geo::cartesian{}(geo::minmax(geom)), clip))
-            continue;
-        auto p = boost::geometry::return_centroid<geo::cartesian::point>(clip);
-        auto x = std::clamp(int(8 * (p.x() - a.x()) / (b.x() - a.x())), 0, 7);
-        auto y = std::clamp(int(8 * (p.y() - a.y()) / (b.y() - a.y())), 0, 7);
-        cells[y * 8 + x].push_back(std::move(geom));
+    auto center = bg::return_centroid<geo::cartesian::point>(box);
+    auto cell = [&](auto v, auto lo, auto hi) {
+        return int(std::clamp(
+            cells_per_side * (v - lo) / (hi - lo), 0., cells_per_side - 1.));
+    };
+    for (auto& geom : geoms) {
+        double best = INFINITY;
+        auto p = center;
+        geo::for_each_point(geom, [&](auto&& v) {
+            auto q = geo::cartesian{}(v);
+            auto d = bg::comparable_distance(q, center);
+            if (d < best) {
+                best = d;
+                p = q;
+            }
+        });
+        if (best < INFINITY) {
+            auto& winner = cells[cell(p.y(), a.y(), b.y()) * cells_per_side +
+                                 cell(p.x(), a.x(), b.x())];
+            if (!winner || bg::num_points(geom) > bg::num_points(*winner))
+                winner = &geom;
+        }
     }
     auto ret = collection{};
-    auto max_size =
-        std::ranges::max_element(cells, {}, &collection::size)->size();
-    for (auto i : std::views::iota(0uz, max_size))
-        for (auto& cell : cells)
-            if (i < cell.size()) {
-                if (ret.size() == limit)
-                    return ret;
-                ret.push_back(std::move(cell[i]));
-            }
+    for (auto* geom : cells)
+        if (geom)
+            ret.push_back(std::move(*geom));
     return ret;
 }
 
