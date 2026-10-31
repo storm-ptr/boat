@@ -3,8 +3,7 @@
 #ifndef BOAT_GUI_TILE_HPP
 #define BOAT_GUI_TILE_HPP
 
-#include <boat/geometry/algorithm.hpp>
-#include <boat/geometry/transform.hpp>
+#include <boat/geometry/raster.hpp>
 #include <boat/tile.hpp>
 
 namespace boat::gui {
@@ -19,9 +18,7 @@ auto tiles(  //
     namespace geo = geometry;
     static constexpr auto d = {-1, 0, 1};
     auto ret = std::unordered_set<tile>{};
-    auto tf = geo::transformation(crs);
-    auto fwd = geo::transform(geo::srs_forward(tf), geo::mat_inverse(affine));
-    auto inv = geo::transform(geo::mat_forward(affine), geo::srs_inverse(tf));
+    auto [fwd, inv] = geo::bidirectional_transform(affine, crs);
     auto a = inv(geo::geographic::point(width * .5, height * .5));
     auto b = inv(geo::geographic::point(width * .5 + 1., height * .5 + 1.));
     if (!a || !b || grid.empty())

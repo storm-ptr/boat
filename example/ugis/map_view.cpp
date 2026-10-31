@@ -15,13 +15,14 @@
 #include <boat/gdal/dataset.hpp>
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/qt.hpp>
+#include <boat/gui/utility.hpp>
 #include <boost/gil.hpp>
 #include "formats.h"
-#include "geometry.h"
 #include "map_view.h"
 #include "tree.h"
 
 namespace geo = boat::geometry;
+using boat::gui::affine;
 using point = geo::geographic::point;
 
 namespace {

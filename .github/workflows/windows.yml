@@ -19,7 +19,7 @@ env:
   TEST_PASSWORD: Password12!
   UGIS_ARTIFACT: ugis.windows
   WX_ROOT: C:\wxWidgets
-  WX_VERSION: 3.3.3
+  WX_VERSION: 3.3.4
 
 jobs:
   build:

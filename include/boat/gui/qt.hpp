@@ -6,6 +6,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
+#include <boat/geometry/raster.hpp>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/gil.hpp>
 
@@ -50,7 +51,8 @@ void draw_image(  //
     geometry::matrix const& out_affine,
     geometry::srs_spec auto&& out_crs)
 {
-    auto [fwd, inv] = bidirectional(in_affine, in_crs, out_affine, out_crs);
+    auto [fwd, inv] = geometry::bidirectional_transform(
+        in_affine, in_crs, out_affine, out_crs);
     auto mbr =
         fwd(multi_point(in.width(), in.height()))
             .transform(geometry::minmax)

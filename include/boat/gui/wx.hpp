@@ -4,8 +4,8 @@
 #define BOAT_GUI_WX_HPP
 
 #include <wx/graphics.h>
-#include <wx/mstream.h>
 #include <wx/wx.h>
+#include <boat/geometry/raster.hpp>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/gil.hpp>
 
@@ -51,7 +51,8 @@ void draw_image(  //
     geometry::matrix const& out_affine,
     geometry::srs_spec auto&& out_crs)
 {
-    auto [fwd, inv] = bidirectional(in_affine, in_crs, out_affine, out_crs);
+    auto [fwd, inv] = geometry::bidirectional_transform(
+        in_affine, in_crs, out_affine, out_crs);
     auto intersect = [&](geometry::box auto&& v) {
         wxDouble w, h;
         out.GetSize(&w, &h);
@@ -66,33 +67,23 @@ void draw_image(  //
                    .transform(intersect);
     if (!mbr || mbr->IsEmpty())
         return;
+    auto [left, top, w, h] = *mbr;
     auto img = wxImage{mbr->GetSize()};
     img.InitAlpha();
     auto ys = std::views::iota(0, img.GetHeight());
-    auto pixel = get_pixel(in);
     std::for_each(policy, ys.begin(), ys.end(), [&](int y) {
         auto d = y * img.GetWidth();
         auto rgb = reinterpret_cast<wxImage::RGBValue*>(img.GetData()) + d;
         auto alpha = img.GetAlpha() + d;
-        for (int x{}; x < img.GetWidth(); ++x)
-            if (auto px =
-                    inv(geometry::geographic::point(x + mbr->m_x, y + mbr->m_y))
-                        .and_then(pixel)) {
-                rgb[x] =
-                    wxImage::RGBValue(get_color(*px, boost::gil::red_t()),
-                                      get_color(*px, boost::gil::green_t()),
-                                      get_color(*px, boost::gil::blue_t()));
-                alpha[x] = get_color(*px, boost::gil::alpha_t());
-            }
-            else
-                alpha[x] = wxIMAGE_ALPHA_TRANSPARENT;
+        for (int x{}; x < img.GetWidth(); ++x) {
+            auto px = inv(geometry::geographic::point(x + left, y + top))
+                          .and_then(get_pixel(in))
+                          .value_or(boost::gil::rgba8_pixel_t{0});
+            rgb[x] = {px[0], px[1], px[2]};
+            alpha[x] = px[3];
+        }
     });
-    out.DrawBitmap(  //
-        out.CreateBitmapFromImage(img),
-        mbr->m_x,
-        mbr->m_y,
-        mbr->m_width,
-        mbr->m_height);
+    out.DrawBitmap(out.CreateBitmapFromImage(img), left, top, w, h);
 }
 
 }  // namespace boat::gui

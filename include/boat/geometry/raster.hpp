@@ -10,6 +10,30 @@
 
 namespace boat::geometry {
 
+/// Maps between geographic coordinates and raster pixels, in that order.
+auto bidirectional_transform(matrix const& mat, srs_spec auto const& crs)
+{
+    auto tf = transformation(crs);
+    return std::pair{
+        transform(srs_forward(tf), mat_inverse(mat)),
+        transform(mat_forward(mat), srs_inverse(tf)),
+    };
+}
+
+/// Maps between the pixel coordinates of two rasters.
+auto bidirectional_transform(  //
+    matrix const& affine1,
+    srs_spec auto const& crs1,
+    matrix const& affine2,
+    srs_spec auto const& crs2)
+{
+    auto tf = transformation(crs1, crs2);
+    return std::pair{
+        transform(mat_forward(affine1), srs_forward(tf), mat_inverse(affine2)),
+        transform(mat_forward(affine2), srs_inverse(tf), mat_inverse(affine1)),
+    };
+}
+
 /// Approximates a raster footprint with points from a fixed global grid.
 geographic::grid geographic_interpolate(  //
     int width,
@@ -19,9 +43,7 @@ geographic::grid geographic_interpolate(  //
     size_t num_points,
     double margin = .05)
 {
-    auto tf = transformation(crs);
-    auto fwd = transform(srs_forward(tf), mat_inverse(mat));
-    auto inv = transform(mat_forward(mat), srs_inverse(tf));
+    auto [fwd, inv] = bidirectional_transform(mat, crs);
     auto dx = width * margin, dy = height * margin;
     auto bounds = cartesian::box{{-dx, -dy}, {width + dx, height + dy}};
     auto sentinel = [&](auto& ll) {
@@ -46,9 +68,8 @@ geographic::grid geographic_interpolate(  //
         if (indices.empty())
             continue;
         auto& lvl = ret[numbers::earth::sqrt_area / std::sqrt(fib.num_points)];
-        lvl.resize(indices.size());
-        for (auto [i, j] : indices | std::views::enumerate)
-            lvl[i] = fib[j];
+        lvl.assign_range(
+            indices | std::views::transform([&](size_t i) { return fib[i]; }));
     }
     return ret;
 }

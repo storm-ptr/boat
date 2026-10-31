@@ -2,10 +2,10 @@
 
 #include <QPainter>
 #include <boat/gui/qt.hpp>
+#include <boat/gui/utility.hpp>
 // strictly ordered
 #include <boat/gui/provider.hpp>
 #include "catalog.h"
-#include "geometry.h"
 #include "map_view.h"
 #include "tree.h"
 
@@ -22,12 +22,9 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     if (lyr.layer.raster) {
         auto rast = cat->get_raster(lyr.layer);
         auto crs = geo::to_srs_variant(rast);
-        auto x = rast.xorig + (rast.width / 2.) * rast.xscale +
-                 (rast.height / 2.) * rast.xskew;
-        auto y = rast.yorig + (rast.width / 2.) * rast.yskew +
-                 (rast.height / 2.) * rast.yscale;
-        return geo::transform(geo::srs_inverse(geo::transformation(crs)))(
-            point{x, y});
+        return geo::transform(geo::mat_forward(boat::db::affine(rast)),
+                              geo::srs_inverse(geo::transformation(crs)))(
+            point{rast.width * .5, rast.height * .5});
     }
     auto tbl = cat->get_table(lyr.layer.schema_name, lyr.layer.table_name);
     auto& col = lyr.layer.column_name;
@@ -104,8 +101,8 @@ void map_view::redraw()
         auto cats = std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
         auto crs = geo::ortho(view.center);
         auto mat = affine(w, h, view, crs);
-        auto num_points = static_cast<size_t>(
-            (w * h) / (boat::tile::size * boat::tile::size) + 1);
+        auto num_points =
+            size_t(w) * h / (boat::tile::size * boat::tile::size) + 1;
         auto pvd = boat::gui::provider{
             .cache = cache_,
             .filter = geo::geographic_interpolate(w, h, mat, crs, num_points)};

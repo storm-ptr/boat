@@ -3,11 +3,11 @@
 #include <QDebug>
 #include <boat/db/io.hpp>
 #include <boat/gui/caches/cache.hpp>
-#include <boat/gui/detail/geometry.hpp>
+#include <boat/gui/utility.hpp>
+#include <boat/tile.hpp>
 #include <filesystem>
 #include "catalog.h"
 #include "copy_layer.h"
-#include "geometry.h"
 #include "tree_model.h"
 #include "viewport.h"
 
@@ -181,8 +181,8 @@ void tree_model::sample(QModelIndex const& idx, viewport const& vp)
             return;
         auto ortho = boat::geometry::ortho(vp.view.center);
         auto mat = affine(w, h, vp.view, ortho);
-        auto num_points = static_cast<size_t>(
-            (w * h) / (boat::tile::size * boat::tile::size) + 1);
+        auto num_points =
+            size_t(w) * h / (boat::tile::size * boat::tile::size) + 1;
         auto grid = boat::geometry::geographic_interpolate(
             w, h, mat, ortho, num_points);
         auto crs = boat::geometry::to_srs_variant(*it);

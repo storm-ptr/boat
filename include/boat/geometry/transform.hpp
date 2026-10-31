@@ -4,13 +4,13 @@
 #define BOAT_GEOMETRY_TRANSFORM_HPP
 
 #include <boat/detail/numbers.hpp>
-#include <boat/detail/string.hpp>
 #include <boat/geometry/vocabulary.hpp>
 #include <boost/geometry/algorithms/transform.hpp>
 #include <boost/geometry/srs/epsg.hpp>
 #include <boost/geometry/srs/transformation.hpp>
 #include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 #include <boost/geometry/strategies/transform/srs_transformer.hpp>
+#include <format>
 #include <optional>
 
 namespace boat::geometry {
@@ -36,14 +36,12 @@ static auto const lonlat = srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
 /// Orthographic SRS centered at v.
 inline auto ortho(geographic::point const& v)
 {
-    return srs::proj4{concat(  //
-        " +proj=ortho +x_0=0 +y_0=0 +units=m +no_defs +a=",
+    return srs::proj4{std::format(  //
+        " +proj=ortho +x_0=0 +y_0=0 +units=m +no_defs"
+        " +a={} +b={} +lat_0={} +lon_0={}",
         numbers::earth::equatorial_radius,
-        " +b=",
         numbers::earth::polar_radius,
-        " +lat_0=",
         v.y(),
-        " +lon_0=",
         v.x())};
 }
 

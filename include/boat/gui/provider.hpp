@@ -3,11 +3,13 @@
 #ifndef BOAT_GUI_PROVIDER_HPP
 #define BOAT_GUI_PROVIDER_HPP
 
+#include <boat/db/adapted/geometry.hpp>
 #include <boat/db/catalog.hpp>
 #include <boat/geometry/wkb.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/tile.hpp>
+#include <boat/gui/utility.hpp>
 #include <boat/gui/variant.hpp>
 
 namespace boat::gui {
@@ -74,11 +76,7 @@ private:
         auto r = get_or_invoke(cache.get(), cache_key, [&] {
             return catalog().get_raster(layer);
         });
-        auto affine = geometry::matrix{{
-            {r.xscale, r.xskew, r.xorig},
-            {r.yskew, r.yscale, r.yorig},
-            {0., 0., 1.},
-        }};
+        auto affine = db::affine(r);
         auto crs = geometry::to_srs_variant(r);
         auto uncached = std::vector<tile>{};
         for (auto& t : tiles(filter, r.width, r.height, affine, crs)) {
