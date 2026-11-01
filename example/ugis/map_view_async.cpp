@@ -129,6 +129,8 @@ void map_view::redraw()
                 for (auto var : pvd.renderables()) {
                     if (tok.stop_requested())
                         return;
+                    auto vec = std::get_if<boat::gui::vector>(&var);
+                    art.setOpacity(vec && vec->partial ? .25 : 1.);
                     std::visit(drw, var);
                 }
             }

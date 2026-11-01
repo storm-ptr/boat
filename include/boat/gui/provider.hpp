@@ -22,10 +22,7 @@ struct provider {
     geometry::geographic::grid filter;
     int query_limit = 512;
 
-    std::generator<variant> renderables()
-    {
-        co_yield std::ranges::elements_of(layer.raster ? rasters() : vectors());
-    }
+    auto renderables() { return layer.raster ? rasters() : vectors(); }
 
 private:
     std::generator<variant> vectors()
@@ -46,28 +43,28 @@ private:
             if (bgi::qbegin(done, bgi::contains(box)) != bgi::qend(done))
                 continue;
             auto a = box.min_corner(), b = box.max_corner();
-            auto [geoms, all] = get_or_invoke(  //
+            auto vec = get_or_invoke(  //
                 cache.get(),
                 std::tuple{cache_key, a.x(), a.y(), b.x(), b.y()},
                 [&] {
                     auto rs = catalog().select(
                         tbl,
                         {{col}, col, a.x(), a.y(), b.x(), b.y(), query_limit});
-                    auto geoms = geometry::geographic::geometry_collection{};
+                    auto ret = vector{};
                     for (auto&& wkb : rs | db::view<blob>)
-                        blob_view{wkb} >> geoms.emplace_back();
-                    auto all = geoms.size() < query_limit;
-                    if (!all)
-                        geoms = sample(std::move(geoms), box, cells_per_side);
-                    return std::pair{
-                        inv(geoms).value_or(
-                            geometry::geographic::geometry_collection{}),
-                        all};
+                        blob_view{wkb} >> ret.geoms.emplace_back();
+                    ret.partial = ret.geoms.size() >= query_limit;
+                    if (ret.partial)
+                        ret.geoms =
+                            sample(std::move(ret.geoms), box, cells_per_side);
+                    ret.geoms = inv(std::move(ret.geoms))
+                                    .value_or(decltype(ret.geoms){});
+                    return ret;
                 });
-            if (all)
+            if (!vec.partial)
                 done.insert(box);
-            if (!geoms.empty())
-                co_yield std::move(geoms);
+            if (!vec.geoms.empty())
+                co_yield std::move(vec);
         }
     }
 

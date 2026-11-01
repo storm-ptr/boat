@@ -8,13 +8,18 @@
 
 namespace boat::gui {
 
+struct vector {
+    geometry::geographic::geometry_collection geoms;
+    bool partial = false;
+};
+
 struct raster {
     boost::gil::rgba8_image_t rgba;
     geometry::matrix affine;  ///< Maps image pixels to spatial coordinates.
     geometry::srs_variant crs;
 };
 
-using variant = std::variant<geometry::geographic::geometry_collection, raster>;
+using variant = std::variant<vector, raster>;
 
 auto draw_variant(  //
     execution_policy auto policy,
@@ -23,12 +28,12 @@ auto draw_variant(  //
     geometry::srs_variant const& out_crs)
 {
     return overloaded{
-        [=, &out](geometry::geographic::geometry_collection const& in) {
+        [=, &out](vector const& in) {
             auto fwd = geometry::transform(
                 geometry::srs_forward(geometry::transformation(out_crs)),
                 geometry::mat_inverse(out_affine));
             auto drw = draw_geometry(out);
-            if (auto g = fwd(in))
+            if (auto g = fwd(in.geoms))
                 drw(*g);
         },
         [=, &out](raster const& in) {
