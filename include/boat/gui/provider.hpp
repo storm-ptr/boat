@@ -28,7 +28,8 @@ private:
     std::generator<variant> vectors()
     {
         namespace bgi = boost::geometry::index;
-        auto cells_per_side = std::max<int>(1, std::sqrt(query_limit));
+        auto cells_per_side =
+            std::max(1, static_cast<int>(std::sqrt(query_limit)));
         auto tbl = get_or_invoke(cache.get(), cache_key, [&] {
             return catalog().get_table(layer.schema_name, layer.table_name);
         });
