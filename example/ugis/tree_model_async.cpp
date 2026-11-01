@@ -185,7 +185,7 @@ void tree_model::sample(QModelIndex const& idx, viewport const& vp)
             size_t(w) * h / (boat::tile::size * boat::tile::size) + 1;
         auto grid = boat::geometry::geographic_interpolate(
             w, h, mat, ortho, num_points);
-        auto crs = boat::geometry::to_srs_variant(*it);
+        auto crs = boat::gui::to_srs_variant(*it);
         for (auto& box : boat::gui::boxes(grid, crs)) {
             if (tok.stop_requested())
                 return;

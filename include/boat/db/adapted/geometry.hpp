@@ -3,18 +3,10 @@
 #ifndef BOAT_DB_ADAPTED_GEOMETRY_HPP
 #define BOAT_DB_ADAPTED_GEOMETRY_HPP
 
-#include <boat/db/meta.hpp>
 #include <boat/db/variant.hpp>
 #include <boat/geometry/wkb.hpp>
 
 namespace boat::db {
-
-inline geometry::matrix affine(raster const& r)
-{
-    return {{{r.xscale, r.xskew, r.xorig},
-             {r.yskew, r.yscale, r.yorig},
-             {0., 0., 1.}}};
-}
 
 /// Reads WKB from a blob; NULL produces a default-constructed geometry.
 void read(variant const& in, geometry::ogc99 auto& out)

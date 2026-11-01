@@ -9,6 +9,7 @@
 
 namespace boat::gui::caches {
 
+/// Thread-safe; capacity is the entry limit.
 class lru : public cache {
     std::mutex guard_;
     size_t capacity_;

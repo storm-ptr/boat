@@ -7,7 +7,7 @@
 
 namespace boat::gui {
 
-/// Parse without interpreting addresses or generating names.
+/// Leaves addresses and empty source names unchanged.
 inline scene read_scene_json(std::string const& text)
 {
     auto root = json::parse(text);
@@ -25,6 +25,7 @@ inline scene read_scene_json(std::string const& text)
     return ret;
 }
 
+/// Omits default fields.
 inline std::string write_scene_json(scene const& in)
 {
     check(std::isfinite(in.view.center.x()) &&

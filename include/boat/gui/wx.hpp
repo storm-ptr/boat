@@ -10,6 +10,7 @@
 #include <boat/gui/detail/gil.hpp>
 
 namespace boat::gui {
+namespace detail {
 
 wxGraphicsPath& add(geometry::curve auto&& in, wxGraphicsPath& out)
 {
@@ -19,29 +20,26 @@ wxGraphicsPath& add(geometry::curve auto&& in, wxGraphicsPath& out)
     return out;
 }
 
+}  // namespace detail
+
 inline auto draw_geometry(wxGraphicsContext& out)
 {
-    return overloaded{
+    return recursive_fn(
         [&](geometry::point auto&& v) { out.DrawEllipse(v.x(), v.y(), 1, 1); },
         [&](geometry::linestring auto&& v) {
             auto path = out.CreatePath();
-            out.StrokePath(add(v, path));
+            out.StrokePath(detail::add(v, path));
         },
         [&](geometry::polygon auto&& v) {
             auto path = out.CreatePath();
-            add(v.outer(), path).CloseSubpath();
+            detail::add(v.outer(), path).CloseSubpath();
             for (auto& item : v.inners())
-                add(item, path).CloseSubpath();
+                detail::add(item, path).CloseSubpath();
             out.DrawPath(path);
-        },
-        [](this auto&& self, geometry::multi auto&& v) -> void {
-            std::ranges::for_each(v, self);
-        },
-        [](this auto&& self, geometry::dynamic auto&& v) -> void {
-            std::visit(self, v);
-        }};
+        });
 }
 
+/// Affine matrices map pixels to spatial coordinates.
 void draw_image(  //
     execution_policy auto policy,
     boost::gil::rgba8c_view_t in,

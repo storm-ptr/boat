@@ -16,9 +16,9 @@ struct view {
 
 struct layer {
     db::layer db{};
-    uint32_t color = 0xff000000;  ///< ARGB
-    double width = 1;             ///< pixels
-    std::optional<uint32_t> fill;
+    uint32_t color = 0xff000000;   ///< ARGB
+    double width = 1;              ///< pixels; 0 selects a cosmetic pen.
+    std::optional<uint32_t> fill;  ///< ARGB
     bool hidden = false;
 };
 

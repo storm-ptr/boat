@@ -5,8 +5,6 @@
 
 #include <atomic>
 #include <boat/detail/any_hashable.hpp>
-#include <functional>
-#include <type_traits>
 
 namespace boat::gui::caches {
 
@@ -19,18 +17,21 @@ struct cache {
     virtual void put(any_hashable, std::any) = 0;
 };
 
-template <class F, class... Args>
-auto get_or_invoke(cache* ptr, any_hashable const& key, F&& f, Args&&... args)
+namespace detail {
+
+auto get_or_invoke(cache* ptr, any_hashable const& key, auto&& fn)
 {
     if (auto any = ptr ? ptr->get(key) : std::any{}; any.has_value())
-        return std::any_cast<std::decay_t<std::invoke_result_t<F, Args...>>>(
-            std::move(any));
-    auto ret = std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+        return std::any_cast<decltype(fn())>(std::move(any));
+    auto ret = fn();
     if (ptr)
         ptr->put(key, ret);
     return ret;
 }
 
+}  // namespace detail
+
+/// Process-wide sequence.
 inline size_t next_key()
 {
     static constinit std::atomic_size_t seq_;

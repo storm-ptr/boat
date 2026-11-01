@@ -45,14 +45,6 @@ inline auto ortho(geographic::point const& v)
         v.x())};
 }
 
-/// Prefers a positive epsg code to proj4; throws if neither is available.
-inline srs_variant to_srs_variant(auto const& meta)
-{
-    return meta.epsg > 0         ? srs_variant{srs::epsg{meta.epsg}}
-           : !meta.proj4.empty() ? srs_variant{srs::proj4{meta.proj4}}
-                                 : throw std::runtime_error("no SRS");
-}
-
 auto transformation(srs_spec auto const& a, srs_spec auto const& b)
 {
     if constexpr (specialized<decltype(a), std::variant>)

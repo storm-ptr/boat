@@ -10,7 +10,19 @@
 
 namespace boat::geometry {
 
-/// Maps between geographic coordinates and raster pixels, in that order.
+/// Maps pixels to spatial coordinates.
+inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
+{
+    namespace qvm = boost::qvm;
+    auto const& [a, b] = mid_pixel;
+    auto scale = boost::geometry::distance(a, b);
+    return qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
+           qvm::rotz_mat<3>(.5 * numbers::pi - boost::geometry::azimuth(a, b)) *
+           qvm::diag_mat(qvm::vec{{scale, -scale, 1.}}) *
+           qvm::translation_mat(-qvm::vec{{width * .5, height * .5}});
+}
+
+/// Maps geographic coordinates to pixels and back.
 auto bidirectional_transform(matrix const& mat, srs_spec auto const& crs)
 {
     auto tf = transformation(crs);
@@ -20,7 +32,7 @@ auto bidirectional_transform(matrix const& mat, srs_spec auto const& crs)
     };
 }
 
-/// Maps between the pixel coordinates of two rasters.
+/// Maps raster 1 pixels to raster 2 pixels and back.
 auto bidirectional_transform(  //
     matrix const& affine1,
     srs_spec auto const& crs1,
@@ -34,7 +46,7 @@ auto bidirectional_transform(  //
     };
 }
 
-/// Approximates a raster footprint with points from a fixed global grid.
+/// Samples a raster footprint on a fixed global grid.
 geographic::grid geographic_interpolate(  //
     int width,
     int height,
@@ -67,23 +79,10 @@ geographic::grid geographic_interpolate(  //
             }
         if (indices.empty())
             continue;
-        auto& lvl = ret[numbers::earth::sqrt_area / std::sqrt(fib.num_points)];
-        lvl.assign_range(
+        ret[numbers::earth::sqrt_area / std::sqrt(fib.num_points)].assign_range(
             indices | std::views::transform([&](size_t i) { return fib[i]; }));
     }
     return ret;
-}
-
-/// Maps pixel coordinates to spatial coordinates.
-inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
-{
-    namespace qvm = boost::qvm;
-    auto const& [a, b] = mid_pixel;
-    auto scale = boost::geometry::distance(a, b);
-    return qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
-           qvm::rotz_mat<3>(.5 * numbers::pi - boost::geometry::azimuth(a, b)) *
-           qvm::diag_mat(qvm::vec{{scale, -scale, 1.}}) *
-           qvm::translation_mat(-qvm::vec{{width * .5, height * .5}});
 }
 
 }  // namespace boat::geometry

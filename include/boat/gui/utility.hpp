@@ -8,6 +8,15 @@
 
 namespace boat::gui {
 
+/// Maps pixels to spatial coordinates.
+inline geometry::matrix affine(db::raster const& r)
+{
+    return {{{r.xscale, r.xskew, r.xorig},
+             {r.yskew, r.yscale, r.yorig},
+             {0., 0., 1.}}};
+}
+
+/// Maps pixels to spatial coordinates.
 geometry::matrix affine(int width, int height, view const& v, auto const& crs)
 {
     if constexpr (geometry::projection_or_transformation<decltype(crs)>)
@@ -23,6 +32,8 @@ geometry::matrix affine(int width, int height, view const& v, auto const& crs)
     }
 }
 
+/// Query boxes in crs coordinates; grid keys are spacings in metres.
+/// Excludes the antimeridian.
 auto boxes(  //
     geometry::geographic::grid const& grid,
     geometry::srs_spec auto const& crs)
@@ -51,6 +62,16 @@ auto boxes(  //
         }
     }
     return ret;
+}
+
+/// Prefers a positive epsg code to proj4; throws if neither is available.
+inline geometry::srs_variant to_srs_variant(auto const& meta)
+{
+    using geometry::srs_variant;
+    namespace srs = geometry::srs;
+    return meta.epsg > 0         ? srs_variant{srs::epsg{meta.epsg}}
+           : !meta.proj4.empty() ? srs_variant{srs::proj4{meta.proj4}}
+                                 : throw std::runtime_error("no SRS");
 }
 
 }  // namespace boat::gui

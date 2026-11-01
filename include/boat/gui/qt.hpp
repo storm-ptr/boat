@@ -11,8 +11,9 @@
 #include <boat/gui/detail/gil.hpp>
 
 namespace boat::gui {
+namespace detail {
 
-constexpr auto to_qt = overloaded{
+constexpr auto qt = overloaded{
     [](geometry::point auto&& v) { return QPointF(v.x(), v.y()); },
     [](this auto&& self, geometry::box auto&& v) -> QRectF {
         return {self(v.min_corner()), self(v.max_corner())};
@@ -28,20 +29,17 @@ constexpr auto to_qt = overloaded{
         return ret;
     }};
 
+}  // namespace detail
+
 inline auto draw_geometry(QPainter& out)
 {
-    return overloaded{
-        [&](geometry::point auto&& v) { out.drawPoint(to_qt(v)); },
-        [&](geometry::linestring auto&& v) { out.drawPolyline(to_qt(v)); },
-        [&](geometry::polygon auto&& v) { out.drawPath(to_qt(v)); },
-        [](this auto&& self, geometry::multi auto&& v) -> void {
-            std::ranges::for_each(v, self);
-        },
-        [](this auto&& self, geometry::dynamic auto&& v) -> void {
-            std::visit(self, v);
-        }};
+    return recursive_fn(
+        [&](geometry::point auto&& v) { out.drawPoint(detail::qt(v)); },
+        [&](geometry::linestring auto&& v) { out.drawPolyline(detail::qt(v)); },
+        [&](geometry::polygon auto&& v) { out.drawPath(detail::qt(v)); });
 }
 
+/// Affine matrices map pixels to spatial coordinates.
 void draw_image(  //
     execution_policy auto policy,
     boost::gil::rgba8c_view_t in,
@@ -56,7 +54,7 @@ void draw_image(  //
     auto mbr =
         fwd(multi_point(in.width(), in.height()))
             .transform(geometry::minmax)
-            .transform(to_qt)
+            .transform(detail::qt)
             .transform(&QRectF::toAlignedRect)
             .transform(std::bind_front(&QRect::intersected, out.window()));
     if (!mbr || mbr->isEmpty())
@@ -67,16 +65,12 @@ void draw_image(  //
     auto ys = std::views::iota(0, img.height());
     auto pixel = get_pixel(in);
     std::for_each(policy, ys.begin(), ys.end(), [&](int y) {
-        auto ln = bits + y * stride;
-        for (int x{}; x < img.width(); ++x) {
-            auto px =
-                inv(geometry::geographic::point(x + mbr->x(), y + mbr->y()))
-                    .and_then(pixel);
-            if (px)
-                *reinterpret_cast<boost::gil::rgba8_pixel_t*>(ln + x * 4) = *px;
-            else
-                std::fill_n(ln + x * 4, 4, 0);
-        }
+        auto ln =
+            reinterpret_cast<boost::gil::rgba8_pixel_t*>(bits + y * stride);
+        for (int x{}; x < img.width(); ++x)
+            ln[x] = inv(geometry::geographic::point(x + mbr->x(), y + mbr->y()))
+                        .and_then(pixel)
+                        .value_or(boost::gil::rgba8_pixel_t{0});
     });
     out.drawImage(mbr->topLeft(), img);
 }
