@@ -1,11 +1,11 @@
 // Andrew Naplavkov
 
-#ifndef BOAT_TEST_GUI_PROVIDERS_HPP
-#define BOAT_TEST_GUI_PROVIDERS_HPP
+#ifndef BOAT_TEST_GUI_PARAMETERS_HPP
+#define BOAT_TEST_GUI_PARAMETERS_HPP
 
 #include <boat/gdal/catalog.hpp>
 #include <boat/gui/caches/lru.hpp>
-#include <boat/gui/provider.hpp>
+#include <boat/gui/renderables.hpp>
 #include <boat/slippy.hpp>
 #include <boat/sql/catalog.hpp>
 #include "../commands.hpp"
@@ -42,18 +42,18 @@ inline std::generator<std::shared_ptr<boat::db::catalog>> catalogs()
     }
 }
 
-inline std::generator<boat::gui::provider> providers()
+inline std::generator<boat::gui::render_params> parameters()
 {
     using namespace boat;
-    auto cache = std::make_shared<gui::caches::lru>(10'000);
+    auto cache = std::make_shared<gui::caches::lru>(1024);
     auto cache_key = size_t{};
     for (auto cat : catalogs())
         for (auto& lyr : cat->layers())
-            co_yield gui::provider{
+            co_yield gui::render_params{
                 .catalog = [=] -> db::catalog& { return *cat; },
                 .layer = std::move(lyr),
                 .cache = cache,
                 .cache_key = ++cache_key};
 }
 
-#endif  // BOAT_TEST_GUI_PROVIDERS_HPP
+#endif  // BOAT_TEST_GUI_PARAMETERS_HPP

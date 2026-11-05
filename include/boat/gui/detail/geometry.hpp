@@ -19,18 +19,6 @@ auto recursive_fn(auto... fn)
         }};
 }
 
-inline auto multi_point(int width, int height)
-{
-    auto size = std::max<>(width, height);
-    auto num_border_points =
-        static_cast<int>(4 * std::max<>(std::sqrt(size), 1.));
-    auto num_area_points = std::max<>(size / 4, 1);
-    auto mbr = geometry::geographic::box{{}, {width * 1., height * 1.}};
-    auto ret = geometry::box_border_interpolate(mbr, num_border_points);
-    ret.append_range(geometry::box_area_interpolate(mbr, num_area_points));
-    return ret;
-}
-
 inline auto sample(  //
     geometry::geographic::geometry_collection geoms,
     geometry::cartesian::box const& box,

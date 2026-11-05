@@ -5,12 +5,12 @@
 #include <boat/gui/qt.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include "../context.hpp"
-#include "../providers.hpp"
+#include "../parameters.hpp"
 
 BOOST_AUTO_TEST_CASE(qt_draw)
 {
     auto pixels_sum = 0., transparent_sum = 0.;
-    auto pvds = providers() | std::ranges::to<std::vector>();
+    auto params = parameters() | std::ranges::to<std::vector>();
     for (auto [i, ctx] : std::views::enumerate(contexts())) {
         auto img = QImage{ctx.width, ctx.height, QImage::Format_ARGB32};
         img.fill(Qt::transparent);
@@ -21,9 +21,9 @@ BOOST_AUTO_TEST_CASE(qt_draw)
         art.setBrush(Qt::cyan);
         auto drw = boat::gui::draw_variant(
             std::execution::par, art, ctx.affine, ctx.crs);
-        for (auto& pvd : pvds) {
-            pvd.filter = ctx.filter;
-            for (auto var : pvd.renderables())
+        for (auto& p : params) {
+            p.filter = ctx.filter;
+            for (auto var : renderables(p))
                 std::visit(drw, var);
         }
         auto path =

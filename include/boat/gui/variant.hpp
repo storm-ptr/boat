@@ -21,28 +21,32 @@ struct raster {
 
 using variant = std::variant<vector, raster>;
 
-/// Include qt.hpp or wx.hpp first.
 auto draw_variant(  //
     execution_policy auto policy,
     auto& out,
     geometry::matrix const& out_affine,
     geometry::srs_variant const& out_crs)
 {
+    struct adl_ref {
+        decltype(out) value;
+        operator decltype(out)() const { return value; }
+    };
+    auto ref = adl_ref{out};
     return overloaded{
-        [=, &out](vector const& in) {
+        [=](vector const& in) {
             auto fwd = geometry::transform(
                 geometry::srs_forward(geometry::transformation(out_crs)),
                 geometry::mat_inverse(out_affine));
             if (auto g = fwd(in.geoms))
-                draw_geometry(out)(*g);
+                draw_geometry(ref)(*g);
         },
-        [=, &out](raster const& in) {
+        [=](raster const& in) {
             draw_image(  //
                 policy,
                 const_view(in.rgba),
                 in.affine,
                 in.crs,
-                out,
+                ref,
                 out_affine,
                 out_crs);
         }};

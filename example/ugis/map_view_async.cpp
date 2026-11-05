@@ -2,9 +2,8 @@
 
 #include <QPainter>
 #include <boat/gui/qt.hpp>
+#include <boat/gui/renderables.hpp>
 #include <boat/gui/utility.hpp>
-// strictly ordered
-#include <boat/gui/provider.hpp>
 #include "catalog.h"
 #include "map_view.h"
 #include "tree.h"
@@ -103,7 +102,7 @@ void map_view::redraw()
         auto mat = affine(w, h, view, crs);
         auto num_points =
             size_t(w) * h / (boat::tile::size * boat::tile::size) + 1;
-        auto pvd = boat::gui::provider{
+        auto params = boat::gui::render_params{
             .cache = cache_,
             .filter = geo::geographic_interpolate(w, h, mat, crs, num_points)};
         auto img = QImage{w, h, QImage::Format_RGBA8888};
@@ -116,17 +115,17 @@ void map_view::redraw()
             try {
                 if (tok.stop_requested())
                     return;
-                pvd.catalog = [&] -> boat::db::catalog& {
+                params.catalog = [&] -> boat::db::catalog& {
                     auto& cat = cats[l.address];
                     if (!cat)
                         cat = make_catalog(l.address);
                     return *cat;
                 };
-                pvd.layer = l.layer;
-                pvd.cache_key = l.cache;
+                params.layer = l.layer;
+                params.cache_key = l.cache;
                 art.setPen(l.pen);
                 art.setBrush(l.brush);
-                for (auto var : pvd.renderables()) {
+                for (auto var : renderables(params)) {
                     if (tok.stop_requested())
                         return;
                     auto vec = std::get_if<boat::gui::vector>(&var);

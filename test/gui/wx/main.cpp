@@ -2,10 +2,11 @@
 
 #define BOOST_TEST_MODULE boat_gui_wx
 
+#include <wx/pen.h>
 #include <boat/gui/wx.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include "../context.hpp"
-#include "../providers.hpp"
+#include "../parameters.hpp"
 
 namespace {
 
@@ -43,20 +44,20 @@ BOOST_AUTO_TEST_CASE(wx_draw)
 {
     wxInitAllImageHandlers();
     auto pixels_sum = 0., transparent_sum = 0.;
-    auto pvds = providers() | std::ranges::to<std::vector>();
+    auto params = parameters() | std::ranges::to<std::vector>();
     for (auto [i, ctx] : std::views::enumerate(contexts())) {
         auto img = wxImage(ctx.width, ctx.height);
         img.InitAlpha();
         auto num_pixels = ctx.width * ctx.height;
         std::memset(img.GetAlpha(), wxIMAGE_ALPHA_TRANSPARENT, num_pixels);
         std::memset(img.GetData(), UCHAR_MAX, 3 * num_pixels);
-        for (auto& pvd : pvds) {
-            pvd.filter = ctx.filter;
+        for (auto& p : params) {
+            p.filter = ctx.filter;
             auto tmp = img.Copy();
             auto art = make_graphics_context(tmp);
             auto drw = boat::gui::draw_variant(
                 std::execution::par, *art, ctx.affine, ctx.crs);
-            for (auto var : pvd.renderables())
+            for (auto var : renderables(p))
                 std::visit(drw, var);
             art.reset();
             compose_darken(img, tmp);

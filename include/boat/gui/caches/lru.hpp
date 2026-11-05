@@ -31,7 +31,9 @@ public:
     void put(any_hashable key, std::any val) override
     {
         auto lock = std::lock_guard{guard_};
-        data_.insert(data_.end(), {std::move(key), std::move(val)});
+        auto it = data_.insert(data_.end(), {std::move(key), {}}).first;
+        it->second = std::move(val);
+        data_.transfer(it, data_.end());
         if (data_.size() > capacity_)
             data_.erase(data_.begin());
     }

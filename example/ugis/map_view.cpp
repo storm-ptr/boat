@@ -69,7 +69,7 @@ QString coordinate_text(viewport const& vp, QPointF cursor)
 
 map_view::map_view(QWidget* parent)
     : QWidget(parent)
-    , cache_(std::make_shared<boat::gui::caches::lru>(10'000))
+    , cache_(std::make_shared<boat::gui::caches::lru>(1024))
     , tasks_{1}
 {
     setMouseTracking(true);

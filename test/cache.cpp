@@ -15,4 +15,8 @@ BOOST_AUTO_TEST_CASE(cache)
     BOOST_CHECK(not lru.get(1).has_value());               //< not found
     BOOST_CHECK_EQUAL(std::any_cast<int>(lru.get(3)), 3);  //< {4:4, 3:3}
     BOOST_CHECK_EQUAL(std::any_cast<int>(lru.get(4)), 4);  //< {3:3, 4:4}
+    lru.put(3, 30);
+    lru.put(5, 5);
+    BOOST_CHECK(not lru.get(4).has_value());
+    BOOST_CHECK_EQUAL(std::any_cast<int>(lru.get(3)), 30);
 }

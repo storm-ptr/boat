@@ -4,10 +4,8 @@
 #define BOAT_GUI_WX_HPP
 
 #include <wx/graphics.h>
-#include <wx/wx.h>
-#include <boat/geometry/raster.hpp>
 #include <boat/gui/detail/geometry.hpp>
-#include <boat/gui/detail/gil.hpp>
+#include <boat/gui/detail/raster.hpp>
 
 namespace boat::gui {
 namespace detail {
@@ -49,39 +47,30 @@ void draw_image(  //
     geometry::matrix const& out_affine,
     geometry::srs_spec auto&& out_crs)
 {
-    auto [fwd, inv] = geometry::bidirectional_transform(
-        in_affine, in_crs, out_affine, out_crs);
-    auto intersect = [&](geometry::box auto&& v) {
-        wxDouble w, h;
-        out.GetSize(&w, &h);
-        w = std::ceil(w), h = std::ceil(h);
-        auto a = v.min_corner(), b = v.max_corner();
-        auto x = std::floor(a.x()), y = std::floor(a.y());
-        return wxRect2DDouble{0., 0., w, h}.CreateIntersection(
-            {x, y, std::ceil(b.x()) - x, std::ceil(b.y()) - y});
-    };
-    auto mbr = fwd(multi_point(in.width(), in.height()))
-                   .transform(geometry::minmax)
-                   .transform(intersect);
-    if (!mbr || mbr->IsEmpty())
-        return;
-    auto [left, top, w, h] = *mbr;
-    auto img = wxImage{mbr->GetSize()};
-    img.InitAlpha();
-    auto ys = std::views::iota(0, img.GetHeight());
-    std::for_each(policy, ys.begin(), ys.end(), [&](int y) {
-        auto d = y * img.GetWidth();
-        auto rgb = reinterpret_cast<wxImage::RGBValue*>(img.GetData()) + d;
-        auto alpha = img.GetAlpha() + d;
-        for (int x{}; x < img.GetWidth(); ++x) {
-            auto px = inv(geometry::geographic::point(x + left, y + top))
-                          .and_then(get_pixel(in))
-                          .value_or(boost::gil::rgba8_pixel_t{0});
-            rgb[x] = {px[0], px[1], px[2]};
-            alpha[x] = px[3];
-        }
-    });
-    out.DrawBitmap(out.CreateBitmapFromImage(img), left, top, w, h);
+    auto img = wxImage{};
+    wxDouble w, h;
+    out.GetSize(&w, &h);
+    auto rect = draw_image(
+        policy,
+        in,
+        in_affine,
+        in_crs,
+        out_affine,
+        out_crs,
+        {0, 0, int(std::ceil(w)), int(std::ceil(h))},
+        [&](int w, int h) {
+            img = wxImage{w, h};
+            img.InitAlpha();
+            return [rgb = reinterpret_cast<wxImage::RGBValue*>(img.GetData()),
+                    alpha = img.GetAlpha()](auto i, auto px) {
+                rgb[i] = {px[0], px[1], px[2]};
+                alpha[i] = px[3];
+            };
+        });
+    if (rect) {
+        auto [x, y, w, h] = *rect;
+        out.DrawBitmap(out.CreateBitmapFromImage(img), x, y, w, h);
+    }
 }
 
 }  // namespace boat::gui

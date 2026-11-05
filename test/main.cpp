@@ -12,7 +12,7 @@
 #include <boat/geometry/raster.hpp>
 #include <boat/geometry/wkb.hpp>
 #include <boat/gui/caches/lru.hpp>
-#include <boat/gui/provider.hpp>
+#include <boat/gui/renderables.hpp>
 #include <boat/slippy.hpp>
 #include <boat/sql/catalog.hpp>
 #include <boat/sql/commands.hpp>
