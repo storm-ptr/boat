@@ -23,10 +23,10 @@ namespace boat::gil {
 template <class Value, class Layout>
 using image = boost::gil::image<boost::gil::pixel<Value, Layout>, false>;
 
-using any_image = boost::mp11::mp_rename<  //
-    boost::mp11::mp_product<               //
+using any_image = boost::mp11::mp_rename<
+    boost::mp11::mp_product<
         image,
-        boost::mp11::mp_list<  //
+        boost::mp11::mp_list<
             uint8_t,
             int8_t,
             uint16_t,
@@ -37,7 +37,7 @@ using any_image = boost::mp11::mp_rename<  //
             int64_t,
             float,
             double>,
-        boost::mp11::mp_list<  //
+        boost::mp11::mp_list<
             boost::gil::abgr_layout_t,
             boost::gil::argb_layout_t,
             boost::gil::bgr_layout_t,

@@ -4,7 +4,6 @@
 #define BOAT_BLOB_HPP
 
 #include <boat/detail/utility.hpp>
-#include <boost/functional/hash.hpp>
 #include <cstring>
 #include <iomanip>
 #include <ios>
@@ -20,7 +19,6 @@ struct blob : std::basic_string<std::byte> {
     using std::basic_string<std::byte>::basic_string;
     blob(std::byte const*) = delete;
     operator blob_view() const { return {data(), size()}; }
-    friend auto hash_value(blob const& v) { return boost::hash_value(v); }
 };
 
 /// Arithmetic reads use native byte order and advance the view.
@@ -71,7 +69,6 @@ T get(blob_view& in, std::endian e)
     return ret;
 }
 
-/// Formats bytes as uppercase hex, two digits per byte.
 struct hex {
     blob_view bytes;
 
@@ -87,10 +84,5 @@ struct hex {
 };
 
 }  // namespace boat
-
-template <>
-struct std::hash<boat::blob> {
-    static auto operator()(boat::blob const& v) { return hash_value(v); }
-};
 
 #endif  // BOAT_BLOB_HPP

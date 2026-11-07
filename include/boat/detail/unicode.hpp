@@ -66,12 +66,11 @@ constexpr auto io = [](std::ranges::input_range auto&& r) {
     return manip{std::ranges::subrange{r}};
 };
 
-constexpr auto quoted =  //
-    [](std::ranges::input_range auto&& r,
-       char32_t delim = '"',
-       char32_t escape = '\\') {
-        return manip{concat<char32_t>(std::quoted(r | utf32, delim, escape))};
-    };
+constexpr auto quoted = [](std::ranges::input_range auto&& r,
+                           char32_t delim = '"',
+                           char32_t escape = '\\') {
+    return manip{concat<char32_t>(std::quoted(r | utf32, delim, escape))};
+};
 
 }  // namespace boat::unicode
 

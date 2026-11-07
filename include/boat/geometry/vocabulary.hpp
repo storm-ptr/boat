@@ -72,7 +72,7 @@ struct d2 {
 
     struct geometry_collection;
 
-    using variant = std::variant<  //
+    using variant = std::variant<
         point,
         linestring,
         polygon,

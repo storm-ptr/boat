@@ -41,26 +41,23 @@ struct sqlite : dialect {
     db::query index_keys(std::string_view, std::string_view table_name)
         const override
     {
-        auto q = db::query{};
-        q << "\n select null"
-          << "\n , 'idx_' || f_table_name || '_' || f_geometry_column"
-          << "\n , name, 0, 0, 0, 0, 1"
-          << "\n from geometry_columns"
-          << "\n , pragma_table_info(" << db::variant(table_name) << ")"
-          << "\n where f_table_name like " << db::variant(table_name)
-          << "\n and f_geometry_column like name"
-          << "\n and spatial_index_enabled"
-          << "\n union"
-          << "\n select null, 'primary', name, 0, 0, 1, 1, pk"
-          << "\n from pragma_table_info(" << db::variant(table_name) << ")"
-          << "\n where pk > 0"
-          << "\n union"
-          << "\n select null, i.name, c.name, c.desc, i.partial, 0"
-          << "\n , i." << db::id{"unique"} << ", c.seqno + 1"
-          << "\n from pragma_index_list(" << db::variant(table_name) << ") i"
-          << "\n , pragma_index_xinfo(i.name) c"
-          << "\n where key and origin <> 'pk'";
-        return q;
+        return {
+            "\n with t(n) as (values (",
+            db::variant(table_name),
+            "))"
+            "\n select null, 'idx_' || f_table_name || '_' || f_geometry_column"
+            "\n , name, 0, 0, 0, 0, 1"
+            "\n from t, geometry_columns, pragma_table_info(t.n)"
+            "\n where f_table_name like t.n and f_geometry_column like name"
+            "\n and spatial_index_enabled"
+            "\n union"
+            "\n select null, 'primary', name, 0, 0, 1, 1, pk"
+            "\n from t, pragma_table_info(t.n) where pk > 0"
+            "\n union"
+            "\n select null, i.name, c.name, c.desc, i.partial, 0"
+            "\n , i.\"unique\", c.seqno + 1"
+            "\n from t, pragma_index_list(t.n) i, pragma_index_xinfo(i.name) c"
+            "\n where key and origin <> 'pk'"};
     }
 
     db::query select(db::table const& tbl, db::bbox const& rq) const override

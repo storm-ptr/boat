@@ -32,8 +32,7 @@ public:
     {
         std::erase_if(futures_, [](auto& fut) { return fut.isFinished(); });
         return futures_.emplace_back(QtConcurrent::run(
-            &pool_,  //
-            [tok = source_.get_token(), fn = std::forward<F>(fn)] {
+            &pool_, [tok = source_.get_token(), fn = std::forward<F>(fn)] {
                 std::invoke(fn, tok);
             }));
     }

@@ -53,32 +53,19 @@ struct postgres : dialect {
         std::string_view table_name) const override
     {
         return {
-            "\n with indices as ("
-            "\n  select s.nspname scm"
-            "\n  , t.oid tbl"
-            "\n  , o.relname nm"
-            "\n  , pg_get_expr(i.indpred, i.indrelid) fltr"
-            "\n  , i.indisprimary prim"
-            "\n  , i.indisunique  uniq"
-            "\n  , i.indkey cols"
-            "\n  , i.indoption opts"
-            "\n  , array_lower(i.indkey, 1) lb"
-            "\n  , array_upper(i.indkey, 1) ub"
-            "\n  from pg_index i, pg_class o, pg_class t, pg_namespace s"
-            "\n  where i.indexrelid = o.oid"
-            "\n  and i.indrelid = t.oid"
-            "\n  and t.relnamespace = s.oid"
-            "\n  and s.nspname = ",
+            "\n select s.nspname, o.relname, a.attname, i.indoption[k.n] & 1"
+            "\n , i.indpred is not null, i.indisprimary, i.indisunique, k.n + 1"
+            "\n from pg_index i"
+            "\n join pg_class o on o.oid = i.indexrelid"
+            "\n join pg_class t on t.oid = i.indrelid"
+            "\n join pg_namespace s on s.oid = t.relnamespace"
+            "\n cross join generate_subscripts(i.indkey, 1) k(n)"
+            "\n left join pg_attribute a"
+            "\n on a.attrelid = t.oid and a.attnum = i.indkey[k.n]"
+            "\n where s.nspname = ",
             db::variant(schema_name),
-            "\n  and t.relname = ",
-            db::variant(table_name),
-            "\n ), columns as ("
-            "\n  select *, generate_series(lb, ub) col from indices"
-            "\n )"
-            "\n select scm, nm, attname, opts[col] & 1, fltr is not null"
-            "\n , prim, uniq, col + 1"
-            "\n from columns left join pg_attribute"
-            "\n on attrelid = tbl and attnum = cols[col]"};
+            "\n and t.relname = ",
+            db::variant(table_name)};
     }
 
     db::query select(db::table const& tbl, db::bbox const& rq) const override

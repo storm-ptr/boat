@@ -88,9 +88,9 @@ struct fibonacci {
     }
 
     template <
-        std::predicate<geographic::point const&> S  //
-        = decltype([](auto&&) { return false; })>
-    std::generator<size_t> nearests(geographic::point p, S sentinel = {}) const
+        std::predicate<geographic::point const&> Sentinel =
+            decltype([](auto&&) { return false; })>
+    std::generator<size_t> nearests(geographic::point p, Sentinel s = {}) const
     {
         auto done = std::unordered_set<size_t>{};
         auto queue = std::priority_queue<priority_point>{};
@@ -99,7 +99,7 @@ struct fibonacci {
             for (auto v : buf(next).outer())
                 for (auto i : inverse_fibonacci(v, num_points))
                     if (done.insert(i).second)
-                        if (auto q = (*this)[i]; !sentinel(q))
+                        if (auto q = (*this)[i]; !s(q))
                             queue.emplace(std::move(q), p, i);
             if (queue.empty())
                 break;
