@@ -10,6 +10,7 @@
 #include "main_window.h"
 #include "map_view.h"
 #include "sql_view.h"
+#include "task_group.h"
 #include "tree_view.h"
 
 namespace {
@@ -25,13 +26,10 @@ void message_handler(  //
     if (!log_ptr)
         return;
     auto fmt = qFormatLogMessage(type, ctx, msg);
-    QMetaObject::invokeMethod(
-        log_ptr,
-        [fmt] {
-            if (log_ptr)
-                log_ptr->appendPlainText(fmt);
-        },
-        Qt::QueuedConnection);
+    post(log_ptr, [fmt] {
+        if (log_ptr)
+            log_ptr->appendPlainText(fmt);
+    });
 }
 
 }  // namespace
@@ -91,10 +89,7 @@ main_window::main_window(QString const& scene_path)
     log_ptr = log;
     old_handler = qInstallMessageHandler(message_handler);
     if (!scene_path.isEmpty())
-        QMetaObject::invokeMethod(
-            tree,
-            [tree, scene_path] { tree->replace_scene(scene_path); },
-            Qt::QueuedConnection);
+        post(tree, [tree, scene_path] { tree->replace_scene(scene_path); });
 }
 
 main_window::~main_window()

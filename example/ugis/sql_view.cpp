@@ -121,13 +121,10 @@ void sql_view::run()
         catch (std::exception const& e) {
             text = "error: " + QString::fromUtf8(e.what());
         }
-        QMetaObject::invokeMethod(
-            this,
-            [this, tok, text = std::move(text)] {
-                if (!tok.stop_requested())
-                    output_->setPlainText(text);
-            },
-            Qt::QueuedConnection);
+        post(this, [this, tok, text = std::move(text)] {
+            if (!tok.stop_requested())
+                output_->setPlainText(text);
+        });
     });
     watch_task(std::move(fut));
 }

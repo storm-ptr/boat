@@ -25,11 +25,6 @@ void run(task_group& tasks, auto fn)
     });
 }
 
-void post(QObject* context, auto fn)
-{
-    QMetaObject::invokeMethod(context, std::move(fn), Qt::QueuedConnection);
-}
-
 }  // namespace
 
 void tree_model::copy_layer_as(  //

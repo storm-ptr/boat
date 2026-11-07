@@ -69,17 +69,14 @@ void map_view::locate(leaf lyr)
     tasks_.request_stop();
     watch_task(tasks_.run([=, lyr = std::move(lyr)](auto tok) {
         try {
-            QMetaObject::invokeMethod(
-                this,
-                [=, mid = any_lonlat(lyr, tok)] {
-                    if (tok.stop_requested())
-                        return;
-                    if (mid)
-                        map_ = bounded({*mid, map_.resolution}).value_or(map_);
-                    update();
-                    redraw();
-                },
-                Qt::QueuedConnection);
+            post(this, [=, mid = any_lonlat(lyr, tok)] {
+                if (tok.stop_requested())
+                    return;
+                if (mid)
+                    map_ = bounded({*mid, map_.resolution}).value_or(map_);
+                update();
+                redraw();
+            });
         }
         catch (std::exception const& e) {
             qWarning() << "locate error:" << e.what();
@@ -135,15 +132,12 @@ void map_view::redraw()
             catch (std::exception const& e) {
                 qWarning() << "draw error:" << e.what();
             }
-        QMetaObject::invokeMethod(
-            this,
-            [=, img = std::move(img)] mutable {
-                if (tok.stop_requested())
-                    return;
-                img_ = std::move(img);
-                img_view_ = view;
-                update();
-            },
-            Qt::QueuedConnection);
+        post(this, [=, img = std::move(img)] mutable {
+            if (tok.stop_requested())
+                return;
+            img_ = std::move(img);
+            img_view_ = view;
+            update();
+        });
     }));
 }

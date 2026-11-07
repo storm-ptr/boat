@@ -3,12 +3,19 @@
 #ifndef TASK_GROUP_H
 #define TASK_GROUP_H
 
+#include <QMetaObject>
 #include <QThreadPool>
 #include <QtConcurrent/QtConcurrentRun>
 #include <concepts>
 #include <functional>
 #include <stop_token>
+#include <utility>
 #include <vector>
+
+void post(QObject* obj, auto fn)
+{
+    QMetaObject::invokeMethod(obj, std::move(fn), Qt::QueuedConnection);
+}
 
 class task_group {
 public:
