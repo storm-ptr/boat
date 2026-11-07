@@ -4,7 +4,8 @@
 #define FORMATS_H
 
 #include <QString>
-#include <optional>
+#include <span>
+#include <vector>
 
 constexpr auto scene_filter = "ugis scene (*.ugis)";
 
@@ -12,12 +13,10 @@ struct copy_format {
     QString filter;
     QString driver;
     QString extension;
-
-    friend auto operator<=>(copy_format const&, copy_format const&) = default;
 };
 
-std::optional<copy_format> copy_as_format(bool raster, QString const& filter);
-QString copy_as_filter(bool raster);
+std::vector<copy_format> copy_formats(bool raster);
+QString copy_as_filter(std::span<copy_format const> fmts);
 QString open_filter();
 QString ensure_extension(QString path, QString const& extension);
 

@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <algorithm>
 #include <boat/detail/uri.hpp>
 #include "formats.h"
 #include "map_view.h"
@@ -118,18 +119,19 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     populated |=
         add(is_vector, "copy layer", [this, idx] { model_.copy_layer(idx); });
     populated |= add(bool(opt), "copy layer as", [this, idx, opt] {
+        auto fmts = copy_formats(opt->layer.raster);
         auto selected = QString{};
         auto path = QFileDialog::getSaveFileName(  //
             this,
             {},
             {},
-            copy_as_filter(opt->layer.raster),
+            copy_as_filter(fmts),
             &selected,
             QFileDialog::DontUseNativeDialog);
         if (path.isEmpty())
             return;
-        auto fmt = copy_as_format(opt->layer.raster, selected);
-        if (fmt)
+        auto fmt = std::ranges::find(fmts, selected, &copy_format::filter);
+        if (fmt != fmts.end())
             model_.copy_layer_as(
                 idx,
                 ensure_extension(std::move(path), fmt->extension),
