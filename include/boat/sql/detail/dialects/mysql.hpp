@@ -57,15 +57,6 @@ struct mysql : dialect {
             db::variant(table_name)};
     }
 
-    db::query select(db::table const& tbl, db::page const& rq) const override
-    {
-        auto q = db::query{};
-        q << "\n select " << select_list{tbl, rq.select_list} << "\n from "
-          << id{tbl} << order_by{tbl, rq.order_by} << "\n limit "
-          << to_chars(rq.limit) << "\n offset " << to_chars(rq.offset);
-        return q;
-    }
-
     db::query select(db::table const& tbl, db::bbox const& rq) const override
     {
         auto& col = find_geo(tbl.columns, rq.layer_column);

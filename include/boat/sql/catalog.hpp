@@ -28,29 +28,16 @@ public:
     db::table get_table(std::string_view schema_name,
                         std::string_view table_name) override
     {
-        auto scm = current_schema_or(*command, schema_name);
-        auto ret = db::table{
-            .dbms{command->dbms()},
-            .schema_name{scm},
-            .table_name{table_name},
-            .columns{
-                std::from_range,
-                command->exec(dial().columns(scm, table_name)) |
-                    db::view<db::column> |
-                    std::views::transform(adaptors::parse(command->dbms()))},
-            .index_keys{std::from_range,
-                        command->exec(dial().index_keys(scm, table_name)) |
-                            db::view<db::index_key>}};
-        std::ranges::sort(ret.index_keys, {}, [](auto& key) {
-            return std::tuple{
-                !key.primary, key.schema_name, key.index_name, key.ordinal};
-        });
-        return ret;
+        return sql::get_table(*command, schema_name, table_name);
     }
 
     db::rowset select(db::table const& tbl, db::page const& rq) override
     {
-        return command->exec(dial().select(tbl, rq));
+        auto q = db::query{};
+        q << "\n select " << select_list{tbl, rq.select_list} << "\n from "
+          << id{tbl} << order_by{tbl, rq.order_by} << "\n limit "
+          << to_chars(rq.limit) << "\n offset " << to_chars(rq.offset);
+        return command->exec(q);
     }
 
     db::rowset select(db::table const& tbl, db::bbox const& rq) override

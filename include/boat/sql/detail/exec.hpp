@@ -18,6 +18,31 @@ inline std::string current_schema_or(db::command& cmd, std::string_view schema)
     return ret;
 }
 
+inline db::table get_table(  //
+    db::command& cmd,
+    std::string_view schema_name,
+    std::string_view table_name)
+{
+    auto ret = db::table{
+        .dbms{cmd.dbms()},
+        .schema_name{current_schema_or(cmd, schema_name)},
+        .table_name{table_name},
+    };
+    auto& dial = dialects::find(ret.dbms);
+    ret.columns.append_range(
+        cmd.exec(dial.columns(ret.schema_name, table_name)) |
+        db::view<db::column> |
+        std::views::transform(adaptors::parse(ret.dbms)));
+    ret.index_keys.append_range(
+        cmd.exec(dial.index_keys(ret.schema_name, table_name)) |
+        db::view<db::index_key>);
+    std::ranges::sort(ret.index_keys, {}, [](auto& key) {
+        return std::tuple{
+            !key.primary, key.schema_name, key.index_name, key.ordinal};
+    });
+    return ret;
+}
+
 inline db::table migrate(db::command& cmd, db::table const& tbl)
 {
     auto ret = db::table{
