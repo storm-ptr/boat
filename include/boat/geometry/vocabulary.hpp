@@ -50,6 +50,9 @@ template <class T, class U>
 concept same_tag = std::same_as<tag<T>, tag<U>>;
 
 template <class T>
+concept segment = std::same_as<tag<T>, boost::geometry::segment_tag>;
+
+template <class T>
 concept single = std::derived_from<tag<T>, boost::geometry::single_tag>;
 
 template <class T>
@@ -83,14 +86,14 @@ struct d2 {
         using boat_geometry_tag = boost::geometry::geometry_collection_tag;
     };
 
-    d2<CoordSys>::point operator()(geometry::point auto const& g) const
+    d2<CoordSys>::point operator()(geometry::point auto const& v) const
     {
-        return {g.x(), g.y()};
+        return {v.x(), v.y()};
     }
 
-    d2<CoordSys>::box operator()(geometry::box auto const& g) const
+    d2<CoordSys>::box operator()(geometry::box auto const& v) const
     {
-        return {(*this)(g.min_corner()), (*this)(g.max_corner())};
+        return {(*this)(v.min_corner()), (*this)(v.max_corner())};
     }
 };
 
@@ -102,7 +105,7 @@ template <class T>
 using d2_of = d2<typename boost::geometry::coordinate_system<T>::type>;
 
 template <class T>
-concept ogc99 = tagged<T> && std::convertible_to<T, typename d2_of<T>::variant>;
+concept ogc = tagged<T> && std::convertible_to<T, typename d2_of<T>::variant>;
 
 template <class T>
 constexpr auto variant_index_v = variant_index<typename d2_of<T>::variant, T>();

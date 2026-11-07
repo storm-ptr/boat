@@ -14,7 +14,7 @@ namespace boat::geometry {
 inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
 {
     namespace qvm = boost::qvm;
-    auto const& [a, b] = mid_pixel;
+    auto&& [a, b] = mid_pixel;
     auto scale = boost::geometry::distance(a, b);
     return qvm::translation_mat(qvm::vec{{a.x(), a.y()}}) *
            qvm::rotz_mat<3>(.5 * numbers::pi - boost::geometry::azimuth(a, b)) *
@@ -22,7 +22,7 @@ inline matrix affine(int width, int height, cartesian::segment const& mid_pixel)
            qvm::translation_mat(-qvm::vec{{width * .5, height * .5}});
 }
 
-/// Maps geographic coordinates to pixels and back.
+/// Maps lon/lat to pixels and back.
 auto bidirectional_transform(matrix const& mat, srs_spec auto const& crs)
 {
     auto tf = transformation(crs);
@@ -32,7 +32,7 @@ auto bidirectional_transform(matrix const& mat, srs_spec auto const& crs)
     };
 }
 
-/// Maps raster 1 pixels to raster 2 pixels and back.
+/// Maps between rasters.
 auto bidirectional_transform(  //
     matrix const& affine1,
     srs_spec auto const& crs1,
@@ -46,41 +46,50 @@ auto bidirectional_transform(  //
     };
 }
 
-/// Samples a raster footprint on a fixed global grid.
+template <box B, arithmetic I>
+B bounds(I width, I height)
+{
+    return {{}, {width * 1., height * 1.}};
+}
+
+template <segment S, arithmetic I>
+S pixel(I width, I height)
+{
+    auto x = width * .5, y = height * .5;
+    return {{x, y}, {x + 1., y + 1.}};
+}
+
+/// Samples a fixed grid.
 geographic::grid geographic_interpolate(  //
     int width,
     int height,
     matrix const& mat,
     srs_spec auto const& crs,
-    size_t num_points,
-    double margin = .05)
+    double meters)
 {
-    auto [fwd, inv] = bidirectional_transform(mat, crs);
-    auto dx = width * margin, dy = height * margin;
-    auto bounds = cartesian::box{{-dx, -dy}, {width + dx, height + dy}};
-    auto sentinel = [&](auto& ll) {
-        auto xy = fwd(ll).transform(cartesian{});
-        return !xy || !boost::geometry::covered_by(*xy, bounds);
-    };
-    auto points =
-        inv(box_area_interpolate(geographic::box{{}, {width * 1., height * 1.}},
-                                 num_points) |
-            std::ranges::to<geographic::multi_point>())
-            .value_or(geographic::multi_point{});
+    auto inv = bidirectional_transform(mat, crs).second;
+    auto px = inv(pixel<geographic::segment>(width, height));
+    if (!px)
+        return {};
+    auto n =
+        size_t(width * .5 * height * std::pow(length(*px) / meters, 2)) + 1;
+    auto mbr = bounds<geographic::box>(width, height);
+    auto points = box_edge_interpolate(mbr, size_t(2 * std::sqrt(n)));
+    points.append_range(box_area_interpolate(mbr, n));
+    points = inv(std::move(points)).value_or(geographic::multi_point{});
     auto ret = geographic::grid{};
     for (auto fib : fibonacci_levels) {
+        auto step = fib.step();
+        if (step < meters * numbers::inv_sqrt_2)
+            break;
+        auto sentinel = [&](auto& ll) { return distance(ll, points) > step; };
         auto indices = std::unordered_set<size_t>{};
         for (auto& p : points)
             for (auto i : fib.nearests(p, sentinel)) {
                 if (!indices.insert(i).second)
                     break;
-                if (indices.size() > points.size() * 2)
-                    return ret;
+                ret[step].push_back(fib[i]);
             }
-        if (indices.empty())
-            continue;
-        ret[numbers::earth::sqrt_area / std::sqrt(fib.num_points)].assign_range(
-            indices | std::views::transform([&](size_t i) { return fib[i]; }));
     }
     return ret;
 }

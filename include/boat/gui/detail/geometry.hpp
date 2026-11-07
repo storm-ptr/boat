@@ -7,18 +7,6 @@
 
 namespace boat::gui {
 
-auto recursive_fn(auto... fn)
-{
-    return overloaded{
-        fn...,
-        [](this auto&& self, geometry::multi auto&& v) -> void {
-            std::ranges::for_each(v, self);
-        },
-        [](this auto&& self, geometry::dynamic auto&& v) -> void {
-            std::visit(self, v);
-        }};
-}
-
 inline auto sample(  //
     geometry::geographic::geometry_collection geoms,
     geometry::cartesian::box const& box,

@@ -20,22 +20,22 @@ std::optional<std::array<int, 4>> draw_image(  //
 {
     auto [fwd, inv] = geometry::bidirectional_transform(
         in_affine, in_crs, out_affine, out_crs);
-    auto size = int(std::max<>(in.width(), in.height()));
-    auto border_points = int(4 * std::max<>(std::sqrt(size), 1.));
-    auto area_points = std::max<>(size / 4, 1);
-    auto mbr =
-        geometry::geographic::box{{}, {in.width() * 1., in.height() * 1.}};
-    auto points = geometry::box_border_interpolate(mbr, border_points);
-    points.append_range(geometry::box_area_interpolate(mbr, area_points));
-    auto box = fwd(points)
-                   .transform(geometry::minmax)
-                   .transform(geometry::cartesian{});
-    auto bounds = geometry::cartesian::box{
+    auto in_box =
+        geometry::bounds<geometry::geographic::box>(in.width(), in.height());
+    auto num_points = std::max<>({in.width(), in.height(), 4z}) / 4;
+    auto points = geometry::box_edge_interpolate(
+        in_box, size_t(2 * std::sqrt(num_points)) - 1);
+    points.append_range(geometry::box_area_interpolate(in_box, num_points));
+    auto out_box = fwd(std::move(points))
+                       .transform(geometry::minmax)
+                       .transform(geometry::cartesian{});
+    auto clip_box = geometry::cartesian::box{
         {out_rect[0] * 1., out_rect[1] * 1.},
         {out_rect[0] * 1. + out_rect[2], out_rect[1] * 1. + out_rect[3]}};
-    if (!box || !boost::geometry::intersection(*box, bounds, *box))
+    if (!out_box ||
+        !boost::geometry::intersection(*out_box, clip_box, *out_box))
         return {};
-    auto a = box->min_corner(), b = box->max_corner();
+    auto a = out_box->min_corner(), b = out_box->max_corner();
     auto x0 = int(std::floor(a.x())), y0 = int(std::floor(a.y()));
     auto w = int(std::ceil(b.x())) - x0, h = int(std::ceil(b.y())) - y0;
     if (w <= 0 || h <= 0)
@@ -48,7 +48,7 @@ std::optional<std::array<int, 4>> draw_image(  //
             if (auto p = inv(geometry::geographic::point(x + x0, y + y0));
                 p && p->x() >= 0 && p->x() < in.width() && p->y() >= 0 &&
                 p->y() < in.height())
-                rgba = in(p->x(), p->y());
+                rgba = in(std::ptrdiff_t(p->x()), std::ptrdiff_t(p->y()));
             write(size_t(y) * w + x, rgba);
         }
     });

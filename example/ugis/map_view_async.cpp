@@ -100,11 +100,10 @@ void map_view::redraw()
         auto cats = std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
         auto crs = geo::ortho(view.center);
         auto mat = affine(w, h, view, crs);
-        auto num_points =
-            size_t(w) * h / (boat::tile::size * boat::tile::size) + 1;
         auto params = boat::gui::render_params{
             .cache = cache_,
-            .filter = geo::geographic_interpolate(w, h, mat, crs, num_points)};
+            .filter = geo::geographic_interpolate(
+                w, h, mat, crs, view.resolution * boat::tile::size)};
         auto img = QImage{w, h, QImage::Format_RGBA8888};
         img.fill(Qt::white);
         auto art = QPainter{&img};

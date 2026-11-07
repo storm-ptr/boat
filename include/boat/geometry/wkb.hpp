@@ -73,14 +73,14 @@ constexpr auto write = overloaded{
 }  // namespace geometry::detail
 
 /// Reads one OGC 99 WKB geometry and advances wkb past it.
-blob_view& operator>>(blob_view& wkb, geometry::ogc99 auto& geom)
+blob_view& operator>>(blob_view& wkb, geometry::ogc auto& geom)
 {
     geometry::detail::read(wkb, geom);
     return wkb;
 }
 
 /// Appends an OGC 99 WKB geometry in native byte order.
-blob& operator<<(blob& wkb, geometry::ogc99 auto const& geom)
+blob& operator<<(blob& wkb, geometry::ogc auto const& geom)
 {
     geometry::detail::write(geom, wkb);
     return wkb;

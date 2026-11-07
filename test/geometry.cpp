@@ -19,7 +19,7 @@ auto tf = transformation(crs);
 auto width = 1920;
 auto height = 1080;
 
-template <ogc99 Geom1, same_tag<Geom1> Geom2>
+template <ogc Geom1, same_tag<Geom1> Geom2>
 void check(std::string const& wkt)
 {
     auto ll = from_wkt<Geom1>(wkt);
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(geometry_fibonacci_vs_rtree)
         auto rtree = index::rtree<geographic::point, index::rstar<4>>{};
         for (auto i : std::views::iota(0u, fib.num_points))
             rtree.insert(fib[i]);
-        auto step = boat::numbers::earth::sqrt_area / std::sqrt(fib.num_points);
+        auto step = fib.step();
         for (auto p : geographic_random() | std::views::take(60)) {
             auto d = distance(p, fib[fib.nearest(p)]);
             BOOST_CHECK_LE(d, step);
@@ -115,31 +115,44 @@ BOOST_AUTO_TEST_CASE(geometry_fibonacci_vs_rtree)
 
 BOOST_AUTO_TEST_CASE(geometry_raster)
 {
-    auto mbr = cartesian::box{{}, {width * 1., height * 1.}};
     auto ext = cartesian::box{};
-    auto num_points = 100u;
     transform(
         geographic::box{{-180., -85.}, {180., 85.}}, ext, srs_forward(tf));
     for (auto p : geographic_random() | std::views::take(10)) {
-        for (auto res : {1, 10, 100, 1000}) {
+        auto node = geographic::point{};
+        auto step = 0.;
+        for (auto res : {2'000, 200, 20, 2}) {
             auto px = cartesian::segment{};
             tf.forward(geographic::segment{p, add_meters(p, 0, res)}, px);
-            auto mat = affine(width, height, px);
-            auto in = *transform(mat_forward(mat))(mbr);
-            if (!covered_by(in, ext))
-                continue;
-            auto grid =
-                geographic_interpolate(width, height, mat, crs, num_points, 0.);
-            BOOST_CHECK(!grid.empty());
-            auto& lls = grid.begin()->second;
-            BOOST_CHECK_LE(lls.size(), num_points * 2);
-            BOOST_CHECK_GE(lls.size(), num_points / 2);
-            auto xys = cartesian::multi_point{};
-            BOOST_CHECK(tf.forward(lls, xys));
-            auto out = minmax(xys);
-            BOOST_CHECK(covered_by(out, in));
-            auto iou = area(out) / area(in);
-            BOOST_TEST(iou > .87, iou << "; " << res << "m/px; " << wkt(p));
+            auto steps = std::unordered_set<double>{};
+            for (auto w : {width, width / 2}) {
+                auto mat = affine(w, height, px);
+                auto in = *transform(mat_forward(mat))(
+                    bounds<cartesian::box>(w, height));
+                if (!covered_by(in, ext))
+                    continue;
+                auto grid =
+                    geographic_interpolate(w, height, mat, crs, res * 256.);
+                BOOST_REQUIRE(!grid.empty());
+                auto& lls = grid.begin()->second;
+                steps.insert(grid.begin()->first);
+                auto footprint = geographic::box{};
+                BOOST_REQUIRE(transform(in, footprint, srs_inverse(tf)));
+                for (auto const& level : grid)
+                    for (auto const& ll : level.second)
+                        BOOST_CHECK_LE(distance(ll, footprint), level.first);
+                BOOST_CHECK(covered_by(footprint,
+                                       return_envelope<geographic::box>(lls)));
+                if (!step) {
+                    node = *std::ranges::min_element(
+                        lls, {}, [&](auto const& q) { return distance(p, q); });
+                    step = grid.begin()->first;
+                    // Shift the center so zooming moves the node off-screen.
+                    p = add_meters(node, step * .9, 0.);
+                }
+                BOOST_CHECK(std::ranges::contains(grid.at(step), node));
+            }
+            BOOST_CHECK_LE(steps.size(), 1);
         }
     }
 }

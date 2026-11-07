@@ -23,7 +23,6 @@ inline std::generator<context> contexts()
     using namespace boat::geometry;
     auto width = 1280;
     auto height = 720;
-    auto num_points = (width * height) / (boat::tile::size * boat::tile::size);
     for (auto p : {geographic::point{20., 40.}, {-117.5, 33.7}, {-179., 68.}})
         for (auto res : {100., 10'000.})
             for (auto deg : {0., 23.5})
@@ -37,7 +36,7 @@ inline std::generator<context> contexts()
                         cartesian::segment{{a.x(), a.y()}, {b.x(), b.y()}};
                     auto mat = affine(width, height, pixel);
                     auto filter = geographic_interpolate(
-                        width, height, mat, crs, num_points);
+                        width, height, mat, crs, res * boat::tile::size);
                     co_yield {width, height, filter, mat, crs};
                 }
 }

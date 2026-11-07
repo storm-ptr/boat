@@ -67,6 +67,11 @@ T inverse_fibonacci(geographic::point const& p, size_t num_points)
 struct fibonacci {
     size_t num_points;
 
+    double step() const
+    {
+        return numbers::earth::sqrt_area / std::sqrt(num_points);
+    }
+
     geographic::point operator[](size_t n) const
     {
         auto azimuth = 2 * numbers::pi * frac(n * numbers::inv_phi);
@@ -87,7 +92,7 @@ struct fibonacci {
     {
         auto done = std::unordered_set<size_t>{};
         auto queue = std::priority_queue<priority_point>{};
-        auto buf = buffer(numbers::earth::sqrt_area / std::sqrt(num_points), 4);
+        auto buf = buffer(step(), 4);
         for (auto next = p;;) {
             for (auto v : buf(next).outer())
                 for (auto i : inverse_fibonacci(v, num_points))

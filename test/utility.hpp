@@ -9,7 +9,7 @@
 
 namespace boost::geometry {
 
-template <boat::geometry::ogc99 T>
+template <boat::geometry::ogc T>
 bool operator==(T const& lhs, T const& rhs)
 {
     return equals(lhs, rhs);

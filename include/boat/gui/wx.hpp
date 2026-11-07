@@ -22,7 +22,7 @@ wxGraphicsPath& add(geometry::curve auto&& in, wxGraphicsPath& out)
 
 inline auto draw_geometry(wxGraphicsContext& out)
 {
-    return recursive_fn(
+    return geometry::visitor(
         [&](geometry::point auto&& v) { out.DrawEllipse(v.x(), v.y(), 1, 1); },
         [&](geometry::linestring auto&& v) {
             auto path = out.CreatePath();

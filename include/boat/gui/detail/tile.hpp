@@ -19,12 +19,11 @@ auto tiles(  //
     static constexpr auto d = {-1, 0, 1};
     auto ret = std::unordered_set<tile>{};
     auto [fwd, inv] = geo::bidirectional_transform(affine, crs);
-    auto a = inv(geo::geographic::point(width * .5, height * .5));
-    auto b = inv(geo::geographic::point(width * .5 + 1., height * .5 + 1.));
-    if (!a || !b || grid.empty())
+    auto px = inv(geo::pixel<geo::geographic::segment>(width, height));
+    if (!px || grid.empty())
         return ret;
     auto meters = std::begin(grid)->first;
-    auto scale = distance(*a, *b) * numbers::inv_sqrt_2 / meters * tile::size;
+    auto scale = length(*px) * numbers::inv_sqrt_2 / meters * tile::size;
     auto z = tile::zoom(width, height, scale);
     auto k = 1. / tile::scale(width, height, z) / tile::size;
     auto snap = [k](auto v) { return static_cast<int>(k * v); };

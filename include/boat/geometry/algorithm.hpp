@@ -13,23 +13,21 @@ template <box T>
 auto box_area_interpolate(T const& mbr, size_t num_points)
 {
     auto a = mbr.min_corner(), b = mbr.max_corner();
-    return std::views::iota(0uz, num_points) |
-           std::views::transform([=](auto n) -> d2_of<T>::point {
-               return {std::lerp(a.x(), b.x(), frac(n * numbers::inv_phi)),
-                       std::lerp(a.y(), b.y(), (n + .5) / num_points)};
-           });
+    auto fn = [=](auto i) -> d2_of<T>::point {
+        return {std::lerp(a.x(), b.x(), frac(i * numbers::inv_phi)),
+                std::lerp(a.y(), b.y(), (i + .5) / num_points)};
+    };
+    return std::views::iota(0uz, num_points) | std::views::transform(fn);
 }
 
 template <box T>
-multi_point auto box_border_interpolate(T const& mbr, size_t num_points)
+multi_point auto box_edge_interpolate(T const& mbr, size_t num_points)
 {
     auto ret = typename d2_of<T>::multi_point{};
-    auto num_per_edge = num_points >= 4 ? (num_points / 4 - 1) : 0;
-    for (auto tup : boost::geometry::box_view{mbr} | std::views::pairwise) {
-        auto a = std::get<0>(tup), b = std::get<1>(tup);
-        ret.push_back(a);
-        for (auto n : std::views::iota(0uz, num_per_edge)) {
-            auto t = (n + 1.) / (num_per_edge + 1.);
+    for (auto edge : boost::geometry::box_view{mbr} | std::views::pairwise) {
+        auto a = std::get<0>(edge), b = std::get<1>(edge);
+        for (auto i : std::views::iota(0uz, num_points + 1)) {
+            auto t = i / (num_points + 1.);
             ret.emplace_back(std::lerp(a.x(), b.x(), t),
                              std::lerp(a.y(), b.y(), t));
         }
@@ -59,19 +57,6 @@ inline auto buffer(double distance, size_t num_points)
     };
 }
 
-void for_each_point(tagged auto const& geom, auto fn)
-{
-    overloaded{
-        [&](single auto const& g) { boost::geometry::for_each_point(g, fn); },
-        [](this auto&& self, multi auto const& g) -> void {
-            std::ranges::for_each(g, self);
-        },
-        [](this auto&& self, dynamic auto const& g) -> void {
-            std::visit(self, g);
-        },
-    }(geom);
-}
-
 /// Approximate degrees per meter of latitude, or longitude at a given latitude.
 constexpr auto meter = overloaded{
     [] { return numbers::radian / numbers::earth::mean_radius; },
@@ -81,12 +66,29 @@ constexpr auto meter = overloaded{
     },
 };
 
+auto visitor(auto... fn)
+{
+    return overloaded{
+        fn...,
+        [](this auto&& self, multi auto&& v) -> void {
+            std::ranges::for_each(v, self);
+        },
+        [](this auto&& self, dynamic auto&& v) -> void { std::visit(self, v); },
+    };
+}
+
+void for_each_point(tagged auto const& geom, auto fn)
+{
+    visitor([&](single auto&& v) { boost::geometry::for_each_point(v, fn); })(
+        geom);
+}
+
 constexpr auto minmax = []<tagged T>(T const& geom) -> box auto {
     double xmin = INFINITY;
     double ymin = INFINITY;
     double xmax = -INFINITY;
     double ymax = -INFINITY;
-    geometry::for_each_point(geom, [&](point auto const& p) {
+    geometry::for_each_point(geom, [&](point auto&& p) {
         xmin = std::min<>(xmin, p.x());
         ymin = std::min<>(ymin, p.y());
         xmax = std::max<>(xmax, p.x());

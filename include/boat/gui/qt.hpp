@@ -29,7 +29,7 @@ constexpr auto qt = overloaded{
 
 inline auto draw_geometry(QPainter& out)
 {
-    return recursive_fn(
+    return geometry::visitor(
         [&](geometry::point auto&& v) { out.drawPoint(detail::qt(v)); },
         [&](geometry::linestring auto&& v) { out.drawPolyline(detail::qt(v)); },
         [&](geometry::polygon auto&& v) { out.drawPath(detail::qt(v)); });

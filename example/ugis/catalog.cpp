@@ -44,7 +44,7 @@ public:
             {rq.xmin, rq.ymin},
             {rq.xmax, rq.ymax},
         };
-        auto points = boat::geometry::box_border_interpolate(mbr, 92);
+        auto points = boat::geometry::box_edge_interpolate(mbr, 22);
         auto wkb = boat::blob{} << points;
         ret.rows.push_back({std::move(wkb)});
         return ret;
