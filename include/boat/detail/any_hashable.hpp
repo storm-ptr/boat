@@ -48,12 +48,4 @@ public:
 
 }  // namespace boat
 
-template <>
-struct std::hash<boat::any_hashable> {
-    static size_t operator()(boat::any_hashable const& v)
-    {
-        return hash_value(v);
-    }
-};
-
 #endif  // BOAT_ANY_HASHABLE_HPP
