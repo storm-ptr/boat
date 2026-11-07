@@ -182,7 +182,7 @@ int tree_model::rowCount(QModelIndex const& parent) const
     return static_cast<int>(to_tree(parent)->children.size());
 }
 
-bool tree_model::setData(  //
+bool tree_model::setData(
     QModelIndex const& idx,
     QVariant const& value,
     int role)
@@ -213,8 +213,8 @@ bool tree_model::removeRows(int position, int rows, QModelIndex const& parent)
     if (position < 0 || rows > std::ssize(children) - position)
         return false;
     beginRemoveRows(parent, position, position + rows - 1);
-    children.erase(children.begin() + position,
-                   children.begin() + position + rows);
+    children.erase(
+        children.begin() + position, children.begin() + position + rows);
     endRemoveRows();
     return true;
 }
@@ -260,7 +260,7 @@ void tree_model::on_fetch_canceled(QPersistentModelIndex per)
     }
 }
 
-void tree_model::on_fetched(  //
+void tree_model::on_fetched(
     QPersistentModelIndex per,
     std::vector<std::unique_ptr<tree>> children)
 {

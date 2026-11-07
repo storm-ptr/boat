@@ -25,32 +25,28 @@ public:
         return {
             .table_name{table_name},
             .columns{
-                {.kind{"geometry"}, .column_name{column_name}, .epsg = 4326}},
-        };
+                {.kind{"geometry"}, .column_name{column_name}, .epsg = 4326}}};
     }
 
-    boat::db::rowset select(boat::db::table const&,
-                            boat::db::page const&) override
+    boat::db::rowset select(boat::db::table const&, boat::db::page const&)
+        override
     {
         throw err;
     }
 
-    boat::db::rowset select(  //
-        boat::db::table const&,
-        boat::db::bbox const& rq) override
+    boat::db::rowset select(boat::db::table const&, boat::db::bbox const& rq)
+        override
     {
         auto ret = boat::db::rowset{.columns{column_name}};
         auto mbr = boat::geometry::cartesian::box{
-            {rq.xmin, rq.ymin},
-            {rq.xmax, rq.ymax},
-        };
+            {rq.xmin, rq.ymin}, {rq.xmax, rq.ymax}};
         auto points = boat::geometry::box_edge_interpolate(mbr, 22);
         auto wkb = boat::blob{} << points;
         ret.rows.push_back({std::move(wkb)});
         return ret;
     }
 
-    void insert(  //
+    void insert(
         boat::db::table const&,
         boat::db::rowset const&,
         std::stop_token) override
@@ -72,7 +68,7 @@ public:
         co_return;
     }
 
-    void write(  //
+    void write(
         boat::db::raster const&,
         boat::db::rect const&,
         boat::gil::any_image_view) override
@@ -88,7 +84,8 @@ public:
 }  // namespace
 
 std::unique_ptr<boat::db::catalog> make_catalog(
-    std::string_view address, bool update)
+    std::string_view address,
+    bool update)
 {
     if (address == "echo://")
         return std::make_unique<echo>();

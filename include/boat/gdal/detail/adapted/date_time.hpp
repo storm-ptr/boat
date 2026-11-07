@@ -16,39 +16,28 @@ inline time_point get_date_time(OGRFeatureH feat, int index)
     namespace sc = std::chrono;
     int year, month, day, hour, minute, tz;
     float second;
-    boat::check(                     //
-        OGR_F_GetFieldAsDateTimeEx(  //
-            feat,
-            index,
-            &year,
-            &month,
-            &day,
-            &hour,
-            &minute,
-            &second,
-            &tz),
+    boat::check(
+        OGR_F_GetFieldAsDateTimeEx(
+            feat, index, &year, &month, &day, &hour, &minute, &second, &tz),
         "OGR_F_GetFieldAsDateTimeEx");
     auto ymd =
         sc::year_month_day(sc::year(year), sc::month(month), sc::day(day));
     auto offset = tz > OGR_TZFLAG_LOCALTIME
                       ? sc::minutes{15 * (tz - OGR_TZFLAG_UTC)}
                       : sc::minutes{};
-    return time_point(sc::sys_days(ymd).time_since_epoch() + sc::hours(hour) +
-                      sc::minutes(minute) + duration(second) - offset);
+    return time_point(
+        sc::sys_days(ymd).time_since_epoch() + sc::hours(hour) +
+        sc::minutes(minute) + duration(second) - offset);
 }
 
-inline void set_date_time(  //
-    OGRFeatureH feat,
-    int index,
-    time_point tp,
-    int tz)
+inline void set_date_time(OGRFeatureH feat, int index, time_point tp, int tz)
 {
     namespace sc = std::chrono;
     auto epoch = tp.time_since_epoch();
     auto days = sc::floor<sc::days>(epoch);
     auto ymd = sc::year_month_day{sc::sys_days(days)};
     auto hms = sc::hh_mm_ss{sc::duration_cast<duration>(epoch - days)};
-    OGR_F_SetFieldDateTimeEx(  //
+    OGR_F_SetFieldDateTimeEx(
         feat,
         index,
         static_cast<int>(ymd.year()),

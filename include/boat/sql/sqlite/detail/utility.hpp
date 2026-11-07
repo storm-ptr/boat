@@ -36,8 +36,7 @@ inline int bind_value(sqlite3_stmt* stmt, int i, db::variant const& var)
         [=](blob_view v) {
             return sqlite3_bind_blob(
                 stmt, i, v.data(), int(v.size()), SQLITE_STATIC);
-        },
-    };
+        }};
     return std::visit(vis, var);
 }
 
@@ -52,13 +51,15 @@ inline db::variant column_value(sqlite3_stmt* stmt, int col)
         case SQLITE_FLOAT:
             return sqlite3_column_double(stmt, col);
         case SQLITE_TEXT:
-            return db::variant{std::in_place_type<std::string>,
-                               as_chars(sqlite3_column_text(stmt, col)),
-                               sqlite3_column_bytes(stmt, col)};
+            return db::variant{
+                std::in_place_type<std::string>,
+                as_chars(sqlite3_column_text(stmt, col)),
+                sqlite3_column_bytes(stmt, col)};
         case SQLITE_BLOB:
-            return db::variant{std::in_place_type<blob>,
-                               as_bytes(sqlite3_column_blob(stmt, col)),
-                               sqlite3_column_bytes(stmt, col)};
+            return db::variant{
+                std::in_place_type<blob>,
+                as_bytes(sqlite3_column_blob(stmt, col)),
+                sqlite3_column_bytes(stmt, col)};
     }
     throw std::runtime_error{concat(sqlite3_column_name(stmt, col), " ", type)};
 }

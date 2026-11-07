@@ -69,10 +69,8 @@ constexpr auto to_lower = [](std::string_view str) {
     return str | std::views::transform(fn) | std::ranges::to<std::string>();
 };
 
-inline void replace(  //
-    std::string& result,
-    std::string_view in,
-    std::string_view out)
+inline void
+replace(std::string& result, std::string_view in, std::string_view out)
 {
     result.replace(result.find(in), in.size(), out);
 }

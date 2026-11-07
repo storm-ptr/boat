@@ -27,23 +27,25 @@ public:
                 env_.get(), SQL_ATTR_ODBC_VERSION, SQLPOINTER(SQL_OV_ODBC3), 0),
             env_);
         dbc_ = alloc<SQL_HANDLE_DBC>(env_);
-        check(SQLSetConnectAttr(  //
-                  dbc_.get(),
-                  SQL_ATTR_LOGIN_TIMEOUT,
-                  SQLPOINTER(std::chrono::seconds{timeout}.count()),
-                  0),
-              dbc_);
+        check(
+            SQLSetConnectAttr(
+                dbc_.get(),
+                SQL_ATTR_LOGIN_TIMEOUT,
+                SQLPOINTER(std::chrono::seconds{timeout}.count()),
+                0),
+            dbc_);
         SQLSMALLINT len;
-        check(SQLDriverConnectW(  //
-                  dbc_.get(),
-                  0,
-                  unicode::utf<SQLWCHAR>(connection).data(),
-                  SQL_NTS,
-                  0,
-                  0,
-                  &len,
-                  SQL_DRIVER_NOPROMPT),
-              dbc_);
+        check(
+            SQLDriverConnectW(
+                dbc_.get(),
+                0,
+                unicode::utf<SQLWCHAR>(connection).data(),
+                SQL_NTS,
+                0,
+                0,
+                &len,
+                SQL_DRIVER_NOPROMPT),
+            dbc_);
         stmt_ = alloc<SQL_HANDLE_STMT>(dbc_);
         id_quote_ = info(dbc_, SQL_IDENTIFIER_QUOTE_CHAR).at(0);
         dbms_ = to_lower(info(dbc_, SQL_DBMS_NAME));
@@ -63,12 +65,13 @@ public:
                   std::ranges::to<std::vector>();
         for (size_t i{}; i < ps.size(); ++i)
             params::bind(stmt_, SQLUSMALLINT(i + 1), ps[i]);
-        check(SQLSetStmtAttr(  //
-                  stmt_.get(),
-                  SQL_ATTR_QUERY_TIMEOUT,
-                  SQLPOINTER(std::chrono::seconds{timeout}.count()),
-                  0),
-              stmt_);
+        check(
+            SQLSetStmtAttr(
+                stmt_.get(),
+                SQL_ATTR_QUERY_TIMEOUT,
+                SQLPOINTER(std::chrono::seconds{timeout}.count()),
+                0),
+            stmt_);
         auto ec = SQLExecute(stmt_.get());
         for (; SQL_NO_DATA != ec; ec = SQLMoreResults(stmt_.get())) {
             check(ec, stmt_);

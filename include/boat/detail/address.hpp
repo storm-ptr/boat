@@ -47,21 +47,21 @@ constexpr auto postgres_host =
 inline static auto const mysql_address =
     boat::concat("mysql://root:", password, "@", mysql_host, "/mysql");
 
-inline static auto const mysql_gdal_address = boat::concat(  //
+inline static auto const mysql_gdal_address = boat::concat(
     "mysql:mysql,user=root,password=",
     password,
     ",host=",
     mysql_host,
     ",port=3306");
 
-inline static auto const postgres_address = boat::concat(  //
+inline static auto const postgres_address = boat::concat(
     "postgres://postgres:",
     password,
     "@",
     postgres_host,
     "/postgres?client_encoding=UTF8");
 
-inline static auto const postgres_gdal_address = boat::concat(  //
+inline static auto const postgres_gdal_address = boat::concat(
     "postgresql://postgres:",
     password,
     "@",
@@ -81,8 +81,7 @@ inline auto odbc_drivers(std::initializer_list<std::string> servers)
         return std::tuple{
             lo.contains("x64"),
             lo.contains("unicode"),
-            std::tuple{part(1), part(2), part(3)},
-        };
+            std::tuple{part(1), part(2), part(3)}};
     };
     auto ret = std::unordered_map<std::string, std::string>{};
     for (auto drv : sql::odbc::drivers()) {
@@ -101,7 +100,7 @@ inline std::vector<std::string> odbc_address()
     auto ret = std::vector<std::string>{};
     for (auto [srv, drv] : odbc_drivers({"mysql", "postgres"})) {
         if (srv == "mysql")
-            ret.push_back(boat::concat(  //
+            ret.push_back(boat::concat(
                 "odbc://root:",
                 password,
                 "@",
@@ -110,7 +109,7 @@ inline std::vector<std::string> odbc_address()
                 "&INITSTMT=SET time_zone='+00:00'&DRIVER=",
                 drv));
         else if (srv == "postgres")
-            ret.push_back(boat::concat(  //
+            ret.push_back(boat::concat(
                 "odbc://postgres:",
                 password,
                 "@",
@@ -126,7 +125,7 @@ inline std::string mssql_gdal_address()
 #if defined(BOAT_TEST_MSSQL_HOST)
     for (auto [srv, drv] : odbc_drivers({"sql server"}))
         if (srv == "sql server")
-            return boat::concat(  //
+            return boat::concat(
                 "mssql:driver={",
                 drv,
                 "};Encrypt=no;server=",

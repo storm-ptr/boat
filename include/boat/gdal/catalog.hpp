@@ -72,7 +72,7 @@ struct catalog : db::catalog {
         return gdal::select(lyr, fields::make(lyr, rq.select_list), rq.limit);
     }
 
-    void insert(  //
+    void insert(
         db::table const& tbl,
         db::rowset const& rs,
         std::stop_token tok = {}) override
@@ -105,7 +105,7 @@ struct catalog : db::catalog {
             co_yield {t, gdal::read(dataset.get(), rast, t)};
     }
 
-    void write(  //
+    void write(
         db::raster const& rast,
         db::rect const& rect,
         gil::any_image_view img) override

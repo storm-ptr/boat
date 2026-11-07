@@ -17,15 +17,13 @@ constexpr auto to_column = overloaded{
         return db::column{
             .kind{v.kind},
             .column_name = v.name,
-            .type_name = to_lower(OGR_GetFieldTypeName(v.type)),
-        };
+            .type_name = to_lower(OGR_GetFieldTypeName(v.type))};
     },
     [](attribute const& v) {
         return db::column{
             .kind{v.kind()},
             .column_name = v.name,
-            .type_name = to_lower(OGR_GetFieldTypeName(v.type)),
-        };
+            .type_name = to_lower(OGR_GetFieldTypeName(v.type))};
     },
     [](geometry const& v) {
         return db::column{
@@ -35,10 +33,8 @@ constexpr auto to_column = overloaded{
             .srid = v.epsg,
             .epsg = v.epsg,
             .wkt = v.wkt,
-            .proj4 = v.proj4,
-        };
-    },
-};
+            .proj4 = v.proj4};
+    }};
 
 inline auto to_index_key(OGRLayerH lyr)
 {
@@ -48,8 +44,7 @@ inline auto to_index_key(OGRLayerH lyr)
                 .index_name = "pk",
                 .column_name = v.name,
                 .primary = true,
-                .ordinal = 1,
-            };
+                .ordinal = 1};
         },
         [](attribute const& v) -> std::optional<db::index_key> {
             return std::nullopt;
@@ -60,10 +55,8 @@ inline auto to_index_key(OGRLayerH lyr)
             return db::index_key{
                 .index_name = concat("idx_", v.name),
                 .column_name = v.name,
-                .ordinal = 1,
-            };
-        },
-    };
+                .ordinal = 1};
+        }};
 }
 
 inline std::vector<db::layer> to_layers(OGRFeatureDefnH fd)
@@ -96,7 +89,7 @@ inline field make(OGRLayerH lyr, char const* name)
     throw std::runtime_error(concat("no field ", name));
 }
 
-inline std::vector<field> make(  //
+inline std::vector<field> make(
     OGRLayerH lyr,
     std::vector<std::string> const& cols = {})
 {

@@ -18,7 +18,7 @@ namespace {
 QtMessageHandler old_handler;
 QPointer<QPlainTextEdit> log_ptr;
 
-void message_handler(  //
+void message_handler(
     QtMsgType type,
     QMessageLogContext const& ctx,
     QString const& msg)

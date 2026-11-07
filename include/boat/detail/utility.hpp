@@ -54,8 +54,7 @@ constexpr auto byteswap = overloaded{
     [](std::floating_point auto v) {
         std::ranges::reverse(std::as_writable_bytes(as_span(v)));
         return v;
-    },
-};
+    }};
 
 constexpr auto frac = [](std::floating_point auto v) {
     return std::fmod(v, 1);

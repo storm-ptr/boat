@@ -36,7 +36,7 @@ static auto const lonlat = srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
 /// Orthographic SRS centered at v.
 inline auto ortho(geographic::point const& v)
 {
-    return srs::proj4{std::format(  //
+    return srs::proj4{std::format(
         " +proj=ortho +x_0=0 +y_0=0 +units=m +no_defs"
         " +a={} +b={} +lat_0={} +lon_0={}",
         numbers::earth::equatorial_radius,

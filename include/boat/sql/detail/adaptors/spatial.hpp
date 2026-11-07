@@ -13,10 +13,11 @@ struct spatial : impl<geometry::geographic::variant> {
 
     db::column migrate(std::string_view) const override
     {
-        return {.kind{kind_},
-                .column_name{col_->column_name},
-                .type_name = "geometry",
-                .epsg = col_->epsg};
+        return {
+            .kind{kind_},
+            .column_name{col_->column_name},
+            .type_name = "geometry",
+            .epsg = col_->epsg};
     }
 
     void select(db::query& qry) const override

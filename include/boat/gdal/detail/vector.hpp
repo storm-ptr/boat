@@ -23,8 +23,7 @@ inline db::table get_table(OGRLayerH lyr)
     auto ret = db::table{
         .dbms = to_lower(GDALGetDriverShortName(
             GDALGetDatasetDriver(OGR_L_GetDataset(lyr)))),
-        .table_name = OGR_FD_GetName(OGR_L_GetLayerDefn(lyr)),
-    };
+        .table_name = OGR_FD_GetName(OGR_L_GetLayerDefn(lyr))};
     auto to_index_key = fields::to_index_key(lyr);
     for (auto& fld : fields::make(lyr)) {
         ret.columns.push_back(std::visit(fields::to_column, fld));
@@ -102,10 +101,10 @@ inline void insert(OGRLayerH lyr, db::rowset const& rs, std::stop_token tok)
 {
     auto flds = fields::make(lyr, rs.columns);
     auto fd = OGR_L_GetLayerDefn(lyr);
-    auto drv = GDALGetDriverShortName(
-        GDALGetDatasetDriver(OGR_L_GetDataset(lyr)));
-    auto tz = std::string_view{drv} == "MySQL" ? OGR_TZFLAG_UNKNOWN
-                                                : OGR_TZFLAG_UTC;
+    auto drv =
+        GDALGetDriverShortName(GDALGetDatasetDriver(OGR_L_GetDataset(lyr)));
+    auto tz =
+        std::string_view{drv} == "MySQL" ? OGR_TZFLAG_UNKNOWN : OGR_TZFLAG_UTC;
     for (auto const& row : rs) {
         if (tok.stop_requested())
             break;

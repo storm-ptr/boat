@@ -35,6 +35,7 @@ BOOST_AUTO_TEST_CASE(qt_draw)
         transparent_sum += std::count_if(
             rgb, rgb + num_pixels, [](auto c) { return !qAlpha(c); });
     }
-    BOOST_TEST(transparent_sum / pixels_sum == transparent_ratio,
-               boost::test_tools::tolerance(transparent_tolerance));
+    BOOST_TEST(
+        transparent_sum / pixels_sum == transparent_ratio,
+        boost::test_tools::tolerance(transparent_tolerance));
 }

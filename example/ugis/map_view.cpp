@@ -32,7 +32,7 @@ constexpr auto latitude_max = 85.;
 constexpr auto resolution_min = 0.5972;
 constexpr auto resolution_max = 19'567.88;
 
-void save_png(  //
+void save_png(
     QString const& path,
     QPixmap const& image,
     geo::matrix const& mat,
@@ -47,8 +47,7 @@ void save_png(  //
         mat.a[0][1] * px,
         mat.a[1][2],
         mat.a[1][0] * px,
-        mat.a[1][1] * px,
-    };
+        mat.a[1][1] * px};
     boat::gdal::check(GDALSetGeoTransform(ds.get(), a.data()));
     auto srs = boat::gdal::make_srs(0, {}, crs.str());
     boat::gdal::check(GDALSetSpatialRef(ds.get(), srs.get()));
@@ -259,8 +258,9 @@ void map_view::wheelEvent(QWheelEvent* event)
     };
     auto a = ll(map_.resolution), b = ll(next.resolution);
     if (a && b)
-        next.center = {map_.center.x() + a->x() - b->x(),
-                       map_.center.y() + a->y() - b->y()};
+        next.center = {
+            map_.center.x() + a->x() - b->x(),
+            map_.center.y() + a->y() - b->y()};
     map_ = bounded(next).value_or(map_);
     schedule_paint();
     update_status(pos);

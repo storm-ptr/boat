@@ -16,10 +16,11 @@ struct timestamp : impl<std::chrono::sys_seconds> {
 
     db::column migrate(std::string_view dbms) const override
     {
-        return {.kind{kind_},
-                .column_name{col_->column_name},
-                .type_name{is_mysql(dbms) ? "datetime" : "timestamp"},
-                .length = is_mysql(dbms) ? 6 : 0};
+        return {
+            .kind{kind_},
+            .column_name{col_->column_name},
+            .type_name{is_mysql(dbms) ? "datetime" : "timestamp"},
+            .length = is_mysql(dbms) ? 6 : 0};
     }
 
     void select(db::query& qry) const override

@@ -29,7 +29,7 @@ consteval GDALDataType as_data_type()
 
 template <specialized<boost::gil::image_view> T>
     requires(!specialized<typename T::value_type, boost::gil::packed_pixel>)
-void image_io(  //
+void image_io(
     GDALDatasetH ds,
     GDALRWFlag rw,
     int x,
@@ -54,7 +54,7 @@ void image_io(  //
                 img, static_cast<int>(i));
         else
             data = (void*)boost::gil::interleaved_view_get_raw_data(img);
-        check(GDALDatasetRasterIO(  //
+        check(GDALDatasetRasterIO(
             ds,
             rw,
             x,

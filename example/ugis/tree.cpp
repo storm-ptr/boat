@@ -12,25 +12,23 @@
 
 namespace {
 
-std::unique_ptr<tree> from_source(  //
-    boat::gui::source const& in,
-    tree* parent)
+std::unique_ptr<tree> from_source(boat::gui::source const& in, tree* parent)
 {
-    auto ret = std::make_unique<tree>(
-        branch{.source = named_source(in.db),
-               .state = in.children.empty() ? branch_state::blank
-                                            : branch_state::ready});
+    auto ret = std::make_unique<tree>(branch{
+        .source = named_source(in.db),
+        .state =
+            in.children.empty() ? branch_state::blank : branch_state::ready});
     ret->parent = parent;
     for (auto const& child : in.children)
         if (auto l = std::get_if<boat::gui::layer>(&child)) {
-            auto ptr = std::make_unique<tree>(
-                leaf{.address = in.db.address,
-                     .layer = l->db,
-                     .pen = QPen{QColor::fromRgba(l->color), l->width},
-                     .brush = l->fill ? QBrush{QColor::fromRgba(*l->fill)}
-                                      : QBrush{},
-                     .state = l->hidden ? Qt::Unchecked : Qt::Checked,
-                     .cache = boat::gui::caches::next_key()});
+            auto ptr = std::make_unique<tree>(leaf{
+                .address = in.db.address,
+                .layer = l->db,
+                .pen = QPen{QColor::fromRgba(l->color), l->width},
+                .brush =
+                    l->fill ? QBrush{QColor::fromRgba(*l->fill)} : QBrush{},
+                .state = l->hidden ? Qt::Unchecked : Qt::Checked,
+                .cache = boat::gui::caches::next_key()});
             ptr->parent = ret.get();
             ret->children.push_back(std::move(ptr));
         }
@@ -128,7 +126,7 @@ QString to_string(tree* ptr)
             return QString::fromStdString(v.source.source_name);
         },
         [](leaf const& v) {
-            return QString::fromStdString(boat::concat(  //
+            return QString::fromStdString(boat::concat(
                 v.layer.schema_name,
                 v.layer.schema_name.empty() ? "" : ".",
                 v.layer.table_name,

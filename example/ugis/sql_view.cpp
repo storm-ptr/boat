@@ -85,10 +85,11 @@ sql_view::sql_view(std::string address, QWidget* parent)
         if (close_handler_)
             close_handler_();
     });
-    connect(show_address,
-            &QPushButton::toggled,
-            address_field,
-            &QWidget::setVisible);
+    connect(
+        show_address,
+        &QPushButton::toggled,
+        address_field,
+        &QWidget::setVisible);
 }
 
 void sql_view::close_async()

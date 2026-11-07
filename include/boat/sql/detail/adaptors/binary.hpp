@@ -26,9 +26,10 @@ struct binary : impl<blob> {
 
     db::column migrate(std::string_view dbms) const override
     {
-        return {.kind{kind_},
-                .column_name{col_->column_name},
-                .type_name{is_postgres(dbms) ? "bytea" : "blob"}};
+        return {
+            .kind{kind_},
+            .column_name{col_->column_name},
+            .type_name{is_postgres(dbms) ? "bytea" : "blob"}};
     }
 };
 

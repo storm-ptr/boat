@@ -19,8 +19,7 @@ BOOST_AUTO_TEST_CASE(unicode)
         0x438,
         0x432,
         0x435,
-        0x442,
-    };
+        0x442};
     auto u32 = boat::unicode::utf32(u16);
     auto u8 = boat::unicode::utf8(u32);
     BOOST_CHECK(boat::unicode::utf16(u8) == u16);

@@ -21,7 +21,7 @@ struct raster {
 
 using variant = std::variant<vector, raster>;
 
-auto draw_variant(  //
+auto draw_variant(
     execution_policy auto policy,
     auto& out,
     geometry::matrix const& out_affine,
@@ -41,7 +41,7 @@ auto draw_variant(  //
                 draw_geometry(ref)(*g);
         },
         [=](raster const& in) {
-            draw_image(  //
+            draw_image(
                 policy,
                 const_view(in.rgba),
                 in.affine,

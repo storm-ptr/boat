@@ -48,8 +48,7 @@ inline param make(db::variant const& var)
         [](int64_t v) { return param(std::in_place_type<integer>, v); },
         [](double v) { return param(std::in_place_type<real>, v); },
         [](std::string_view v) { return param(std::in_place_type<text>, v); },
-        [](blob_view v) { return param(std::in_place_type<binary>, v); },
-    };
+        [](blob_view v) { return param(std::in_place_type<binary>, v); }};
     return std::visit(vis, var);
 }
 

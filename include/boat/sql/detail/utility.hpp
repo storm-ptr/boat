@@ -20,7 +20,7 @@ constexpr auto geo = overloaded{
         });
     }};
 
-db::column const& find(  //
+db::column const& find(
     range_of<db::column> auto&& cols,
     std::string_view column_name)
 {
@@ -29,7 +29,7 @@ db::column const& find(  //
     return *it;
 }
 
-db::column const& find_geo(  //
+db::column const& find_geo(
     range_of<db::column> auto&& cols,
     std::string_view column_name)
 {

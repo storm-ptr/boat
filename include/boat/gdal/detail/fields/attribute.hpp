@@ -31,9 +31,10 @@ struct attribute {
     static attribute make(OGRFeatureDefnH fd, int index)
     {
         auto fld = OGR_FD_GetFieldDefn(fd, index);
-        return {.name = OGR_Fld_GetNameRef(fld),
-                .type = OGR_Fld_GetType(fld),
-                .index = index};
+        return {
+            .name = OGR_Fld_GetNameRef(fld),
+            .type = OGR_Fld_GetType(fld),
+            .index = index};
     }
 
     std::string_view kind() const
@@ -75,8 +76,7 @@ struct attribute {
                 return db::variant{
                     std::in_place_type<blob>,
                     as_bytes(ptr),
-                    static_cast<size_t>(len),
-                };
+                    static_cast<size_t>(len)};
             }
             default:
                 throw std::runtime_error(
@@ -90,8 +90,7 @@ struct attribute {
             return OGR_F_SetFieldNull(feat, index);
         switch (type) {
             case OFTDateTime:
-                return set_date_time(
-                    feat, index, db::get<time_point>(var), tz);
+                return set_date_time(feat, index, db::get<time_point>(var), tz);
             case OFTInteger:
             case OFTInteger64:
                 return OGR_F_SetFieldInteger64(

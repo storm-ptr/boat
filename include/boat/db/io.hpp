@@ -35,17 +35,16 @@ auto& operator<<(ostream auto& out, table const& in)
          in.dbms}};
     for (auto& col : in.columns) {
         auto suf = col.srid > 0 ? col.srid : col.length > 0 ? col.length : 0;
-        rs.rows.push_back({
-            col.column_name,
-            suf > 0 ? concat(col.type_name, ":", suf) : col.type_name,
-        });
+        rs.rows.push_back(
+            {col.column_name,
+             suf > 0 ? concat(col.type_name, ":", suf) : col.type_name});
     }
     for (auto idx : in.indices()) {
         auto key = std::ranges::begin(idx);
         auto spatial = std::ranges::any_of(in.columns, [&](auto& col) {
             return col.has_coord_sys() && col.column_name == key->column_name;
         });
-        rs.columns.push_back(concat(  //
+        rs.columns.push_back(concat(
             key->partial   ? "part:"
             : key->primary ? "pk:"
             : spatial      ? "spat:"

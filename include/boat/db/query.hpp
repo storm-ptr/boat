@@ -27,8 +27,8 @@ public:
 
     query& operator<<(std::convertible_to<std::string_view> auto&& sql)
     {
-        emplace_back(std::in_place_type<std::string>,
-                     std::forward<decltype(sql)>(sql));
+        emplace_back(
+            std::in_place_type<std::string>, std::forward<decltype(sql)>(sql));
         return *this;
     }
 

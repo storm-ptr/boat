@@ -39,9 +39,10 @@ T inverse_fibonacci(geographic::point const& p, size_t num_points)
         return std::views::iota(0u, num_points) | std::ranges::to<T>();
     auto azimuth = (p.x() + 180) * num::degree;
     auto polar = (p.y() + 90) * num::degree;
-    auto k = .5 * num::inv_ln_phi *
-             std::log(num::sqrt_5 * num::pi * num_points *
-                      std::pow(std::sin(polar), 2));
+    auto k =
+        .5 * num::inv_ln_phi *
+        std::log(
+            num::sqrt_5 * num::pi * num_points * std::pow(std::sin(polar), 2));
     k = std::max<>(2., std::floor(k));
     auto fk = std::pow(num::phi, static_cast<size_t>(k)) / num::sqrt_5;
     auto f0 = std::round(fk);
@@ -86,8 +87,9 @@ struct fibonacci {
         return *std::ranges::max_element(indices, std::less{}, proj);
     }
 
-    template <std::predicate<geographic::point const&> S  //
-              = decltype([](auto&&) { return false; })>
+    template <
+        std::predicate<geographic::point const&> S  //
+        = decltype([](auto&&) { return false; })>
     std::generator<size_t> nearests(geographic::point p, S sentinel = {}) const
     {
         auto done = std::unordered_set<size_t>{};

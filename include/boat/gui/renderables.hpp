@@ -48,7 +48,7 @@ inline std::generator<variant> vectors(render_params const& p)
         if (bgi::qbegin(done, bgi::contains(box)) != bgi::qend(done))
             continue;
         auto a = box.min_corner(), b = box.max_corner();
-        auto vec = caches::detail::get_or_invoke(  //
+        auto vec = caches::detail::get_or_invoke(
             p.cache.get(),
             key(p, a.x(), a.y(), b.x(), b.y(), p.query_limit),
             [&] {

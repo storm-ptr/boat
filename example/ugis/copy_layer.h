@@ -7,13 +7,13 @@
 
 struct leaf;
 
-void copy_raster(  //
+void copy_raster(
     leaf const& src,
     char const* dst,
     char const* drv,
     std::stop_token);
 
-leaf copy_vector(  //
+leaf copy_vector(
     leaf const& src,
     char const* dst,
     char const* drv,

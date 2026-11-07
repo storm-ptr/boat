@@ -71,78 +71,77 @@ BOOST_AUTO_TEST_CASE(scene_addresses)
       {"address":"DSN=test;UID=user;PWD=secret"}
     ]})");
     BOOST_TEST(scene.sources[0].db.address == "../data/file.gpkg");
-    BOOST_TEST(scene.sources[1].db.address ==
-               "postgres://user:password@localhost/db?sslmode=require");
-    BOOST_TEST(scene.sources[2].db.address ==
-               "PG:dbname='test' user='user' password='secret'");
-    BOOST_TEST(scene.sources[3].db.address ==
-               "/vsicurl/https://example.com/file.tif");
-    BOOST_TEST(scene.sources[4].db.address ==
-               "DSN=test;UID=user;PWD=secret");
+    BOOST_TEST(
+        scene.sources[1].db.address ==
+        "postgres://user:password@localhost/db?sslmode=require");
+    BOOST_TEST(
+        scene.sources[2].db.address ==
+        "PG:dbname='test' user='user' password='secret'");
+    BOOST_TEST(
+        scene.sources[3].db.address == "/vsicurl/https://example.com/file.tif");
+    BOOST_TEST(scene.sources[4].db.address == "DSN=test;UID=user;PWD=secret");
     auto restored = gui::read_scene_json(gui::write_scene_json(scene));
     for (size_t i = 0; i < scene.sources.size(); ++i)
-        BOOST_TEST(restored.sources[i].db.address ==
-                   scene.sources[i].db.address);
+        BOOST_TEST(
+            restored.sources[i].db.address == scene.sources[i].db.address);
 }
 
 BOOST_AUTO_TEST_CASE(scene_invalid)
 {
-    for (auto text : {
-             "",
-             "{",
-             "{} garbage",
-             "{} {}",
-             "{}]",
-             "{\"sources\":[],}",
-             "{}/*comment*/",
-             "[]",
-             "null",
-             R"({"sources":null})",
-             R"({"sources":{}})",
-             R"({"sources":[null]})",
-             R"({"sources":[[]]})",
-             R"({"sources":[{}]})",
-             R"({"sources":[{"address":""}]})",
-             R"({"sources":[{"address":42}]})",
-             R"({"sources":[{"address":"a","children":null}]})",
-             R"({"sources":[{"address":"a","children":{}}]})",
-             R"({"sources":[{"address":"a","children":[0]}]})",
-             R"({"sources":[{"address":"a","source_name":null}]})",
-             R"({"center":[0]})",
-             R"({"center":["0",0]})",
-             R"({"center":[true,0]})",
-             R"({"center":[null,0]})",
-             R"({"center":[1e999,0]})",
-             R"({"center":[0,1e999]})",
-             R"({"resolution":0})",
-             R"({"resolution":-1})",
-             R"({"resolution":"1"})",
-             R"({"resolution":true})",
-             R"({"resolution":null})",
-             R"({"resolution":1e999})",
-         }) {
+    for (auto text :
+         {"",
+          "{",
+          "{} garbage",
+          "{} {}",
+          "{}]",
+          "{\"sources\":[],}",
+          "{}/*comment*/",
+          "[]",
+          "null",
+          R"({"sources":null})",
+          R"({"sources":{}})",
+          R"({"sources":[null]})",
+          R"({"sources":[[]]})",
+          R"({"sources":[{}]})",
+          R"({"sources":[{"address":""}]})",
+          R"({"sources":[{"address":42}]})",
+          R"({"sources":[{"address":"a","children":null}]})",
+          R"({"sources":[{"address":"a","children":{}}]})",
+          R"({"sources":[{"address":"a","children":[0]}]})",
+          R"({"sources":[{"address":"a","source_name":null}]})",
+          R"({"center":[0]})",
+          R"({"center":["0",0]})",
+          R"({"center":[true,0]})",
+          R"({"center":[null,0]})",
+          R"({"center":[1e999,0]})",
+          R"({"center":[0,1e999]})",
+          R"({"resolution":0})",
+          R"({"resolution":-1})",
+          R"({"resolution":"1"})",
+          R"({"resolution":true})",
+          R"({"resolution":null})",
+          R"({"resolution":1e999})"}) {
         BOOST_TEST_CONTEXT(text)
         {
             BOOST_CHECK_THROW(gui::read_scene_json(text), std::exception);
         }
     }
-    for (auto fields : {
-             R"("hidden":null)",
-             R"("hidden":1)",
-             R"("raster":"false")",
-             R"("schema_name":false)",
-             R"("color":"red")",
-             R"("color":"#12345G")",
-             R"("fill":null)",
-             R"("fill":"#123")",
-             R"("width":-1)",
-             R"("width":"1")",
-             R"("width":true)",
-             R"("width":null)",
-             R"("table_name":"")",
-             R"("column_name":"")",
-             R"("width":1e999)",
-         }) {
+    for (auto fields :
+         {R"("hidden":null)",
+          R"("hidden":1)",
+          R"("raster":"false")",
+          R"("schema_name":false)",
+          R"("color":"red")",
+          R"("color":"#12345G")",
+          R"("fill":null)",
+          R"("fill":"#123")",
+          R"("width":-1)",
+          R"("width":"1")",
+          R"("width":true)",
+          R"("width":null)",
+          R"("table_name":"")",
+          R"("column_name":"")",
+          R"("width":1e999)"}) {
         auto text = std::string{R"({"sources":[{"address":"a","children":[{
             "table_name":"t","column_name":"g",)"} +
                     fields + "}]}]}";
@@ -151,9 +150,10 @@ BOOST_AUTO_TEST_CASE(scene_invalid)
             BOOST_CHECK_THROW(gui::read_scene_json(text), std::exception);
         }
     }
-    BOOST_CHECK_THROW(gui::read_scene_json(R"({"sources":[{"address":"a",
+    BOOST_CHECK_THROW(
+        gui::read_scene_json(R"({"sources":[{"address":"a",
         "children":[{"table_name":"t"}]}]})"),
-                      std::exception);
+        std::exception);
 }
 
 BOOST_AUTO_TEST_CASE(scene_invalid_output)
@@ -161,29 +161,34 @@ BOOST_AUTO_TEST_CASE(scene_invalid_output)
     auto scene = gui::read_scene_json(R"({"sources":[{"address":"data.gpkg",
         "children":[{"table_name":"roads","column_name":"geom"}]}]})");
     auto& layer = std::get<gui::layer>(scene.sources[0].children[0]);
-    for (double width : {-1.,
-                         std::numeric_limits<double>::infinity(),
-                         std::numeric_limits<double>::quiet_NaN()}) {
+    for (double width :
+         {-1.,
+          std::numeric_limits<double>::infinity(),
+          std::numeric_limits<double>::quiet_NaN()}) {
         layer.width = width;
         BOOST_CHECK_THROW(gui::write_scene_json(scene), std::runtime_error);
     }
     layer.width = 1;
-    for (double resolution : {0., -1.,
-                              std::numeric_limits<double>::infinity(),
-                              std::numeric_limits<double>::quiet_NaN()}) {
+    for (double resolution :
+         {0.,
+          -1.,
+          std::numeric_limits<double>::infinity(),
+          std::numeric_limits<double>::quiet_NaN()}) {
         scene.view.resolution = resolution;
         BOOST_CHECK_THROW(gui::write_scene_json(scene), std::runtime_error);
     }
     scene.view.resolution = gui::view{}.resolution;
-    for (auto name : {&layer.db.table_name,
-                      &layer.db.column_name,
-                      &scene.sources[0].db.address}) {
+    for (auto name :
+         {&layer.db.table_name,
+          &layer.db.column_name,
+          &scene.sources[0].db.address}) {
         auto saved = std::exchange(*name, "");
         BOOST_CHECK_THROW(gui::write_scene_json(scene), std::runtime_error);
         *name = std::move(saved);
     }
-    for (double coordinate : {std::numeric_limits<double>::infinity(),
-                              std::numeric_limits<double>::quiet_NaN()}) {
+    for (double coordinate :
+         {std::numeric_limits<double>::infinity(),
+          std::numeric_limits<double>::quiet_NaN()}) {
         scene.view.center = {coordinate, 0};
         BOOST_CHECK_THROW(gui::write_scene_json(scene), std::runtime_error);
         scene.view.center = {0, coordinate};

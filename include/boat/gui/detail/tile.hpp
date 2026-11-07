@@ -8,7 +8,7 @@
 
 namespace boat::gui {
 
-auto tiles(  //
+auto tiles(
     geometry::geographic::grid const& grid,
     int width,
     int height,
@@ -43,9 +43,10 @@ auto tiles(  //
             queue.pop();
             ret.insert(top);
             for (auto [dx, dy] : std::views::cartesian_product(d, d)) {
-                auto t = tile{.z = z,
-                              .y = (top.y + dy + ny) % ny,
-                              .x = (top.x + dx + nx) % nx};
+                auto t = tile{
+                    .z = z,
+                    .y = (top.y + dy + ny) % ny,
+                    .x = (top.x + dx + nx) % nx};
                 auto [x, y, w, h] = t.rect(width, height);
                 if (!w || !h || !done.insert(t).second)
                     continue;

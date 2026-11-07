@@ -38,7 +38,7 @@ inline auto draw_geometry(wxGraphicsContext& out)
 }
 
 /// Affine matrices map pixels to spatial coordinates.
-void draw_image(  //
+void draw_image(
     execution_policy auto policy,
     boost::gil::rgba8c_view_t in,
     geometry::matrix const& in_affine,

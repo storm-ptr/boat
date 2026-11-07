@@ -44,7 +44,7 @@ public:
             lengths[i] = params::length(p);
             formats[i] = params::format(p);
         }
-        auto res = unique_ptr<PGresult, PQclear>{PQexecParams(  //
+        auto res = unique_ptr<PGresult, PQclear>{PQexecParams(
             dbc_.get(),
             txt.data(),
             int(ps.size()),

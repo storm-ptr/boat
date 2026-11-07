@@ -56,8 +56,8 @@ BOOST_AUTO_TEST_CASE(geometry_transform_wkb)
     // clang-format on
     boost::fusion::for_each(geoms, [&]<class P>(P const& pair) {
         using geom1 = P::first_type;
-        using geom2 = std::variant_alternative_t<variant_index_v<geom1>,
-                                                 cartesian::variant>;
+        using geom2 = std::
+            variant_alternative_t<variant_index_v<geom1>, cartesian::variant>;
         auto const& wkt = pair.second;
         check<geom1, geom2>(wkt);
         check<geographic::variant, cartesian::variant>(wkt);
@@ -68,8 +68,7 @@ BOOST_AUTO_TEST_CASE(geometry_endian)
 {
     std::pair<std::string, std::string> tests[] = {
         {"000000000140000000000000004010000000000000", "POINT(2 4)"},
-        {"010100000000000000000000400000000000001040", "POINT(2 4)"},
-    };
+        {"010100000000000000000000400000000000001040", "POINT(2 4)"}};
     for (auto& [hex, wkt] : tests) {
         auto unhex = boost::algorithm::unhex(hex);
         auto in = boat::blob_view{std::as_bytes(std::span(unhex))};
@@ -88,8 +87,8 @@ BOOST_AUTO_TEST_CASE(geometry_fibonacci_monotonic)
             for (auto [i, j] : fib.nearests(p) | std::views::take(lim) |
                                    std::views::enumerate) {
                 auto d = distance(p, fib[j]);
-                BOOST_TEST(prev <= d,
-                           wkt(p) << ", " << i << "/" << fib.num_points);
+                BOOST_TEST(
+                    prev <= d, wkt(p) << ", " << i << "/" << fib.num_points);
                 prev = d;
                 indices.insert(j);
             }
@@ -141,8 +140,8 @@ BOOST_AUTO_TEST_CASE(geometry_raster)
                 for (auto const& level : grid)
                     for (auto const& ll : level.second)
                         BOOST_CHECK_LE(distance(ll, footprint), level.first);
-                BOOST_CHECK(covered_by(footprint,
-                                       return_envelope<geographic::box>(lls)));
+                BOOST_CHECK(covered_by(
+                    footprint, return_envelope<geographic::box>(lls)));
                 if (!step) {
                     node = *std::ranges::min_element(
                         lls, {}, [&](auto const& q) { return distance(p, q); });

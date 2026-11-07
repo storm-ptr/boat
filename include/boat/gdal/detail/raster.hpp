@@ -15,9 +15,10 @@ inline auto get_bands(GDALDatasetH ds)
     return std::views::iota(0, GDALGetRasterCount(ds)) |
            std::views::transform([=](int i) -> db::band {
                auto b = GDALGetRasterBand(ds, i + 1);
-               return {to_lower(GDALGetColorInterpretationName(
-                           GDALGetRasterColorInterpretation(b))),
-                       to_lower(GDALGetDataTypeName(GDALGetRasterDataType(b)))};
+               return {
+                   to_lower(GDALGetColorInterpretationName(
+                       GDALGetRasterColorInterpretation(b))),
+                   to_lower(GDALGetDataTypeName(GDALGetRasterDataType(b)))};
            }) |
            std::ranges::to<std::vector>();
 }
@@ -43,8 +44,7 @@ inline db::raster get_raster(GDALDatasetH ds)
         .srid = epsg,
         .epsg = epsg,
         .wkt = get_wkt(crs),
-        .proj4 = get_proj4(crs),
-    };
+        .proj4 = get_proj4(crs)};
 }
 
 auto to_colors(range_of<db::band> auto&& bands)
@@ -55,10 +55,8 @@ auto to_colors(range_of<db::band> auto&& bands)
            std::ranges::to<std::vector>();
 }
 
-inline gil::any_image read(  //
-    GDALDatasetH ds,
-    db::raster const& rast,
-    tile const& t)
+inline gil::any_image
+read(GDALDatasetH ds, db::raster const& rast, tile const& t)
 {
     auto cs = to_colors(rast.bands);
     auto ret = [&] {
@@ -94,7 +92,7 @@ inline gil::any_image read(  //
     return ret;
 }
 
-inline void write(  //
+inline void write(
     GDALDatasetH ds,
     db::raster const& rast,
     db::rect const& rect,
@@ -102,7 +100,7 @@ inline void write(  //
 {
     visit(
         [&]<class T>(T v) {
-            image_io(  //
+            image_io(
                 ds,
                 GF_Write,
                 rect.x,

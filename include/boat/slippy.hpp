@@ -35,10 +35,8 @@ public:
 
     db::rowset select(db::table const&, db::bbox const&) override { throw err; }
 
-    void insert(  //
-        db::table const&,
-        db::rowset const&,
-        std::stop_token = {}) override
+    void insert(db::table const&, db::rowset const&, std::stop_token = {})
+        override
     {
         throw err;
     }
@@ -55,10 +53,11 @@ public:
         return {
             .table_name{"_layer"},
             .column_name{"raster"},
-            .bands{{"red", "byte"},
-                   {"green", "byte"},
-                   {"blue", "byte"},
-                   {"alpha", "byte"}},
+            .bands{
+                {"red", "byte"},
+                {"green", "byte"},
+                {"blue", "byte"},
+                {"alpha", "byte"}},
             .width = sz,
             .height = sz,
             .xorig = -lim,
@@ -66,8 +65,7 @@ public:
             .xscale = 2 * lim / sz,
             .yscale = -2 * lim / sz,
             .srid = epsg,
-            .epsg = epsg,
-        };
+            .epsg = epsg};
     }
 
     std::generator<std::pair<tile, gil::any_image>> read(

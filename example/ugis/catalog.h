@@ -7,6 +7,7 @@
 #include <memory>
 
 std::unique_ptr<boat::db::catalog> make_catalog(
-    std::string_view address, bool update = false);
+    std::string_view address,
+    bool update = false);
 
 #endif  // CATALOG_H

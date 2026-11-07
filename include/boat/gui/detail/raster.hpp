@@ -8,7 +8,7 @@
 
 namespace boat::gui {
 
-std::optional<std::array<int, 4>> draw_image(  //
+std::optional<std::array<int, 4>> draw_image(
     execution_policy auto policy,
     boost::gil::rgba8c_view_t in,
     geometry::matrix const& in_affine,

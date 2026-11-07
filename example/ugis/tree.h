@@ -32,7 +32,9 @@ struct tree {
     std::vector<std::unique_ptr<tree>> children;
 };
 
-boat::db::source named_source(boat::db::source, std::string fallback = "source");
+boat::db::source named_source(
+    boat::db::source,
+    std::string fallback = "source");
 std::unique_ptr<tree> from_scene(boat::gui::scene const&);
 boat::gui::scene to_scene(tree const&);
 boat::gui::scene read_scene(QString const& path);

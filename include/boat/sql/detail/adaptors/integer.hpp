@@ -21,9 +21,10 @@ struct integer : impl<int> {
 
     db::column migrate(std::string_view) const override
     {
-        return {.kind{kind_},
-                .column_name{col_->column_name},
-                .type_name{"bigint"}};
+        return {
+            .kind{kind_},
+            .column_name{col_->column_name},
+            .type_name{"bigint"}};
     }
 };
 

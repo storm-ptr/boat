@@ -20,7 +20,7 @@ public:
     bool can_refresh(QModelIndex const&) const;
     QString clipboard_name() const;
     void copy_layer(QModelIndex const&);
-    void copy_layer_as(  //
+    void copy_layer_as(
         QModelIndex const&,
         QString const& path,
         QString const& driver);
@@ -58,10 +58,8 @@ public:
     QModelIndex parent(QModelIndex const&) const override;
     bool removeRows(int, int, QModelIndex const& = {}) override;
     int rowCount(QModelIndex const& = {}) const override;
-    bool setData(  //
-        QModelIndex const&,
-        QVariant const&,
-        int = Qt::EditRole) override;
+    bool setData(QModelIndex const&, QVariant const&, int = Qt::EditRole)
+        override;
 
 private:
     void on_dropped(QPersistentModelIndex);

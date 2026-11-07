@@ -94,8 +94,7 @@ BOOST_AUTO_TEST_CASE(uri)
           .host_spec = "host1:123,host2:456",
           .path = "somedb",
           .query = "target_session_attrs=any&application_name=myapp"}},
-        {"sqlite:///:memory:", {.scheme = "sqlite", .path = ":memory:"}},
-    };
+        {"sqlite:///:memory:", {.scheme = "sqlite", .path = ":memory:"}}};
     for (auto& [str, url] : tests)
         BOOST_CHECK(boat::uri::parse(str) == url);
 }

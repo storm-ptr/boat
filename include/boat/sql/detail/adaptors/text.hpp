@@ -34,10 +34,11 @@ struct text : impl<std::string> {
 
     db::column migrate(std::string_view dbms) const override
     {
-        return {.kind{kind_},
-                .column_name{col_->column_name},
-                .type_name{"varchar"},
-                .length = 250};
+        return {
+            .kind{kind_},
+            .column_name{col_->column_name},
+            .type_name{"varchar"},
+            .length = 250};
     }
 };
 

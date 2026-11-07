@@ -66,11 +66,12 @@ BOOST_AUTO_TEST_CASE(wx_draw)
             boat::concat("drop.", std::setfill('0'), std::setw(2), i, ".png");
         img.SaveFile(wxASCII_STR(path.data()), wxBITMAP_TYPE_PNG);
         pixels_sum += num_pixels;
-        transparent_sum += std::count(  //
+        transparent_sum += std::count(
             img.GetAlpha(),
             img.GetAlpha() + num_pixels,
             wxIMAGE_ALPHA_TRANSPARENT);
     }
-    BOOST_TEST(transparent_sum / pixels_sum == transparent_ratio,
-               boost::test_tools::tolerance(transparent_tolerance));
+    BOOST_TEST(
+        transparent_sum / pixels_sum == transparent_ratio,
+        boost::test_tools::tolerance(transparent_tolerance));
 }

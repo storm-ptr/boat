@@ -15,30 +15,33 @@ class command : public db::command {
     std::string prepared_;
 
 public:
-    command(char const* user,
-            char const* password,
-            char const* host,
-            int port,
-            char const* database)
+    command(
+        char const* user,
+        char const* password,
+        char const* host,
+        int port,
+        char const* database)
     {
         auto seconds =
             static_cast<unsigned>(std::chrono::seconds{timeout}.count());
         dbc_.reset(mysql_init(0));
         check(!!dbc_, dbc_);
-        for (auto opt : {MYSQL_OPT_CONNECT_TIMEOUT,
-                         MYSQL_OPT_READ_TIMEOUT,
-                         MYSQL_OPT_WRITE_TIMEOUT})
+        for (auto opt :
+             {MYSQL_OPT_CONNECT_TIMEOUT,
+              MYSQL_OPT_READ_TIMEOUT,
+              MYSQL_OPT_WRITE_TIMEOUT})
             check(!mysql_options(dbc_.get(), opt, &seconds), dbc_);
-        check(mysql_real_connect(  //
-                  dbc_.get(),
-                  host,
-                  user,
-                  password,
-                  database,
-                  port,
-                  0,
-                  CLIENT_MULTI_STATEMENTS) == dbc_.get(),
-              dbc_);
+        check(
+            mysql_real_connect(
+                dbc_.get(),
+                host,
+                user,
+                password,
+                database,
+                port,
+                0,
+                CLIENT_MULTI_STATEMENTS) == dbc_.get(),
+            dbc_);
         check(!mysql_set_character_set(dbc_.get(), "utf8"), dbc_);
         check(!mysql_query(dbc_.get(), "set time_zone = '+00:00'"), dbc_);
     }
@@ -62,11 +65,12 @@ public:
             if (prepared_ != txt) {
                 stmt_.reset(mysql_stmt_init(dbc_.get()));
                 check(!!stmt_, dbc_);
-                check(!mysql_stmt_prepare(  //
-                          stmt_.get(),
-                          txt.data(),
-                          static_cast<unsigned long>(txt.size())),
-                      stmt_);
+                check(
+                    !mysql_stmt_prepare(
+                        stmt_.get(),
+                        txt.data(),
+                        static_cast<unsigned long>(txt.size())),
+                    stmt_);
                 prepared_ = txt;
             }
             check(!mysql_stmt_bind_param(stmt_.get(), ps.data()), stmt_);

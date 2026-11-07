@@ -20,8 +20,7 @@ auto format(ostream auto const& fmt, variant const& var)
         [&](null) { os << ""; },
         [&](arithmetic auto v) { os << v; },
         [&](std::string_view v) { os << unicode::io(v); },
-        [&](blob_view v) { os << v.size() << " bytes"; },
-    };
+        [&](blob_view v) { os << v.size() << " bytes"; }};
     std::visit(vis, var);
     return os.view() |
            std::views::transform([](auto c) { return iswspace(c) ? ' ' : c; }) |

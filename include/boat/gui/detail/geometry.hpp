@@ -7,7 +7,7 @@
 
 namespace boat::gui {
 
-inline auto sample(  //
+inline auto sample(
     geometry::geographic::geometry_collection geoms,
     geometry::cartesian::box const& box,
     size_t cells_per_side)
@@ -35,8 +35,9 @@ inline auto sample(  //
             }
         });
         if (best < INFINITY) {
-            auto& winner = cells[cell(p.y(), a.y(), b.y()) * cells_per_side +
-                                 cell(p.x(), a.x(), b.x())];
+            auto& winner = cells
+                [cell(p.y(), a.y(), b.y()) * cells_per_side +
+                 cell(p.x(), a.x(), b.x())];
             if (!winner || bg::num_points(geom) > bg::num_points(*winner))
                 winner = &geom;
         }

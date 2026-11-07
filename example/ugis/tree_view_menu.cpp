@@ -17,7 +17,7 @@
 namespace {
 
 template <class Get, class Set>
-void pick_color(  //
+void pick_color(
     tree_view* self,
     tree_model& model,
     QPersistentModelIndex const& idx,
@@ -51,11 +51,12 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
 
     // other
     auto populated = false;
-    populated |= add(opt || model_.is_branch(idx),
-                     "describe in log",
-                     [this, idx] { model_.describe(idx); });
+    populated |=
+        add(opt || model_.is_branch(idx), "describe in log", [this, idx] {
+            model_.describe(idx);
+        });
     populated |= add(is_vector, "drop layer", [this, idx] {
-        if (QMessageBox::question(  //
+        if (QMessageBox::question(
                 this,
                 {},
                 "drop layer?",
@@ -108,8 +109,8 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
             auto width = QInputDialog::getInt(
                 this, "outline width", {}, opt->pen.width(), 0, 100, 1, &ok);
             if (ok)
-                model_.mutate_leaf(idx,
-                                   [&](leaf& l) { l.pen.setWidth(width); });
+                model_.mutate_leaf(
+                    idx, [&](leaf& l) { l.pen.setWidth(width); });
         });
         menu.addSeparator();
     }
@@ -121,7 +122,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     populated |= add(bool(opt), "copy layer as", [this, idx, opt] {
         auto fmts = copy_formats(opt->layer.raster);
         auto selected = QString{};
-        auto path = QFileDialog::getSaveFileName(  //
+        auto path = QFileDialog::getSaveFileName(
             this,
             {},
             {},
@@ -139,7 +140,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     });
     populated |= add(model_.can_paste_to(idx), "paste layer", [this, idx] {
         auto ok = false;
-        auto name = QInputDialog::getText(  //
+        auto name = QInputDialog::getText(
             this,
             "paste layer",
             "table name",
@@ -156,10 +157,9 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     add(true, "mount source", [this] {
         auto dlg = select_source_dialog{this};
         if (dlg.exec() == QDialog::Accepted)
-            model_.mount({
-                .source_name = dlg.name().toStdString(),
-                .address = dlg.address().toStdString(),
-            });
+            model_.mount(
+                {.source_name = dlg.name().toStdString(),
+                 .address = dlg.address().toStdString()});
     });
     add(model_.is_mounted(idx), "unmount source", [this, idx] {
         model_.unmount(idx);
@@ -169,7 +169,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     // scene
     add(true, "new scene", [this] { replace_scene({}); });
     add(true, "open scene", [this] {
-        auto path = QFileDialog::getOpenFileName(  //
+        auto path = QFileDialog::getOpenFileName(
             this,
             {},
             {},
@@ -181,7 +181,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
         replace_scene(path);
     });
     add(true, "save scene", [this] {
-        auto path = QFileDialog::getSaveFileName(  //
+        auto path = QFileDialog::getSaveFileName(
             this,
             {},
             scene_path_,
@@ -204,7 +204,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     if (model_.busy()) {
         menu.addSeparator();
         add(true, "cancel tasks", [this] {
-            if (QMessageBox::question(  //
+            if (QMessageBox::question(
                     this,
                     {},
                     "cancel tasks?",

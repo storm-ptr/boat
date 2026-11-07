@@ -44,7 +44,7 @@ void check(SQLRETURN ec, unique_ptr<type> const& ptr)
         auto state = std::array<SQLWCHAR, 6>{};
         auto code = SQLINTEGER{};
         auto buf = std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH>{};
-        while (SQL_SUCCEEDED(SQLGetDiagRecW(  //
+        while (SQL_SUCCEEDED(SQLGetDiagRecW(
             type,
             ptr.get(),
             ++row,

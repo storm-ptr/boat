@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(gdal_vector)
         {"./drop.gdal_vector.gpkg", "GPKG"},
         {"./drop.gdal_vector.sqlite", "SQLite"},
         {boat::config::mssql_gdal_address(), ""},
-        {boat::config::postgres_gdal_address, ""},
+        {boat::config::postgres_gdal_address, ""}
 
         // OFTDateTime is created without ms
         // {boat::config::mysql_gdal_address, ""},
@@ -92,15 +92,14 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
         char const* driver;
     } tests[] = {
         {"./drop.gdal_raster.tif", "GTiff"},
-        {"./drop.gdal_raster.gpkg", "GPKG"},
-    };
+        {"./drop.gdal_raster.gpkg", "GPKG"}};
     for (auto [path, driver] : tests) {
         auto cat2 = boat::gdal::catalog{};
         cat2.dataset = boat::gdal::create(path, driver, rast1);
         auto rast2 = cat2.get_raster(cat2.layers().at(0));
 
         for (auto [tile, img] : img1)
-            cat2.write(  //
+            cat2.write(
                 rast2,
                 std::make_from_tuple<boat::db::rect>(
                     tile.rect(rast2.width, rast2.height)),
@@ -130,8 +129,9 @@ BOOST_AUTO_TEST_CASE(gdal_image_io)
         auto crop = gil::subimage_view(v, margin, margin, n, n);
         auto background = gil::rgb8_pixel_t{201, 202, 203};
         gil::fill_pixels(v, background);
-        gil::copy_pixels(gil::subimage_view(gil::const_view(expected),
-                                           margin, margin, n, n), crop);
+        gil::copy_pixels(
+            gil::subimage_view(gil::const_view(expected), margin, margin, n, n),
+            crop);
         auto want = img;
         auto actual = gil::rgb8_image_t{4, 4};
         for (int i = 0; i < 3; ++i)
@@ -146,8 +146,9 @@ BOOST_AUTO_TEST_CASE(gdal_image_io)
         boat::gdal::image_io(ds.get(), GF_Read, margin, margin, n, n, crop);
         for (int y = 0; y < 4; ++y)
             for (int x = 0; x < 4; ++x) {
-                BOOST_CHECK(gil::const_view(actual)(x, y) ==
-                            gil::const_view(want)(x, y));
+                BOOST_CHECK(
+                    gil::const_view(actual)(x, y) ==
+                    gil::const_view(want)(x, y));
                 BOOST_CHECK(v(x, y) == gil::const_view(want)(x, y));
             }
     };
@@ -160,14 +161,13 @@ BOOST_AUTO_TEST_CASE(gdal_image_io)
 
 BOOST_AUTO_TEST_CASE(gdal_raster_edge_tiles)
 {
-    for (auto [width, height] : {
-             std::pair{512, 512},
-             {513, 513},
-             {515, 515},
-             {513, 1},
-             {1, 515},
-             {1, 1},
-         }) {
+    for (auto [width, height] :
+         {std::pair{512, 512},
+          {513, 513},
+          {515, 515},
+          {513, 1},
+          {1, 515},
+          {1, 1}}) {
         auto cat = boat::gdal::catalog{};
         auto rast = boat::db::raster{
             .bands{{"gray", "byte"}},
@@ -175,8 +175,7 @@ BOOST_AUTO_TEST_CASE(gdal_raster_edge_tiles)
             .height = height,
             .xscale = 1,
             .yscale = -1,
-            .epsg = 4326,
-        };
+            .epsg = 4326};
         cat.dataset = boat::gdal::create("", "MEM", rast);
         BOOST_REQUIRE_EQUAL(
             GDALFillRaster(GDALGetRasterBand(cat.dataset.get(), 1), 29, 0),
@@ -194,10 +193,10 @@ BOOST_AUTO_TEST_CASE(gdal_raster_edge_tiles)
                 auto [a] = t.affine(width, height);
                 BOOST_CHECK_EQUAL(a[0][2], x);
                 BOOST_CHECK_EQUAL(a[1][2], y);
-                BOOST_CHECK_SMALL(a[0][2] + a[0][0] * img.width() - (x + w),
-                                  1e-10);
-                BOOST_CHECK_SMALL(a[1][2] + a[1][1] * img.height() - (y + h),
-                                  1e-10);
+                BOOST_CHECK_SMALL(
+                    a[0][2] + a[0][0] * img.width() - (x + w), 1e-10);
+                BOOST_CHECK_SMALL(
+                    a[1][2] + a[1][1] * img.height() - (y + h), 1e-10);
                 auto v = const_view(get<boost::gil::gray8_image_t>(img));
                 BOOST_CHECK_EQUAL(v(0, 0)[0], 29);
                 BOOST_CHECK_EQUAL(v(v.width() - 1, v.height() - 1)[0], 29);

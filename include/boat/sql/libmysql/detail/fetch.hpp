@@ -35,8 +35,9 @@ inline db::rowset fetch(MYSQL_STMT* stmt)
 {
     auto ret = db::rowset{};
     auto update_len = true;
-    check(!mysql_stmt_attr_set(stmt, STMT_ATTR_UPDATE_MAX_LENGTH, &update_len),
-          stmt);
+    check(
+        !mysql_stmt_attr_set(stmt, STMT_ATTR_UPDATE_MAX_LENGTH, &update_len),
+        stmt);
     check(!mysql_stmt_store_result(stmt), stmt);
     auto _ = unique_ptr<MYSQL_STMT, mysql_stmt_free_result>{stmt};
     auto res = unique_ptr<MYSQL_RES, mysql_free_result>{

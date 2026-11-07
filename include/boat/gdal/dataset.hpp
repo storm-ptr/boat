@@ -30,15 +30,13 @@ inline dataset_ptr create(char const* file, char const* driver)
 }
 
 /// rast must contain at least one band.
-inline dataset_ptr create(  //
-    char const* file,
-    char const* driver,
-    db::raster const& rast)
+inline dataset_ptr
+create(char const* file, char const* driver, db::raster const& rast)
 {
     init();
     auto drv = GDALGetDriverByName(driver);
     boat::check(!!drv, error_or(concat("GDALGetDriverByName ", driver)));
-    auto ret = dataset_ptr{GDALCreate(  //
+    auto ret = dataset_ptr{GDALCreate(
         drv,
         file,
         rast.width,
@@ -53,8 +51,7 @@ inline dataset_ptr create(  //
         rast.xskew,
         rast.yorig,
         rast.yskew,
-        rast.yscale,
-    };
+        rast.yscale};
     check(GDALSetGeoTransform(ret.get(), a.data()));
     auto crs = make_srs(rast.epsg, rast.wkt, rast.proj4);
     check(GDALSetSpatialRef(ret.get(), crs.get()));

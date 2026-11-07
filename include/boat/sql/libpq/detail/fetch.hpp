@@ -46,9 +46,10 @@ inline db::variant get_value(PGresult* res, int row, int col)
         case name_oid:
         case text_oid:
         case varchar_oid:
-            return db::variant{std::in_place_type<std::string>,
-                               PQgetvalue(res, row, col),
-                               PQgetlength(res, row, col)};
+            return db::variant{
+                std::in_place_type<std::string>,
+                PQgetvalue(res, row, col),
+                PQgetlength(res, row, col)};
         case bytea_oid:
             return get_blob(res, row, col);
     }
@@ -61,8 +62,8 @@ inline db::rowset fetch(PGresult* res)
     check(ec == PGRES_COMMAND_OK || ec == PGRES_TUPLES_OK, res);
     int cols = PQnfields(res);
     int rows = PQntuples(res);
-    auto ret = db::rowset{.columns{static_cast<size_t>(cols)},
-                          .rows{static_cast<size_t>(rows)}};
+    auto ret = db::rowset{
+        .columns{static_cast<size_t>(cols)}, .rows{static_cast<size_t>(rows)}};
     for (int col{}; col < cols; ++col)
         ret.columns[col] = PQfname(res, col);
     for (int row{}; row < rows; ++row) {

@@ -27,12 +27,13 @@ struct geometry {
         auto name = std::string{OGR_GFld_GetNameRef(fld)};
         if (name.empty())
             name = alias;
-        return {.name = std::move(name),
-                .type = OGR_GFld_GetType(fld),
-                .epsg = crs ? get_epsg(crs) : 4326,
-                .wkt = crs ? get_wkt(crs) : "",
-                .proj4 = crs ? get_proj4(crs) : "",
-                .index = index};
+        return {
+            .name = std::move(name),
+            .type = OGR_GFld_GetType(fld),
+            .epsg = crs ? get_epsg(crs) : 4326,
+            .wkt = crs ? get_wkt(crs) : "",
+            .proj4 = crs ? get_proj4(crs) : "",
+            .index = index};
     }
 
     db::variant read(OGRFeatureH feat) const

@@ -28,10 +28,11 @@ inline scene read_scene_json(std::string const& text)
 /// Omits default fields.
 inline std::string write_scene_json(scene const& in)
 {
-    check(std::isfinite(in.view.center.x()) &&
-              std::isfinite(in.view.center.y()) &&
-              std::isfinite(in.view.resolution) && in.view.resolution > 0,
-          "view");
+    check(
+        std::isfinite(in.view.center.x()) &&
+            std::isfinite(in.view.center.y()) &&
+            std::isfinite(in.view.resolution) && in.view.resolution > 0,
+        "view");
     auto root = json::object();
     for (auto const& source : in.sources)
         root["sources"].push_back(write_source(source));

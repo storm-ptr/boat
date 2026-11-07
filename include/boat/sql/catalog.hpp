@@ -21,12 +21,14 @@ public:
 
     std::vector<db::layer> layers() override
     {
-        return {std::from_range,
-                command->exec(dial().layers()) | db::view<db::layer>};
+        return {
+            std::from_range,
+            command->exec(dial().layers()) | db::view<db::layer>};
     }
 
-    db::table get_table(std::string_view schema_name,
-                        std::string_view table_name) override
+    db::table get_table(
+        std::string_view schema_name,
+        std::string_view table_name) override
     {
         return sql::get_table(*command, schema_name, table_name);
     }
@@ -45,7 +47,7 @@ public:
         return command->exec(dial().select(tbl, rq));
     }
 
-    void insert(  //
+    void insert(
         db::table const& tbl,
         db::rowset const& rs,
         std::stop_token tok = {}) override
@@ -83,8 +85,8 @@ public:
         return get_table(t.schema_name, t.table_name);
     }
 
-    void drop(std::string_view schema_name,
-              std::string_view table_name) override
+    void drop(std::string_view schema_name, std::string_view table_name)
+        override
     {
         auto scm = current_schema_or(*command, schema_name);
         command->exec({"drop table if exists ", id{scm, table_name}});

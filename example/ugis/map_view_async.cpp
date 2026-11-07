@@ -21,8 +21,9 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     if (lyr.layer.raster) {
         auto rast = cat->get_raster(lyr.layer);
         auto crs = boat::gui::to_srs_variant(rast);
-        return geo::transform(geo::mat_forward(boat::gui::affine(rast)),
-                              geo::srs_inverse(geo::transformation(crs)))(
+        return geo::transform(
+            geo::mat_forward(boat::gui::affine(rast)),
+            geo::srs_inverse(geo::transformation(crs)))(
             point{rast.width * .5, rast.height * .5});
     }
     auto tbl = cat->get_table(lyr.layer.schema_name, lyr.layer.table_name);
@@ -56,8 +57,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         },
         [](this auto&& self, geo::dynamic auto&& v) -> std::optional<point> {
             return std::visit(self, v);
-        },
-    }(var);
+        }}(var);
     return p ? geo::transform(geo::srs_inverse(geo::transformation(crs)))(*p)
              : std::nullopt;
 }

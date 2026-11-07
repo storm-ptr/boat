@@ -11,9 +11,10 @@ namespace boat::gui {
 /// Maps pixels to spatial coordinates.
 inline geometry::matrix affine(db::raster const& r)
 {
-    return {{{r.xscale, r.xskew, r.xorig},
-             {r.yskew, r.yscale, r.yorig},
-             {0., 0., 1.}}};
+    return {
+        {{r.xscale, r.xskew, r.xorig},
+         {r.yskew, r.yscale, r.yorig},
+         {0., 0., 1.}}};
 }
 
 /// Maps pixels to spatial coordinates.
@@ -34,7 +35,7 @@ geometry::matrix affine(int width, int height, view const& v, auto const& crs)
 
 /// Query boxes in crs coordinates; grid keys are spacings in metres.
 /// Excludes the antimeridian.
-auto boxes(  //
+auto boxes(
     geometry::geographic::grid const& grid,
     geometry::srs_spec auto const& crs)
 {

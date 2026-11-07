@@ -27,7 +27,7 @@ void run(task_group& tasks, auto fn)
 
 }  // namespace
 
-void tree_model::copy_layer_as(  //
+void tree_model::copy_layer_as(
     QModelIndex const& idx,
     QString const& path,
     QString const& driver)
@@ -51,8 +51,7 @@ void tree_model::copy_layer_as(  //
                 return;
             mount(boat::db::source{
                 .source_name = std::filesystem::path(adr).filename().string(),
-                .address = adr,
-            });
+                .address = adr});
             qInfo() << "copy_layer_as completed";
         });
     });
@@ -115,20 +114,20 @@ void tree_model::fetchMore(QModelIndex const& idx)
                     children.push_back(
                         std::make_unique<tree>(branch{named_source(item)}));
                 for (auto& item : cat->layers())
-                    children.push_back(std::make_unique<tree>(
-                        leaf{.address = src.address,
-                             .layer = item,
-                             .cache = boat::gui::caches::next_key()}));
+                    children.push_back(std::make_unique<tree>(leaf{
+                        .address = src.address,
+                        .layer = item,
+                        .cache = boat::gui::caches::next_key()}));
                 qInfo() << "fetched" << children.size() << "items from"
                         << src.source_name;
             }
-            post(this,
-                 [this, tok, per, children = std::move(children)] mutable {
-                     if (tok.stop_requested())
-                         on_fetch_canceled(per);
-                     else
-                         on_fetched(per, std::move(children));
-                 });
+            post(
+                this, [this, tok, per, children = std::move(children)] mutable {
+                    if (tok.stop_requested())
+                        on_fetch_canceled(per);
+                    else
+                        on_fetched(per, std::move(children));
+                });
         }
         catch (std::exception const& e) {
             qWarning() << e.what();

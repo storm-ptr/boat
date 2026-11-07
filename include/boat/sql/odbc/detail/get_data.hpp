@@ -65,8 +65,8 @@ inline db::variant get_blob(stmt_ptr const& stmt, SQLUSMALLINT col)
 inline db::variant get_data(stmt_ptr const& stmt, SQLUSMALLINT col)
 {
     SQLLEN type;
-    check(SQLColAttribute(stmt.get(), col, SQL_DESC_TYPE, 0, 0, 0, &type),
-          stmt);
+    check(
+        SQLColAttribute(stmt.get(), col, SQL_DESC_TYPE, 0, 0, 0, &type), stmt);
     switch (type) {
         case SQL_BIGINT:
         case SQL_BIT:

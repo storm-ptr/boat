@@ -28,8 +28,7 @@ void tree_view::replace_scene(QString const& path)
             {},
             "replace scene?",
             QMessageBox::Cancel,
-            this,
-        };
+            this};
         auto replace = box.addButton("replace", QMessageBox::AcceptRole);
         box.setDefaultButton(QMessageBox::Cancel);
         box.exec();
@@ -78,8 +77,9 @@ void tree_view::dropEvent(QDropEvent* event)
     }
     for (auto& url : urls)
         if (url.isLocalFile())
-            model_.mount({.source_name = url.fileName().toStdString(),
-                          .address = url.toLocalFile().toStdString()});
+            model_.mount(
+                {.source_name = url.fileName().toStdString(),
+                 .address = url.toLocalFile().toStdString()});
     event->setDropAction(Qt::CopyAction);
     event->accept();
 }
@@ -91,9 +91,10 @@ void tree_view::paintEvent(QPaintEvent* event)
         return;
     auto art = QPainter{viewport()};
     art.setPen(palette().color(QPalette::PlaceholderText));
-    art.drawText(viewport()->rect(),
-                 Qt::AlignCenter | Qt::TextSingleLine,
-                 "right-click to mount a source or open a scene");
+    art.drawText(
+        viewport()->rect(),
+        Qt::AlignCenter | Qt::TextSingleLine,
+        "right-click to mount a source or open a scene");
 }
 
 void tree_view::set_sql_handler(std::function<void(boat::db::source const&)> fn)

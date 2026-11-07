@@ -66,16 +66,14 @@ inline void check(boat::db::catalog& cat)
         .ymin = 9,
         .xmax = 11,
         .ymax = 11,
-        .limit = int(objs.size()),
-    };
-    BOOST_CHECK(std::ranges::equal(std::array{2},
-                                   cat.select(tbl, bbox) | db::view<int>));
+        .limit = int(objs.size())};
+    BOOST_CHECK(std::ranges::equal(
+        std::array{2}, cat.select(tbl, bbox) | db::view<int>));
 
     auto page = db::page{
         .select_list = boost::pfr::names_as_array<udt>() |
                        std::ranges::to<std::vector<std::string>>(),
-        .limit = 1,
-    };
+        .limit = 1};
     auto res = std::vector<udt>{};
     for (; page.offset < objs.size(); ++page.offset)
         res.append_range(cat.select(tbl, page) | db::view<udt>);

@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(sql_select)
     auto expect = std::vector<udt>{{.s{"a"}}, {.n = 1, .d = 3.14, .s{"b"}}};
     auto qry = db::query{"select 0, null, 'a' union select 1, 3.14, 'b'"};
     for (auto cmd : commands())
-        BOOST_CHECK(std::ranges::equal(  //
+        BOOST_CHECK(std::ranges::equal(
             expect,
             cmd->exec(qry) | db::view<udt>,
             BOAT_LIFT(boost::pfr::eq_fields)));
@@ -177,13 +177,12 @@ BOOST_AUTO_TEST_CASE(sql_datatypes)
         tbl_b = cat.create(tbl_b);
         cat.insert(tbl_b, rs);
         auto check = [&](auto& a, auto& b) {
-            auto res = cat.command->exec({
-                "select count(*) from (select * from ",
-                sql::id{a},
-                " except select * from ",
-                sql::id{b},
-                ") as t",
-            });
+            auto res = cat.command->exec(
+                {"select count(*) from (select * from ",
+                 sql::id{a},
+                 " except select * from ",
+                 sql::id{b},
+                 ") as t"});
             BOOST_CHECK_EQUAL(db::get<int>(res.value()), 0);
         };
         check(tbl_a, tbl_b);

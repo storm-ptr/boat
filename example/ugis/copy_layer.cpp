@@ -7,7 +7,7 @@
 #include "copy_layer.h"
 #include "tree.h"
 
-void copy_raster(  //
+void copy_raster(
     leaf const& src,
     char const* dst,
     char const* drv,
@@ -31,10 +31,11 @@ void copy_raster(  //
         for (auto [tile, img] : cat1->read(rast1, batch)) {
             if (tok.stop_requested())
                 return;
-            cat2.write(rast2,
-                       std::make_from_tuple<boat::db::rect>(
-                           tile.rect(rast2.width, rast2.height)),
-                       boost::gil::const_view(img));
+            cat2.write(
+                rast2,
+                std::make_from_tuple<boat::db::rect>(
+                    tile.rect(rast2.width, rast2.height)),
+                boost::gil::const_view(img));
         }
         done += batch.size();
         qInfo() << "copied" << done << "tiles";
@@ -42,7 +43,7 @@ void copy_raster(  //
     qInfo() << "copied all tiles";
 }
 
-leaf copy_vector(  //
+leaf copy_vector(
     leaf const& src,
     char const* dst,
     char const* drv,

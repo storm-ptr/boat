@@ -14,8 +14,9 @@ auto box_area_interpolate(T const& mbr, size_t num_points)
 {
     auto a = mbr.min_corner(), b = mbr.max_corner();
     auto fn = [=](auto i) -> d2_of<T>::point {
-        return {std::lerp(a.x(), b.x(), frac(i * numbers::inv_phi)),
-                std::lerp(a.y(), b.y(), (i + .5) / num_points)};
+        return {
+            std::lerp(a.x(), b.x(), frac(i * numbers::inv_phi)),
+            std::lerp(a.y(), b.y(), (i + .5) / num_points)};
     };
     return std::views::iota(0uz, num_points) | std::views::transform(fn);
 }
@@ -28,8 +29,8 @@ multi_point auto box_edge_interpolate(T const& mbr, size_t num_points)
         auto a = std::get<0>(edge), b = std::get<1>(edge);
         for (auto i : std::views::iota(0uz, num_points + 1)) {
             auto t = i / (num_points + 1.);
-            ret.emplace_back(std::lerp(a.x(), b.x(), t),
-                             std::lerp(a.y(), b.y(), t));
+            ret.emplace_back(
+                std::lerp(a.x(), b.x(), t), std::lerp(a.y(), b.y(), t));
         }
     }
     return ret;
@@ -40,12 +41,13 @@ inline auto buffer(double distance, size_t num_points)
     return [=]<single T>(T const& geom) -> polygon auto {
         namespace strategy = boost::geometry::strategy::buffer;
         using strategy_point_circle = std::conditional_t<
-            std::same_as<typename boost::geometry::cs_tag<T>::type,
-                         boost::geometry::geographic_tag>,
+            std::same_as<
+                typename boost::geometry::cs_tag<T>::type,
+                boost::geometry::geographic_tag>,
             strategy::geographic_point_circle<>,
             strategy::point_circle>;
         auto out = typename d2_of<T>::multi_polygon{};
-        boost::geometry::buffer(  //
+        boost::geometry::buffer(
             geom,
             out,
             strategy::distance_symmetric{distance},
@@ -63,8 +65,7 @@ constexpr auto meter = overloaded{
     [](this auto&& self, double lat) {
         auto den = std::cos(lat * numbers::degree);
         return den ? self() / den : 0.;
-    },
-};
+    }};
 
 auto visitor(auto... fn)
 {
@@ -73,8 +74,9 @@ auto visitor(auto... fn)
         [](this auto&& self, multi auto&& v) -> void {
             std::ranges::for_each(v, self);
         },
-        [](this auto&& self, dynamic auto&& v) -> void { std::visit(self, v); },
-    };
+        [](this auto&& self, dynamic auto&& v) -> void {
+            std::visit(self, v);
+        }};
 }
 
 void for_each_point(tagged auto const& geom, auto fn)
@@ -113,10 +115,8 @@ inline geographic::point wrap(geographic::point const& p)
     return {x, y};
 }
 
-inline geographic::point add_meters(  //
-    geographic::point const& p,
-    double eastward,
-    double northward)
+inline geographic::point
+add_meters(geographic::point const& p, double eastward, double northward)
 {
     auto dx = eastward * meter(p.y());
     auto dy = northward * meter();

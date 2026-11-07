@@ -44,9 +44,10 @@ public:
         auto it = ps.begin();
         while (first != last) {
             sqlite3_stmt* stmt{};
-            check(sqlite3_prepare_v2(
-                      dbc_.get(), first, int(last - first), &stmt, &first),
-                  dbc_);
+            check(
+                sqlite3_prepare_v2(
+                    dbc_.get(), first, int(last - first), &stmt, &first),
+                dbc_);
             if (!stmt)
                 continue;
             ret = {};

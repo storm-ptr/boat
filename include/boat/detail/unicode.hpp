@@ -35,8 +35,9 @@ struct closure : std::ranges::range_adaptor_closure<closure<T>> {
     {
         using dec = unit_to_point_iter<std::ranges::iterator_t<R>>;
         using enc = point_to_unit_iter<dec, T>;
-        return std::ranges::subrange{enc{dec{std::ranges::begin(r)}},
-                                     enc{dec{std::ranges::end(r)}}} |
+        return std::ranges::subrange{
+                   enc{dec{std::ranges::begin(r)}},
+                   enc{dec{std::ranges::end(r)}}} |
                std::views::transform([](auto c) -> T { return c; });
     }
 };

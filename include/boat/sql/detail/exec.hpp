@@ -18,7 +18,7 @@ inline std::string current_schema_or(db::command& cmd, std::string_view schema)
     return ret;
 }
 
-inline db::table get_table(  //
+inline db::table get_table(
     db::command& cmd,
     std::string_view schema_name,
     std::string_view table_name)
@@ -26,8 +26,7 @@ inline db::table get_table(  //
     auto ret = db::table{
         .dbms{cmd.dbms()},
         .schema_name{current_schema_or(cmd, schema_name)},
-        .table_name{table_name},
-    };
+        .table_name{table_name}};
     auto& dial = dialects::find(ret.dbms);
     ret.columns.append_range(
         cmd.exec(dial.columns(ret.schema_name, table_name)) |
@@ -49,8 +48,7 @@ inline db::table migrate(db::command& cmd, db::table const& tbl)
         .dbms{cmd.dbms()},
         .schema_name{current_schema_or(cmd, tbl.schema_name)},
         .table_name{tbl.table_name},
-        .index_keys{tbl.index_keys},
-    };
+        .index_keys{tbl.index_keys}};
     for (auto& in : tbl.columns) {
         auto out = adaptors::make(tbl.dbms, in)->migrate(ret.dbms);
         out.srid = out.epsg
@@ -67,11 +65,10 @@ inline db::table migrate(db::command& cmd, db::table const& tbl)
                 return idx.front().column_name == col.column_name;
             }))
             continue;
-        ret.index_keys.push_back({
-            .index_name = concat("idx_", col.column_name),
-            .column_name = col.column_name,
-            .ordinal = 1,
-        });
+        ret.index_keys.push_back(
+            {.index_name = concat("idx_", col.column_name),
+             .column_name = col.column_name,
+             .ordinal = 1});
     }
     return ret;
 }

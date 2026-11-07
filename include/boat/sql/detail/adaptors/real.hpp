@@ -26,9 +26,10 @@ struct real : impl<float> {
 
     db::column migrate(std::string_view dbms) const override
     {
-        return {.kind{kind_},
-                .column_name{col_->column_name},
-                .type_name{"double precision"}};
+        return {
+            .kind{kind_},
+            .column_name{col_->column_name},
+            .type_name{"double precision"}};
     }
 };
 

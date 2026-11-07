@@ -28,12 +28,11 @@ auto bidirectional_transform(matrix const& mat, srs_spec auto const& crs)
     auto tf = transformation(crs);
     return std::pair{
         transform(srs_forward(tf), mat_inverse(mat)),
-        transform(mat_forward(mat), srs_inverse(tf)),
-    };
+        transform(mat_forward(mat), srs_inverse(tf))};
 }
 
 /// Maps between rasters.
-auto bidirectional_transform(  //
+auto bidirectional_transform(
     matrix const& affine1,
     srs_spec auto const& crs1,
     matrix const& affine2,
@@ -42,8 +41,7 @@ auto bidirectional_transform(  //
     auto tf = transformation(crs1, crs2);
     return std::pair{
         transform(mat_forward(affine1), srs_forward(tf), mat_inverse(affine2)),
-        transform(mat_forward(affine2), srs_inverse(tf), mat_inverse(affine1)),
-    };
+        transform(mat_forward(affine2), srs_inverse(tf), mat_inverse(affine1))};
 }
 
 template <box B, arithmetic I>
@@ -60,7 +58,7 @@ S pixel(I width, I height)
 }
 
 /// Samples a fixed grid.
-geographic::grid geographic_interpolate(  //
+geographic::grid geographic_interpolate(
     int width,
     int height,
     matrix const& mat,

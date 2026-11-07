@@ -44,8 +44,9 @@ auto color_mapping(R&& colors)
     auto ret = std::vector<int>{};
     for (auto c : as_colors<T>()) {
         auto it = std::ranges::find(colors, c);
-        boat::check(it != colors.end(),
-                    concat("color_mapping", GDALGetColorInterpretationName(c)));
+        boat::check(
+            it != colors.end(),
+            concat("color_mapping", GDALGetColorInterpretationName(c)));
         ret.push_back(static_cast<int>(std::distance(colors.begin(), it)));
     }
     return ret;

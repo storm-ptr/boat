@@ -22,7 +22,7 @@ enum class driver_type { Raster, Vector };
 enum class driver_op { Create, Open };
 
 /// Skips drivers without filename extensions.
-inline std::generator<driver> drivers(  //
+inline std::generator<driver> drivers(
     [[maybe_unused]] driver_type type,
     [[maybe_unused]] driver_op op)
 {
@@ -30,7 +30,7 @@ inline std::generator<driver> drivers(  //
     init();
     for (int i{}, n = GDALGetDriverCount(); i < n; ++i) {
         auto drv = GDALGetDriver(i);
-        if (!GDALGetMetadataItem(  //
+        if (!GDALGetMetadataItem(
                 drv,
                 type == driver_type::Raster ? GDAL_DCAP_RASTER
                                             : GDAL_DCAP_VECTOR,

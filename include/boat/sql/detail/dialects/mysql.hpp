@@ -15,9 +15,8 @@ struct mysql : dialect {
                "\n from information_schema.st_geometry_columns";
     }
 
-    db::query columns(  //
-        std::string_view schema_name,
-        std::string_view table_name) const override
+    db::query columns(std::string_view schema_name, std::string_view table_name)
+        const override
     {
         return {
             "\n with l as ("
@@ -42,7 +41,7 @@ struct mysql : dialect {
             db::variant(table_name)};
     }
 
-    db::query index_keys(  //
+    db::query index_keys(
         std::string_view schema_name,
         std::string_view table_name) const override
     {

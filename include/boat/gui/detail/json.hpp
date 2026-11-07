@@ -47,12 +47,11 @@ inline void validate(layer const& v)
 
 inline layer read_layer(json const& obj)
 {
-    auto ret = layer{{
-        .schema_name = obj.value("schema_name", std::string{}),
-        .table_name = obj.at("table_name").get<std::string>(),
-        .column_name = obj.at("column_name").get<std::string>(),
-        .raster = obj.value("raster", false),
-    }};
+    auto ret = layer{
+        {.schema_name = obj.value("schema_name", std::string{}),
+         .table_name = obj.at("table_name").get<std::string>(),
+         .column_name = obj.at("column_name").get<std::string>(),
+         .raster = obj.value("raster", false)}};
     ret.hidden = obj.value("hidden", false);
     ret.width = obj.value("width", ret.width);
     if (obj.contains("color"))
@@ -66,10 +65,9 @@ inline layer read_layer(json const& obj)
 inline source read_source(json const& obj, unsigned depth = 0)
 {
     check(depth < max_source_depth, "source depth");
-    auto ret = source{{
-        .source_name = obj.value("source_name", std::string{}),
-        .address = obj.at("address").get<std::string>(),
-    }};
+    auto ret = source{
+        {.source_name = obj.value("source_name", std::string{}),
+         .address = obj.at("address").get<std::string>()}};
     check(!ret.db.address.empty(), "address");
     for (auto const& child : array(obj, "children"))
         if (child.contains("address"))
@@ -82,8 +80,8 @@ inline source read_source(json const& obj, unsigned depth = 0)
 inline json write_layer(layer const& in)
 {
     validate(in);
-    auto ret = json{{"table_name", in.db.table_name},
-                    {"column_name", in.db.column_name}};
+    auto ret = json{
+        {"table_name", in.db.table_name}, {"column_name", in.db.column_name}};
     if (!in.db.schema_name.empty())
         ret["schema_name"] = in.db.schema_name;
     if (in.db.raster)

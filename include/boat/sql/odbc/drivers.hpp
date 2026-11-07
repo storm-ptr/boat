@@ -16,12 +16,13 @@ inline std::generator<std::string> drivers()
 #if __has_include(<sql.h>)
     auto env = env_ptr{};
     env = alloc<SQL_HANDLE_ENV>(env);
-    check(SQLSetEnvAttr(
-              env.get(), SQL_ATTR_ODBC_VERSION, SQLPOINTER(SQL_OV_ODBC3), 0),
-          env);
+    check(
+        SQLSetEnvAttr(
+            env.get(), SQL_ATTR_ODBC_VERSION, SQLPOINTER(SQL_OV_ODBC3), 0),
+        env);
     std::array<SQLWCHAR, SQL_MAX_MESSAGE_LENGTH> desc, attr;
     SQLSMALLINT desc_len, attr_len;
-    while (SQL_SUCCEEDED(SQLDriversW(  //
+    while (SQL_SUCCEEDED(SQLDriversW(
         env.get(),
         SQL_FETCH_NEXT,
         desc.data(),

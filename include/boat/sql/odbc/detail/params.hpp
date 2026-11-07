@@ -59,8 +59,7 @@ inline param make(db::variant const& var)
         [](int64_t v) { return param(std::in_place_type<integer>, v); },
         [](double v) { return param(std::in_place_type<real>, v); },
         [](std::string_view v) { return param(std::in_place_type<text>, v); },
-        [](blob_view v) { return param(std::in_place_type<binary>, v); },
-    };
+        [](blob_view v) { return param(std::in_place_type<binary>, v); }};
     return std::visit(vis, var);
 }
 
@@ -68,18 +67,19 @@ inline void bind(stmt_ptr const& stmt, SQLUSMALLINT i, param& p)
 {
     std::visit(
         [&stmt, i](auto& v) {
-            check(SQLBindParameter(  //
-                      stmt.get(),
-                      i,
-                      SQL_PARAM_INPUT,
-                      v.c_type(),
-                      v.sql_type(),
-                      v.length(),
-                      0,
-                      v.value(),
-                      0,
-                      v.indicator()),
-                  stmt);
+            check(
+                SQLBindParameter(
+                    stmt.get(),
+                    i,
+                    SQL_PARAM_INPUT,
+                    v.c_type(),
+                    v.sql_type(),
+                    v.length(),
+                    0,
+                    v.value(),
+                    0,
+                    v.indicator()),
+                stmt);
         },
         p);
 }

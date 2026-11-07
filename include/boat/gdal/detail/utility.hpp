@@ -130,8 +130,9 @@ inline void set_autocommit(GDALDatasetH ds, bool on)
 {
     if (!GDALDatasetTestCapability(ds, ODsCTransactions))
         return;
-    check(on ? GDALDatasetRollbackTransaction(ds)
-             : GDALDatasetStartTransaction(ds, 0));
+    check(
+        on ? GDALDatasetRollbackTransaction(ds)
+           : GDALDatasetStartTransaction(ds, 0));
 }
 
 inline void commit(GDALDatasetH ds)

@@ -16,7 +16,8 @@
 namespace boat {
 
 inline std::unique_ptr<db::catalog> make_catalog(
-    std::string_view address, bool update = false)
+    std::string_view address,
+    bool update = false)
 {
     if (is_http_url(address))
 #if __has_include(<curl/curl.h>)

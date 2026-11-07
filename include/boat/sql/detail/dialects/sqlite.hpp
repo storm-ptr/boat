@@ -20,9 +20,8 @@ struct sqlite : dialect {
                "\n where f_table_name like m.name";
     }
 
-    db::query columns(  //
-        std::string_view,
-        std::string_view table_name) const override
+    db::query columns(std::string_view, std::string_view table_name)
+        const override
     {
         return {
             "\n select c.*"
@@ -39,9 +38,8 @@ struct sqlite : dialect {
             ")) c left join spatial_ref_sys r using (srid)"};
     }
 
-    db::query index_keys(  //
-        std::string_view,
-        std::string_view table_name) const override
+    db::query index_keys(std::string_view, std::string_view table_name)
+        const override
     {
         auto q = db::query{};
         q << "\n select null"

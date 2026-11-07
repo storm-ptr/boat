@@ -29,9 +29,8 @@ table to_table()
         boost::typeindex::ctti_type_index::type_id<T>().pretty_name()}};
     if (auto pos = ret.table_name.find_last_of(' '); pos != std::string::npos)
         ret.table_name = ret.table_name.substr(pos + 1);
-    for (auto [k, n] : std::views::zip(  //
-             kinds_as_array<T>(),
-             boost::pfr::names_as_array<T>())) {
+    for (auto [k, n] : std::views::zip(
+             kinds_as_array<T>(), boost::pfr::names_as_array<T>())) {
         auto col = column{.kind{k}, .column_name{n}};
         if (col.kind == kind<geometry::geographic::variant>::value)
             col.epsg = 4326;

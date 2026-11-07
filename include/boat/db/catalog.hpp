@@ -21,7 +21,7 @@ struct catalog {
 
     virtual std::vector<layer> layers() = 0;
 
-    virtual table get_table(  //
+    virtual table get_table(
         std::string_view schema_name,
         std::string_view table_name) = 0;
 
@@ -35,7 +35,7 @@ struct catalog {
     /// Returns metadata reported by the backend after creation.
     virtual table create(table const&) = 0;
 
-    virtual void drop(  //
+    virtual void drop(
         std::string_view schema_name,
         std::string_view table_name) = 0;
 

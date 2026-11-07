@@ -13,11 +13,13 @@ struct dialect {
 
     virtual db::query layers() const = 0;
 
-    virtual db::query columns(std::string_view schema_name,
-                              std::string_view table_name) const = 0;
+    virtual db::query columns(
+        std::string_view schema_name,
+        std::string_view table_name) const = 0;
 
-    virtual db::query index_keys(std::string_view schema_name,
-                                 std::string_view table_name) const = 0;
+    virtual db::query index_keys(
+        std::string_view schema_name,
+        std::string_view table_name) const = 0;
 
     virtual db::query select(db::table const&, db::bbox const&) const = 0;
 

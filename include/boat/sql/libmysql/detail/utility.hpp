@@ -17,8 +17,7 @@ struct buffer {
 
 constexpr auto error = overloaded{
     [](MYSQL* dbc) { return mysql_error(dbc); },
-    [](MYSQL_STMT* stmt) { return mysql_stmt_error(stmt); },
-};
+    [](MYSQL_STMT* stmt) { return mysql_stmt_error(stmt); }};
 
 void check(bool success, auto* ptr)
     requires requires { error(ptr); }
@@ -55,16 +54,13 @@ inline MYSQL_BIND to_bind(db::variant const& var)
             ret.buffer_type = MYSQL_TYPE_BLOB;
             ret.buffer = const_cast<std::byte*>(v.data());
             ret.buffer_length = static_cast<unsigned long>(v.size());
-        },
-    };
+        }};
     std::visit(vis, var);
     return ret;
 }
 
-inline db::variant get_value(  //
-    MYSQL_FIELD& fld,
-    char const* ptr,
-    unsigned long len)
+inline db::variant
+get_value(MYSQL_FIELD& fld, char const* ptr, unsigned long len)
 {
     if (!ptr)
         return {};
