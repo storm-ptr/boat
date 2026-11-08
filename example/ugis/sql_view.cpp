@@ -8,21 +8,10 @@
 #include <QSplitter>
 #include <QVBoxLayout>
 #include <boat/db/io.hpp>
-#include <boat/gdal/command.hpp>
-#include <boat/gdal/dataset.hpp>
-#include <boat/sql/commands.hpp>
+#include "db.h"
 #include "sql_view.h"
 
 namespace {
-
-std::unique_ptr<boat::db::command> make_command(std::string const& address)
-{
-    if (boat::sql::supported_url(address))
-        return boat::sql::make_command(address);
-    auto ret = std::make_unique<boat::gdal::command>();
-    ret->dataset = boat::gdal::open(address.data());
-    return ret;
-}
 
 QString format(boat::db::rowset rows)
 {

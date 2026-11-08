@@ -1,10 +1,9 @@
 // Andrew Naplavkov
 
 #include <QDebug>
-#include <boat/gdal/catalog.hpp>
 #include <boat/gui/caches/cache.hpp>
-#include "catalog.h"
 #include "copy_layer.h"
+#include "db.h"
 #include "tree.h"
 
 void copy_raster(
@@ -19,9 +18,8 @@ void copy_raster(
     auto rast1 = cat1->get_raster(src.layer);
     if (tok.stop_requested())
         return;
-    auto cat2 = boat::gdal::catalog{};
-    cat2.dataset = boat::gdal::create(dst, drv, rast1);
-    auto rast2 = cat2.get_raster(cat2.layers().at(0));
+    auto cat2 = make_gdal_catalog(dst, drv, &rast1);
+    auto rast2 = cat2->get_raster(cat2->layers().at(0));
     auto z = boat::tile::zmax(rast1.width, rast1.height);
     auto done = size_t{};
     qInfo() << "copying tiles";
@@ -31,7 +29,7 @@ void copy_raster(
         for (auto [tile, img] : cat1->read(rast1, batch)) {
             if (tok.stop_requested())
                 return;
-            cat2.write(
+            cat2->write(
                 rast2,
                 std::make_from_tuple<boat::db::rect>(
                     tile.rect(rast2.width, rast2.height)),
@@ -59,13 +57,7 @@ leaf copy_vector(
     auto tbl1 = cat1->get_table(src.layer.schema_name, src.layer.table_name);
     if (tok.stop_requested())
         return ret;
-    auto cat2 = [&] -> std::unique_ptr<boat::db::catalog> {
-        if (!drv)
-            return make_catalog(dst, true);
-        auto ret = std::make_unique<boat::gdal::catalog>();
-        ret->dataset = boat::gdal::create(dst, drv);
-        return ret;
-    }();
+    auto cat2 = drv ? make_gdal_catalog(dst, drv) : make_catalog(dst, true);
     auto tbl2 = tbl1;
     tbl2.schema_name.clear();
     tbl2.table_name = name;

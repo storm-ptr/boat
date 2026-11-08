@@ -6,8 +6,8 @@
 #include <boat/gui/utility.hpp>
 #include <boat/tile.hpp>
 #include <filesystem>
-#include "catalog.h"
 #include "copy_layer.h"
+#include "db.h"
 #include "tree_model.h"
 #include "viewport.h"
 

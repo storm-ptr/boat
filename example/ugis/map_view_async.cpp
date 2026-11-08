@@ -4,7 +4,7 @@
 #include <boat/gui/qt.hpp>
 #include <boat/gui/renderables.hpp>
 #include <boat/gui/utility.hpp>
-#include "catalog.h"
+#include "db.h"
 #include "map_view.h"
 #include "tree.h"
 
