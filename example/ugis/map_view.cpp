@@ -1,23 +1,13 @@
 // Andrew Naplavkov
 
-#include <QClipboard>
-#include <QContextMenuEvent>
-#include <QFileDialog>
-#include <QGuiApplication>
 #include <QMainWindow>
-#include <QMenu>
-#include <QMessageBox>
 #include <QMouseEvent>
-#include <QPixmap>
 #include <QStatusBar>
 #include <QWheelEvent>
-#include <array>
-#include <boat/gdal/dataset.hpp>
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/qt.hpp>
 #include <boat/gui/utility.hpp>
 #include <boost/gil.hpp>
-#include "formats.h"
 #include "map_view.h"
 #include "tree.h"
 
@@ -32,36 +22,13 @@ constexpr auto latitude_max = 85.;
 constexpr auto resolution_min = 0.5972;
 constexpr auto resolution_max = 19'567.88;
 
-void save_png(
-    QString const& path,
-    QPixmap const& image,
-    geo::matrix const& mat,
-    geo::srs::proj4 const& crs)
+auto unproject(viewport const& vp, QPointF cursor)
 {
-    boat::check(image.save(path), "save png");
-    auto ds = boat::gdal::open(path.toUtf8().constData());
-    auto px = 1. / image.devicePixelRatio();
-    auto a = std::array{
-        mat.a[0][2],
-        mat.a[0][0] * px,
-        mat.a[0][1] * px,
-        mat.a[1][2],
-        mat.a[1][0] * px,
-        mat.a[1][1] * px};
-    boat::gdal::check(GDALSetGeoTransform(ds.get(), a.data()));
-    auto srs = boat::gdal::make_srs(0, {}, crs.str());
-    boat::gdal::check(GDALSetSpatialRef(ds.get(), srs.get()));
-    boat::gdal::check(GDALClose(ds.release()));
-}
-
-QString coordinate_text(viewport const& vp, QPointF cursor)
-{
-    auto tf = geo::transformation(geo::ortho(vp.view.center));
-    auto mat = affine(vp.width, vp.height, vp.view, tf);
-    auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
-    if (auto ll = inv(point(cursor.x(), cursor.y())))
-        return QString::asprintf("lon: %.6f, lat: %.6f", ll->x(), ll->y());
-    return {};
+    return [=, tf = geo::transformation(geo::ortho(vp.view.center))](auto res) {
+        auto mat = affine(vp.width, vp.height, {vp.view.center, res}, tf);
+        return geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf))(
+            point(cursor.x(), cursor.y()));
+    };
 }
 
 }  // namespace
@@ -77,35 +44,10 @@ map_view::map_view(QWidget* parent)
 
 map_view::~map_view() = default;
 
-void map_view::contextMenuEvent(QContextMenuEvent* event)
-{
-    auto menu = QMenu{this};
-    menu.addAction("save map as PNG", this, [this] {
-        auto path = QFileDialog::getSaveFileName(this, {}, {}, "PNG (*.png)");
-        if (path.isEmpty())
-            return;
-        try {
-            auto crs = geo::ortho(map_.center);
-            auto mat = affine(width(), height(), map_, crs);
-            save_png(
-                ensure_extension(std::move(path), ".png"), grab(), mat, crs);
-        }
-        catch (std::exception const& e) {
-            QMessageBox::warning(this, {}, QString::fromUtf8(e.what()));
-        }
-    });
-    if (auto text = coordinate_text(view(), event->pos()); !text.isEmpty())
-        menu.addAction("copy coordinates", this, [text] {
-            QGuiApplication::clipboard()->setText(text);
-        });
-    menu.exec(event->globalPos());
-}
-
 void map_view::leaveEvent(QEvent*)
 {
     if (auto mw = qobject_cast<QMainWindow*>(window()))
-        if (auto sb = mw->statusBar())
-            sb->clearMessage();
+        mw->statusBar()->clearMessage();
 }
 
 void map_view::mouseMoveEvent(QMouseEvent* event)
@@ -160,8 +102,7 @@ void map_view::paintEvent(QPaintEvent*)
     if (img_.isNull())
         return;
     if (boost::geometry::equals(img_view_.center, map_.center) &&
-        img_view_.resolution == map_.resolution && img_.width() == width() &&
-        img_.height() == height())
+        img_view_.resolution == map_.resolution && img_.size() == size())
         return art.drawImage(0, 0, img_);
     auto img_crs = geo::ortho(img_view_.center);
     auto img_mat = affine(img_.width(), img_.height(), img_view_, img_crs);
@@ -192,21 +133,26 @@ void map_view::timerEvent(QTimerEvent* event)
     if (event->timerId() == map_timer_.timerId()) {
         map_timer_.stop();
         update();
-        return;
     }
-    if (event->timerId() == img_timer_.timerId()) {
+    else if (event->timerId() == img_timer_.timerId()) {
         img_timer_.stop();
         redraw();
-        return;
     }
-    QWidget::timerEvent(event);
+    else
+        QWidget::timerEvent(event);
+}
+
+QString map_view::coordinate_text(QPointF cursor) const
+{
+    if (auto ll = unproject(view(), cursor)(map_.resolution))
+        return QString::asprintf("lon: %.6f, lat: %.6f", ll->x(), ll->y());
+    return {};
 }
 
 void map_view::update_status(QPointF cursor)
 {
     if (auto mw = qobject_cast<QMainWindow*>(window()))
-        if (auto sb = mw->statusBar())
-            sb->showMessage(coordinate_text(view(), cursor));
+        mw->statusBar()->showMessage(coordinate_text(cursor));
 }
 
 viewport map_view::view() const
@@ -250,12 +196,7 @@ void map_view::wheelEvent(QWheelEvent* event)
     auto pos = event->position();
     auto factor = std::pow(2., event->angleDelta().y() / 8. / 60.);
     auto next = bounded({map_.center, map_.resolution / factor}).value_or(map_);
-    auto tf = geo::transformation(geo::ortho(map_.center));
-    auto ll = [&](auto res) {
-        auto mat = affine(width(), height(), {map_.center, res}, tf);
-        auto inv = geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf));
-        return inv(point(pos.x(), pos.y()));
-    };
+    auto ll = unproject(view(), pos);
     auto a = ll(map_.resolution), b = ll(next.resolution);
     if (a && b)
         next.center = {

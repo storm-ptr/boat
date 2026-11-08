@@ -39,12 +39,14 @@ protected:
 
 private:
     static std::optional<boat::gui::view> bounded(boat::gui::view);
+    QString coordinate_text(QPointF cursor) const;
     void redraw();
     void schedule_paint();
     void update_status(QPointF cursor);
     void watch_task(QFuture<void>);
 
     std::shared_ptr<boat::gui::caches::cache> cache_;
+    boat::gui::caches::cache_stats last_cache_report_;
 
     QImage img_;
     boat::gui::view img_view_;

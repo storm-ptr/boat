@@ -44,20 +44,16 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         return {};
     auto var = geo::geographic::variant{};
     boat::blob_view{*wkb} >> var;
-    auto p = boat::overloaded{
-        [](geo::point auto&& v) -> std::optional<point> {
+    auto p = [](this auto&& self, auto const& v) -> std::optional<point> {
+        if constexpr (geo::point<decltype(v)>)
             return point{v.x(), v.y()};
-        },
-        [](this auto&& self,
-           std::ranges::range auto&& v) -> std::optional<point> {
-            return v.empty() ? std::nullopt : self(v.front());
-        },
-        [](this auto&& self, geo::polygon auto&& v) -> std::optional<point> {
+        else if constexpr (geo::polygon<decltype(v)>)
             return self(v.outer());
-        },
-        [](this auto&& self, geo::dynamic auto&& v) -> std::optional<point> {
+        else if constexpr (geo::dynamic<decltype(v)>)
             return std::visit(self, v);
-        }}(var);
+        else
+            return v.empty() ? std::nullopt : self(v.front());
+    }(var);
     return p ? geo::transform(geo::srs_inverse(geo::transformation(crs)))(*p)
              : std::nullopt;
 }
@@ -86,10 +82,9 @@ void map_view::locate(leaf lyr)
 
 void map_view::redraw()
 {
-    auto w = width(), h = height();
+    auto [view, w, h] = this->view();
     if (w <= 0 || h <= 0)
         return;
-    auto view = map_;
     tasks_.request_stop();
     watch_task(tasks_.run([=, lyrs = layers_](auto tok) {
         if (tok.stop_requested())

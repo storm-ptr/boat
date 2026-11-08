@@ -19,4 +19,6 @@ BOOST_AUTO_TEST_CASE(cache)
     lru.put(5, 5);
     BOOST_CHECK(not lru.get(4).has_value());
     BOOST_CHECK_EQUAL(std::any_cast<int>(lru.get(3)), 30);
+    BOOST_CHECK_EQUAL(lru.stats().requests, 7);
+    BOOST_CHECK_EQUAL(lru.stats().misses, 3);
 }

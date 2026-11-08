@@ -8,6 +8,12 @@
 
 namespace boat::gui::caches {
 
+/// Cumulative counts of get() calls and empty results.
+struct cache_stats {
+    size_t requests = 0;
+    size_t misses = 0;
+};
+
 struct cache {
     virtual ~cache() = default;
 
@@ -15,6 +21,8 @@ struct cache {
     virtual std::any get(any_hashable const&) = 0;
 
     virtual void put(any_hashable, std::any) = 0;
+
+    virtual cache_stats stats() const = 0;
 };
 
 namespace detail {

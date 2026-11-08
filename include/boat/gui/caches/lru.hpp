@@ -16,7 +16,8 @@ namespace boat::gui::caches {
 /// Thread-safe; capacity is the entry limit.
 class lru : public cache {
     using entry = std::pair<any_hashable, std::any>;
-    std::mutex guard_;
+    mutable std::mutex guard_;
+    cache_stats stats_;
     size_t capacity_;
     boost::multi_index_container<
         entry,
@@ -33,11 +34,14 @@ public:
     std::any get(any_hashable const& key) override
     {
         auto lock = std::lock_guard{guard_};
+        ++stats_.requests;
         auto& index = data_.get<1>();
         if (auto it = index.find(key); it != index.end()) {
             data_.relocate(data_.end(), data_.project<0>(it));
+            stats_.misses += !it->second.has_value();
             return it->second;
         }
+        ++stats_.misses;
         return {};
     }
 
@@ -49,6 +53,12 @@ public:
         data_.relocate(data_.end(), it);
         if (data_.size() > capacity_)
             data_.pop_front();
+    }
+
+    cache_stats stats() const override
+    {
+        auto lock = std::lock_guard{guard_};
+        return stats_;
     }
 };
 
