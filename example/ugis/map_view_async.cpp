@@ -95,7 +95,8 @@ void map_view::redraw()
         auto params = boat::gui::render_params{
             .cache = cache_,
             .filter = geo::geographic_interpolate(
-                w, h, mat, crs, view.resolution * boat::tile::size)};
+                w, h, mat, crs, view.resolution * boat::tile::size),
+            .stop = tok};
         auto img = QImage{w, h, QImage::Format_RGBA8888};
         img.fill(Qt::white);
         auto art = QPainter{&img};

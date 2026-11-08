@@ -10,6 +10,7 @@
 #include <boat/gui/detail/tile.hpp>
 #include <boat/gui/utility.hpp>
 #include <boat/gui/variant.hpp>
+#include <stop_token>
 
 namespace boat::gui {
 
@@ -20,6 +21,7 @@ struct render_params {
     size_t cache_key;                   ///< Change when layer data changes.
     geometry::geographic::grid filter;  ///< Sample points by spacing in metres.
     int query_limit = 512;
+    std::stop_token stop;
 };
 
 namespace detail {
@@ -32,8 +34,7 @@ auto key(render_params const& p, auto const&... args)
 inline std::generator<variant> vectors(render_params const& p)
 {
     namespace bgi = boost::geometry::index;
-    auto cells_per_side =
-        std::max<>(1, static_cast<int>(std::sqrt(p.query_limit)));
+    auto cells = std::max<>(1, static_cast<int>(std::sqrt(p.query_limit)));
     auto tbl = caches::detail::get_or_invoke(p.cache.get(), key(p), [&] {
         return p.catalog().get_table(p.layer.schema_name, p.layer.table_name);
     });
@@ -45,6 +46,8 @@ inline std::generator<variant> vectors(render_params const& p)
         geometry::srs_inverse(geometry::transformation(crs)));
     auto done = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
     for (auto& box : boxes(p.filter, crs)) {
+        if (p.stop.stop_requested())
+            co_return;
         if (bgi::qbegin(done, bgi::contains(box)) != bgi::qend(done))
             continue;
         auto a = box.min_corner(), b = box.max_corner();
@@ -60,8 +63,7 @@ inline std::generator<variant> vectors(render_params const& p)
                     blob_view{wkb} >> ret.geoms.emplace_back();
                 ret.partial = ret.geoms.size() >= p.query_limit;
                 if (ret.partial)
-                    ret.geoms =
-                        sample(std::move(ret.geoms), box, cells_per_side);
+                    ret.geoms = sample(std::move(ret.geoms), box, cells);
                 ret.geoms =
                     inv(std::move(ret.geoms)).value_or(decltype(ret.geoms){});
                 return ret;
@@ -90,7 +92,7 @@ inline std::generator<variant> rasters(render_params const& p)
         co_yield raster{
             std::move(rgba), mat * t.affine(r.width, r.height), crs};
     }
-    if (uncached.empty())
+    if (uncached.empty() || p.stop.stop_requested())
         co_return;
     for (auto [t, img] : p.catalog().read(r, std::move(uncached))) {
         auto rgba = gil::to<boost::gil::rgba8_image_t>(const_view(img));
@@ -98,6 +100,8 @@ inline std::generator<variant> rasters(render_params const& p)
             p.cache->put(key(p, t), rgba);
         co_yield raster{
             std::move(rgba), mat * t.affine(r.width, r.height), crs};
+        if (p.stop.stop_requested())
+            co_return;
     }
 }
 
