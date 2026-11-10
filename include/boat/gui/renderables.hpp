@@ -18,24 +18,21 @@ struct render_params {
     std::move_only_function<db::catalog&() const> catalog;
     db::layer layer;
     std::shared_ptr<caches::cache> cache;
-    size_t cache_key;                   ///< Change when layer data changes.
-    geometry::geographic::grid filter;  ///< Sample points by spacing in metres.
+    size_t cache_key;  ///< Layer data revision.
+    geometry::geographic::grid query_grid;
     int query_limit = 512;
     std::stop_token stop;
 };
 
 namespace detail {
 
-auto key(render_params const& p, auto const&... args)
-{
-    return std::tuple{p.cache_key, args...};
-}
+using caches::detail::get_or_invoke;
 
-inline std::generator<variant> vectors(render_params const& p)
+std::generator<variant> vectors(auto const& p)
 {
     namespace bgi = boost::geometry::index;
-    auto cells = std::max<>(1, static_cast<int>(std::sqrt(p.query_limit)));
-    auto tbl = caches::detail::get_or_invoke(p.cache.get(), key(p), [&] {
+    auto cells = std::max<>(1, int(std::sqrt(2 * p.query_limit)));
+    auto tbl = get_or_invoke(p.cache.get(), p.cache_key, [&] {
         return p.catalog().get_table(p.layer.schema_name, p.layer.table_name);
     });
     auto& col = p.layer.column_name;
@@ -45,15 +42,15 @@ inline std::generator<variant> vectors(render_params const& p)
     auto inv = geometry::transform(
         geometry::srs_inverse(geometry::transformation(crs)));
     auto done = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
-    for (auto& box : boxes(p.filter, crs)) {
+    for (auto& box : query_boxes(p.query_grid, crs)) {
         if (p.stop.stop_requested())
             co_return;
-        if (bgi::qbegin(done, bgi::contains(box)) != bgi::qend(done))
+        if (done.qbegin(bgi::contains(box)) != done.qend())
             continue;
         auto a = box.min_corner(), b = box.max_corner();
-        auto vec = caches::detail::get_or_invoke(
+        auto vec = get_or_invoke(
             p.cache.get(),
-            key(p, a.x(), a.y(), b.x(), b.y(), p.query_limit),
+            std::tuple{p.cache_key, a.x(), a.y(), b.x(), b.y(), p.query_limit},
             [&] {
                 auto rs = p.catalog().select(
                     tbl,
@@ -75,29 +72,37 @@ inline std::generator<variant> vectors(render_params const& p)
     }
 }
 
-inline std::generator<variant> rasters(render_params const& p)
+std::generator<variant> rasters(auto const& p)
 {
-    auto r = caches::detail::get_or_invoke(
-        p.cache.get(), key(p), [&] { return p.catalog().get_raster(p.layer); });
+    auto& grid = p.query_grid;
+    if (grid.empty())
+        co_return;
+    auto r = get_or_invoke(p.cache.get(), p.cache_key, [&] {
+        return p.catalog().get_raster(p.layer);
+    });
+    auto meters = std::next(grid.begin(), grid.size() > 1)->first;
     auto mat = affine(r);
     auto crs = to_srs_variant(r);
     auto uncached = std::vector<tile>{};
-    for (auto& t : tiles(p.filter, r.width, r.height, mat, crs)) {
-        auto any = p.cache ? p.cache->get(key(p, t)) : std::any{};
+    for (auto& t :
+         tiles(grid.begin()->second, meters, r.width, r.height, mat, crs)) {
+        auto any =
+            p.cache ? p.cache->get(std::pair{p.cache_key, t}) : std::any{};
         if (!any.has_value()) {
             uncached.push_back(t);
             continue;
         }
-        auto rgba = std::any_cast<boost::gil::rgba8_image_t>(std::move(any));
         co_yield raster{
-            std::move(rgba), mat * t.affine(r.width, r.height), crs};
+            std::any_cast<decltype(raster::rgba)>(std::move(any)),
+            mat * t.affine(r.width, r.height),
+            crs};
     }
     if (uncached.empty() || p.stop.stop_requested())
         co_return;
     for (auto [t, img] : p.catalog().read(r, std::move(uncached))) {
-        auto rgba = gil::to<boost::gil::rgba8_image_t>(const_view(img));
+        auto rgba = gil::to<decltype(raster::rgba)>(const_view(img));
         if (p.cache)
-            p.cache->put(key(p, t), rgba);
+            p.cache->put(std::pair{p.cache_key, t}, rgba);
         co_yield raster{
             std::move(rgba), mat * t.affine(r.width, r.height), crs};
         if (p.stop.stop_requested())

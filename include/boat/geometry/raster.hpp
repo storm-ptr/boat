@@ -80,10 +80,10 @@ geographic::grid geographic_interpolate(
         auto step = fib.step();
         if (step < meters * numbers::inv_sqrt_2)
             break;
-        auto sentinel = [&](auto& ll) { return distance(ll, points) > step; };
+        auto pred = [&](auto& ll) { return distance(ll, points) <= step; };
         auto indices = std::unordered_set<size_t>{};
         for (auto& p : points)
-            for (auto i : fib.nearests(p, sentinel)) {
+            for (auto i : fib.nearests(p, pred)) {
                 if (!indices.insert(i).second)
                     break;
                 ret[step].push_back(fib[i]);

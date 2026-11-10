@@ -5,6 +5,7 @@
 
 #include <boat/geometry/raster.hpp>
 #include <boat/gui/scene.hpp>
+#include <boat/tile.hpp>
 
 namespace boat::gui {
 
@@ -33,10 +34,22 @@ geometry::matrix affine(int width, int height, view const& v, auto const& crs)
     }
 }
 
+/// Finest nodes locate tiles; the next coarser spacing sets their zoom.
+auto make_query_grid(
+    int width,
+    int height,
+    geometry::matrix const& affine,
+    geometry::srs_spec auto const& crs,
+    double meters_per_pixel)
+{
+    return geometry::geographic_interpolate(
+        width, height, affine, crs, meters_per_pixel * tile::size / 2);
+}
+
 /// Query boxes in crs coordinates; grid keys are spacings in metres.
 /// Excludes the antimeridian.
-auto boxes(
-    geometry::geographic::grid const& grid,
+auto query_boxes(
+    geometry::geographic::grid const& query_grid,
     geometry::srs_spec auto const& crs)
 {
     auto ret = std::vector<geometry::cartesian::box>{};
@@ -49,17 +62,14 @@ auto boxes(
         if (auto xy = fwd(ll).transform(geometry::cartesian{}))
             ret.push_back(*xy);
     };
-    for (auto& lvl : grid | std::views::reverse) {
+    for (auto& lvl : query_grid | std::views::reverse) {
         auto d = lvl.first * numbers::inv_sqrt_2;
         if (d >= numbers::earth::sqrt_area / 4)
             continue;
         for (auto& p : lvl.second) {
             auto x = p.x(), y = p.y();
             auto dx = d * geometry::meter(y), dy = d * geometry::meter();
-            add({{x, y}, {x + dx, y + dy}});
-            add({{x - dx, y}, {x, y + dy}});
-            add({{x, y - dy}, {x + dx, y}});
-            add({{x - dx, y - dy}, {x, y}});
+            add({{x - dx, y - dy}, {x + dx, y + dy}});
         }
     }
     return ret;

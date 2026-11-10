@@ -4,7 +4,6 @@
 #include <boat/db/io.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include <boat/gui/utility.hpp>
-#include <boat/tile.hpp>
 #include <filesystem>
 #include "copy_layer.h"
 #include "db.h"
@@ -175,10 +174,10 @@ void tree_model::sample(QModelIndex const& idx, viewport const& vp)
             return;
         auto ortho = boat::geometry::ortho(vp.view.center);
         auto mat = affine(w, h, vp.view, ortho);
-        auto grid = boat::geometry::geographic_interpolate(
-            w, h, mat, ortho, vp.view.resolution * boat::tile::size);
+        auto query_grid =
+            boat::gui::make_query_grid(w, h, mat, ortho, vp.view.resolution);
         auto crs = boat::gui::to_srs_variant(*it);
-        for (auto& box : boat::gui::boxes(grid, crs)) {
+        for (auto& box : boat::gui::query_boxes(query_grid, crs)) {
             if (tok.stop_requested())
                 return;
             auto a = box.min_corner(), b = box.max_corner();

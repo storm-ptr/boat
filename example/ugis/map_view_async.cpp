@@ -94,8 +94,8 @@ void map_view::redraw()
         auto mat = affine(w, h, view, crs);
         auto params = boat::gui::render_params{
             .cache = cache_,
-            .filter = geo::geographic_interpolate(
-                w, h, mat, crs, view.resolution * boat::tile::size),
+            .query_grid =
+                boat::gui::make_query_grid(w, h, mat, crs, view.resolution),
             .stop = tok};
         auto img = QImage{w, h, QImage::Format_RGBA8888};
         img.fill(Qt::white);

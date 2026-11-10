@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(wx_draw)
         std::memset(img.GetAlpha(), wxIMAGE_ALPHA_TRANSPARENT, num_pixels);
         std::memset(img.GetData(), UCHAR_MAX, 3 * num_pixels);
         for (auto& p : params) {
-            p.filter = ctx.filter;
+            p.query_grid = ctx.query_grid;
             auto tmp = img.Copy();
             auto art = make_graphics_context(tmp);
             auto drw = boat::gui::draw_variant(

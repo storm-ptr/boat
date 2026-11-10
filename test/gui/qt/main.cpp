@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE(qt_draw)
         auto drw = boat::gui::draw_variant(
             std::execution::par, art, ctx.affine, ctx.crs);
         for (auto& p : params) {
-            p.filter = ctx.filter;
+            p.query_grid = ctx.query_grid;
             for (auto var : renderables(p))
                 std::visit(drw, var);
         }

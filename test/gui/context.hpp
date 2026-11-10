@@ -3,8 +3,7 @@
 #ifndef BOAT_TEST_GUI_CONTEXT_HPP
 #define BOAT_TEST_GUI_CONTEXT_HPP
 
-#include <boat/geometry/raster.hpp>
-#include <boat/tile.hpp>
+#include <boat/gui/utility.hpp>
 #include "../utility.hpp"
 
 constexpr auto transparent_ratio = .0935;
@@ -13,7 +12,7 @@ constexpr auto transparent_tolerance = .002;
 struct context {
     int width;
     int height;
-    boat::geometry::geographic::grid filter;
+    boat::geometry::geographic::grid query_grid;
     boat::geometry::matrix affine;
     boat::geometry::srs_variant crs;
 };
@@ -35,9 +34,9 @@ inline std::generator<context> contexts()
                     auto pixel =
                         cartesian::segment{{a.x(), a.y()}, {b.x(), b.y()}};
                     auto mat = affine(width, height, pixel);
-                    auto filter = geographic_interpolate(
-                        width, height, mat, crs, res * boat::tile::size);
-                    co_yield {width, height, filter, mat, crs};
+                    auto query_grid = boat::gui::make_query_grid(
+                        width, height, mat, crs, res);
+                    co_yield {width, height, query_grid, mat, crs};
                 }
 }
 

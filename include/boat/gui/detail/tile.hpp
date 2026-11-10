@@ -9,7 +9,8 @@
 namespace boat::gui {
 
 auto tiles(
-    geometry::geographic::grid const& grid,
+    geometry::geographic::multi_point const& points,
+    double meters,
     int width,
     int height,
     geometry::matrix const& affine,
@@ -20,20 +21,18 @@ auto tiles(
     auto ret = std::unordered_set<tile>{};
     auto [fwd, inv] = geo::bidirectional_transform(affine, crs);
     auto px = inv(geo::pixel<geo::geographic::segment>(width, height));
-    if (!px || grid.empty())
+    if (!px || points.empty())
         return ret;
-    auto meters = std::begin(grid)->first;
     auto scale = length(*px) * numbers::inv_sqrt_2 / meters * tile::size;
     auto z = tile::zoom(width, height, scale);
     auto k = 1. / tile::scale(width, height, z) / tile::size;
-    auto snap = [k](auto v) { return static_cast<int>(k * v); };
     auto nx = static_cast<int>(std::ceil(width * k));
     auto ny = static_cast<int>(std::ceil(height * k));
-    for (auto& a : grid.begin()->second) {
+    for (auto& a : points) {
         auto b = fwd(a);
         if (!b)
             continue;
-        auto t = tile{.z = z, .y = snap(b->y()), .x = snap(b->x())};
+        auto t = tile{.z = z, .y = int(k * b->y()), .x = int(k * b->x())};
         if (auto [x, y, w, h] = t.rect(width, height); !w || !h)
             continue;
         auto done = std::unordered_set{{t}};

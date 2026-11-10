@@ -39,6 +39,10 @@ struct overloaded : Ts... {
     using Ts::operator()...;
 };
 
+struct always_true {
+    static constexpr bool operator()(auto const&) noexcept { return true; }
+};
+
 constexpr auto as_bytes = [](auto* ptr) {
     return reinterpret_cast<std::byte const*>(ptr);
 };

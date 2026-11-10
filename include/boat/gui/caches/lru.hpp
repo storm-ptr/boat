@@ -5,7 +5,7 @@
 
 #include <boat/gui/caches/cache.hpp>
 #include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/key.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 #include <mutex>
@@ -24,8 +24,7 @@ class lru : public cache {
         boost::multi_index::indexed_by<
             boost::multi_index::sequenced<>,
             boost::multi_index::hashed_unique<
-                boost::multi_index::
-                    member<entry, any_hashable, &entry::first>>>>
+                boost::multi_index::key<&entry::first>>>>
         data_;
 
 public:

@@ -63,7 +63,7 @@ void map_view::contextMenuEvent(QContextMenuEvent* event)
         menu.addAction("copy coordinates", this, [text] {
             QGuiApplication::clipboard()->setText(text);
         });
-    menu.addAction("cache statistics", this, [this] {
+    menu.addAction("cache statistics in log", this, [this] {
         auto now = cache_->stats();
         auto summary = [](size_t requests, size_t misses) {
             auto rate =
