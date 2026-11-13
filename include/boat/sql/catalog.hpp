@@ -102,7 +102,10 @@ public:
         co_return;
     }
 
-    void write(db::raster const&, db::rect const&, gil::any_image_view) override
+    void write(
+        db::raster const&,
+        geometry::raster::box const&,
+        gil::any_image_view) override
     {
         throw err;
     }

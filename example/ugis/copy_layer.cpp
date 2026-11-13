@@ -20,20 +20,17 @@ void copy_raster(
         return;
     auto cat2 = make_gdal_catalog(dst, drv, &rast1);
     auto rast2 = cat2->get_raster(cat2->layers().at(0));
-    auto z = boat::tile::zmax(rast1.width, rast1.height);
+    auto z = boat::tile::zmax(rast1.extent);
     auto done = size_t{};
     qInfo() << "copying tiles";
-    for (auto chunk : boat::tile::all(rast1.width, rast1.height, z) |
-                          std::views::chunk(100)) {
+    for (auto chunk :
+         boat::tile::all(rast1.extent, z) | std::views::chunk(100)) {
         auto batch = chunk | std::ranges::to<std::vector>();
         for (auto [tile, img] : cat1->read(rast1, batch)) {
             if (tok.stop_requested())
                 return;
             cat2->write(
-                rast2,
-                std::make_from_tuple<boat::db::rect>(
-                    tile.rect(rast2.width, rast2.height)),
-                boost::gil::const_view(img));
+                rast2, tile.rect(rast2.extent), boost::gil::const_view(img));
         }
         done += batch.size();
         qInfo() << "copied" << done << "tiles";
@@ -50,7 +47,7 @@ leaf copy_vector(
 {
     auto ret = src;
     ret.address = dst;
-    ret.cache = boat::gui::caches::next_key();
+    ret.cache_key = boat::gui::caches::next_key();
     if (tok.stop_requested())
         return ret;
     auto cat1 = make_catalog(src.address);

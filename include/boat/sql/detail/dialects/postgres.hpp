@@ -28,20 +28,16 @@ struct postgres : dialect {
             "\n  union"
             "\n  select f_table_schema, f_table_name, f_geometry_column, srid"
             "\n  from public.geometry_columns"
-            "\n ), r as ("
-            "\n  select srid"
-            "\n  , case auth_name when 'EPSG' then auth_srid else null end epsg"
-            "\n  , srtext, proj4text"
-            "\n  from public.spatial_ref_sys"
             "\n )"
             "\n select null, column_name"
             "\n , case data_type when 'USER-DEFINED'"
             "\n   then udt_name else data_type end"
             "\n , coalesce(character_maximum_length, datetime_precision)"
-            "\n , srid, epsg, srtext, proj4text"
+            "\n , srid, case auth_name when 'EPSG' then auth_srid end epsg"
+            "\n , srtext, proj4text"
             "\n from information_schema.columns c"
             "\n left join l using (table_schema, table_name, column_name)"
-            "\n left join r using (srid)"
+            "\n left join public.spatial_ref_sys using (srid)"
             "\n where c.table_schema = ",
             db::variant(schema_name),
             "\n and c.table_name = ",
@@ -74,8 +70,8 @@ struct postgres : dialect {
         auto q = db::query{};
         q << "\n select " << select_list{tbl, rq.select_list} << "\n from "
           << id{tbl} << "\n where " << db::id(col.column_name) << " && "
-          << rect{tbl.dbms, col, rq.xmin, rq.ymin, rq.xmax, rq.ymax}
-          << "\n limit " << to_chars(rq.limit);
+          << bbox{tbl.dbms, col, rq.bounds} << "\n limit "
+          << to_chars(rq.limit);
         return q;
     }
 
@@ -91,8 +87,7 @@ struct postgres : dialect {
 
     db::query create(db::table const& tbl) const override
     {
-        auto q = db::query{};
-        q << "\n create table " << id{tbl};
+        auto q = db::query{"\n create table ", id{tbl}};
         for (auto sep{"\n ( "}; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
               << col.type_name;
@@ -102,13 +97,13 @@ struct postgres : dialect {
                 q << "(" << to_chars(col.length) << ")";
         }
         q << "\n );";
-        for (auto idx : tbl.indices() | std::views::filter(constructible)) {
-            auto key = std::ranges::begin(idx);
-            auto spatial = geo(tbl.columns, key->column_name);
-            if (key->primary)
+        for (auto idx : indices(tbl) | std::views::filter(constructible)) {
+            auto& key = idx.front();
+            auto spatial = geo(tbl.columns, key.column_name);
+            if (key.primary)
                 q << "\n alter table " << id{tbl} << " add primary key ";
             else
-                q << "\n create " << (key->unique ? "unique " : "")
+                q << "\n create " << (key.unique ? "unique " : "")
                   << "index on " << id{tbl} << (spatial ? " using gist " : " ");
             q << index_spec{idx} << ";";
         }

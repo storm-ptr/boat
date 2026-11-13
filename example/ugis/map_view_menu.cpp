@@ -10,7 +10,7 @@
 #include <QPixmap>
 #include <array>
 #include <boat/gdal/dataset.hpp>
-#include <boat/gui/utility.hpp>
+#include <boat/geometry/raster.hpp>
 #include "formats.h"
 #include "map_view.h"
 
@@ -51,7 +51,8 @@ void map_view::contextMenuEvent(QContextMenuEvent* event)
             return;
         try {
             auto crs = geo::ortho(map_.center);
-            auto mat = boat::gui::affine(width(), height(), map_, crs);
+            auto mat = geo::affine(
+                {width(), height()}, map_.center, map_.resolution, crs);
             save_png(
                 ensure_extension(std::move(path), ".png"), grab(), mat, crs);
         }

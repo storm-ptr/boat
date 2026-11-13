@@ -52,26 +52,6 @@ inline param make(db::variant const& var)
     return std::visit(vis, var);
 }
 
-inline Oid type(param const& p)
-{
-    return std::visit([](auto& v) { return v.type(); }, p);
-}
-
-inline char const* value(param const& p)
-{
-    return std::visit([](auto& v) { return v.value(); }, p);
-}
-
-inline int length(param const& p)
-{
-    return std::visit([](auto& v) { return v.length(); }, p);
-}
-
-inline int format(param const& p)
-{
-    return std::visit([](auto& v) { return v.format(); }, p);
-}
-
 }  // namespace boat::sql::libpq::params
 
 #endif  // BOAT_SQL_LIBPQ_PARAMS_HPP

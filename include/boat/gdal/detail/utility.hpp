@@ -10,6 +10,7 @@
 #include <boat/detail/config.hpp>
 #include <boat/detail/string.hpp>
 #include <cstring>
+#include <format>
 #include <generator>
 #include <mutex>
 
@@ -102,10 +103,10 @@ inline auto subdatasets(GDALDatasetH ds)
 {
     auto meta = GDALGetMetadata(ds, "SUBDATASETS");
     for (int i = 1;; ++i) {
-        auto desc =
-            CSLFetchNameValue(meta, concat("SUBDATASET_", i, "_DESC").data());
-        auto name =
-            CSLFetchNameValue(meta, concat("SUBDATASET_", i, "_NAME").data());
+        auto desc = CSLFetchNameValue(
+            meta, std::format("SUBDATASET_{}_DESC", i).data());
+        auto name = CSLFetchNameValue(
+            meta, std::format("SUBDATASET_{}_NAME", i).data());
         if (!desc || !name)
             co_return;
         co_yield {desc, name};

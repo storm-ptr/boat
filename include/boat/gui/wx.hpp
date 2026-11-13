@@ -57,7 +57,7 @@ void draw_image(
         in_crs,
         out_affine,
         out_crs,
-        {0, 0, int(std::ceil(w)), int(std::ceil(h))},
+        {{0, 0}, {int(std::ceil(w)), int(std::ceil(h))}},
         [&](int w, int h) {
             img = wxImage{w, h};
             img.InitAlpha();
@@ -68,7 +68,7 @@ void draw_image(
             };
         });
     if (rect) {
-        auto [x, y, w, h] = *rect;
+        auto [x, y, w, h] = geometry::xywh(*rect);
         out.DrawBitmap(out.CreateBitmapFromImage(img), x, y, w, h);
     }
 }

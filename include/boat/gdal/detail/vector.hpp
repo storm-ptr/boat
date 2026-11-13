@@ -37,18 +37,17 @@ inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
 {
     OGRLayerH ret = 0;
     for (auto& col : tbl.columns) {
-        if (!col.has_coord_sys())
+        if (!has_coord_sys(col))
             continue;
         auto crs = make_srs(col.epsg, col.wkt, col.proj4);
         auto fld = unique_ptr<OGRGeomFieldDefnHS, OGR_GFld_Destroy>{
             OGR_GFld_Create(col.column_name.data(), wkbUnknown)};
         OGR_GFld_SetSpatialRef(fld.get(), crs.get());
-        if (ret)
-            check(OGR_L_CreateGeomField(ret, fld.get(), 1));
-        else if (GDALDatasetTestCapability(
-                     ds, ODsCCreateGeomFieldAfterCreateLayer)) {
-            ret = GDALDatasetCreateLayerFromGeomFieldDefn(
-                ds, tbl.table_name.data(), 0, 0);
+        if (ret || GDALDatasetTestCapability(
+                       ds, ODsCCreateGeomFieldAfterCreateLayer)) {
+            if (!ret)
+                ret = GDALDatasetCreateLayerFromGeomFieldDefn(
+                    ds, tbl.table_name.data(), 0, 0);
             check(OGR_L_CreateGeomField(ret, fld.get(), 1));
         }
         else {
@@ -60,7 +59,7 @@ inline OGRLayerH add_table(GDALDatasetH ds, db::table const& tbl)
     }
     boat::check(!!ret, "no geometry");
     for (auto& col : tbl.columns) {
-        if (col.has_coord_sys())
+        if (has_coord_sys(col))
             continue;
         auto fld = unique_ptr<void, OGR_Fld_Destroy>{
             OGR_Fld_Create(col.column_name.data(), fields::to_type(col.kind))};

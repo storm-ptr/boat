@@ -55,8 +55,8 @@ struct mysql : dialect {
         auto q = db::query{};
         q << "\n select " << select_list{tbl, rq.select_list} << "\n from "
           << id{tbl} << "\n where MBRIntersects("
-          << rect{tbl.dbms, col, rq.xmin, rq.ymin, rq.xmax, rq.ymax} << ", "
-          << db::id(col.column_name) << ")\n limit " << to_chars(rq.limit);
+          << bbox{tbl.dbms, col, rq.bounds} << ", " << db::id(col.column_name)
+          << ")\n limit " << to_chars(rq.limit);
         return q;
     }
 
@@ -73,8 +73,7 @@ struct mysql : dialect {
 
     db::query create(db::table const& tbl) const override
     {
-        auto q = db::query{};
-        q << "\n create table " << id{tbl};
+        auto q = db::query{"\n create table ", id{tbl}};
         for (auto sep{"\n ( "}; auto& col : tbl.columns) {
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
               << col.type_name;
@@ -85,13 +84,13 @@ struct mysql : dialect {
         }
         q << "\n );";
         int i{};
-        for (auto idx : tbl.indices() | std::views::filter(constructible)) {
-            auto key = std::ranges::begin(idx);
-            auto spatial = geo(tbl.columns, key->column_name);
+        for (auto idx : indices(tbl) | std::views::filter(constructible)) {
+            auto& key = idx.front();
+            auto spatial = geo(tbl.columns, key.column_name);
             if (spatial && std::ranges::size(idx) > 1u)
                 continue;
-            auto type = spatial ? "spatial" : key->unique ? "unique" : "";
-            if (key->primary)
+            auto type = spatial ? "spatial" : key.unique ? "unique" : "";
+            if (key.primary)
                 q << "\n alter table " << id{tbl} << " add primary key ";
             else
                 q << "\n create " << type << " index _" << to_chars(++i)

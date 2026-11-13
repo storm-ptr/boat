@@ -116,20 +116,15 @@ void sql_view::run()
                 output_->setPlainText(text);
         });
     });
-    watch_task(std::move(fut));
-}
-
-void sql_view::set_close_handler(std::function<void()> fn)
-{
-    close_handler_ = std::move(fn);
-}
-
-void sql_view::watch_task(QFuture<void> fut)
-{
     fut.then(this, [this] {
         auto busy = tasks_.busy();
         cancel_->setEnabled(busy);
         if (closing_ && !busy)
             deleteLater();
     });
+}
+
+void sql_view::set_close_handler(std::function<void()> fn)
+{
+    close_handler_ = std::move(fn);
 }

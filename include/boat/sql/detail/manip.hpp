@@ -4,8 +4,8 @@
 #define BOAT_SQL_MANIP_HPP
 
 #include <boat/db/query.hpp>
-#include <boat/geometry/algorithm.hpp>
 #include <boat/sql/detail/adaptors/adaptors.hpp>
+#include <boost/geometry/algorithms/convert.hpp>
 
 namespace boat::sql {
 
@@ -75,7 +75,7 @@ struct order_by {
     friend db::query& operator<<(db::query& out, order_by const& in)
     {
         if (in.keys.empty())
-            for (auto idx : in.tbl.indices() | std::views::filter(orderable) |
+            for (auto idx : indices(in.tbl) | std::views::filter(orderable) |
                                 std::views::take(1))
                 in.print(out, idx);
         else
@@ -84,19 +84,16 @@ struct order_by {
     }
 };
 
-struct rect {
+struct bbox {
     std::string_view dbms;
     db::column const& col;
-    double xmin;
-    double ymin;
-    double xmax;
-    double ymax;
+    geometry::cartesian::box const& bounds;
 
-    friend db::query& operator<<(db::query& out, rect const& in)
+    friend db::query& operator<<(db::query& out, bbox const& in)
     {
-        auto var = db::to_variant(geometry::to_polygon(
-            geometry::cartesian::box{{in.xmin, in.ymin}, {in.xmax, in.ymax}}));
-        adaptors::make(in.dbms, in.col)->insert(out, std::move(var));
+        auto poly = geometry::cartesian::polygon{};
+        boost::geometry::convert(in.bounds, poly);
+        adaptors::make(in.dbms, in.col)->insert(out, db::to_variant(poly));
         return out;
     }
 };

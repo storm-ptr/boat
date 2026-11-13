@@ -33,13 +33,6 @@ std::vector<copy_format> copy_formats(bool raster)
     return ret;
 }
 
-QString copy_as_filter(std::span<copy_format const> fmts)
-{
-    return (fmts | std::views::transform(&copy_format::filter) |
-            std::ranges::to<QStringList>())
-        .join(";;");
-}
-
 QString open_filter()
 {
     auto filters = QStringList{};

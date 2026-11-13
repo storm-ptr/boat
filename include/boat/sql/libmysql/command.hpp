@@ -49,7 +49,7 @@ public:
     db::rowset exec(db::query const& qry, std::stop_token = {}) override
     {
         auto ret = db::rowset{};
-        auto txt = qry.text(id_quote(), param_mark());
+        auto txt = qry.text('`', "?");
         auto ps = qry.params() | std::views::transform(to_bind) |
                   std::ranges::to<std::vector>();
         if (ps.empty()) {
@@ -91,8 +91,6 @@ public:
     }
 
     void commit() override { check(!mysql_commit(dbc_.get()), dbc_); }
-    char id_quote() override { return '`'; }
-    std::string param_mark() override { return "?"; }
     std::string dbms() override { return "mysql"; }
 };
 

@@ -18,17 +18,17 @@ inline auto sample(
     auto cells =
         std::vector<collection::value_type*>(cells_per_side * cells_per_side);
     auto a = box.min_corner(), b = box.max_corner();
-    auto center = bg::return_centroid<geo::cartesian::point>(box);
+    auto mid = bg::return_centroid<geo::cartesian::point>(box);
     auto cell = [&](auto v, auto lo, auto hi) {
         return int(std::clamp(
             cells_per_side * (v - lo) / (hi - lo), 0., cells_per_side - 1.));
     };
     for (auto& geom : geoms) {
         double best = INFINITY;
-        auto p = center;
+        auto p = mid;
         geo::for_each_point(geom, [&](auto&& v) {
             auto q = geo::cartesian{}(v);
-            auto d = bg::comparable_distance(q, center);
+            auto d = bg::comparable_distance(q, mid);
             if (d < best) {
                 best = d;
                 p = q;

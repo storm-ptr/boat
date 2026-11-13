@@ -12,8 +12,10 @@ namespace boat {
 namespace geometry::detail {
 
 constexpr auto endians = std::array{std::endian::big, std::endian::little};
+
 constexpr auto native = static_cast<uint8_t>(
     std::ranges::find(endians, std::endian::native) - endians.begin());
+
 static_assert(native < endians.size());
 
 constexpr auto read = overloaded{

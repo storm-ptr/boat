@@ -7,14 +7,24 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <QStringList>
 #include <algorithm>
 #include <boat/detail/uri.hpp>
+#include <ranges>
+#include <span>
 #include "formats.h"
 #include "map_view.h"
 #include "select_source_dialog.h"
 #include "tree_view.h"
 
 namespace {
+
+QString copy_as_filter(std::span<copy_format const> fmts)
+{
+    return (fmts | std::views::transform(&copy_format::filter) |
+            std::ranges::to<QStringList>())
+        .join(";;");
+}
 
 template <class Get, class Set>
 void pick_color(

@@ -80,9 +80,9 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
     cat1.zmax = 2;
     auto rast1 = cat1.get_raster(cat1.layers().at(0));
 
-    auto z = boat::tile::zmax(rast1.width, rast1.height);
-    auto tiles = boat::tile::all(rast1.width, rast1.height, z) |
-                 std::views::take(16) | std::ranges::to<std::vector>();
+    auto z = boat::tile::zmax(rast1.extent);
+    auto tiles = boat::tile::all(rast1.extent, z) | std::views::take(16) |
+                 std::ranges::to<std::vector>();
     BOOST_CHECK(!tiles.empty());
     auto img1 = cat1.read(rast1, tiles) | std::ranges::to<std::map>();
     BOOST_CHECK_EQUAL(img1.size(), tiles.size());
@@ -99,11 +99,7 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
         auto rast2 = cat2.get_raster(cat2.layers().at(0));
 
         for (auto [tile, img] : img1)
-            cat2.write(
-                rast2,
-                std::make_from_tuple<boat::db::rect>(
-                    tile.rect(rast2.width, rast2.height)),
-                const_view(img));
+            cat2.write(rast2, tile.rect(rast2.extent), const_view(img));
         auto img2 = cat2.read(rast2, tiles) | std::ranges::to<std::map>();
         BOOST_CHECK_EQUAL(img2.size(), tiles.size());
         for (auto& tile : tiles)
@@ -114,6 +110,7 @@ BOOST_AUTO_TEST_CASE(gdal_raster)
 BOOST_AUTO_TEST_CASE(gdal_image_io)
 {
     namespace gil = boost::gil;
+    namespace geo = boat::geometry;
     boat::gdal::init();
     auto ds = boat::gdal::dataset_ptr{
         GDALCreate(GDALGetDriverByName("MEM"), "", 4, 4, 3, GDT_Byte, nullptr)};
@@ -127,6 +124,8 @@ BOOST_AUTO_TEST_CASE(gdal_image_io)
         auto v = gil::view(img);
         auto n = 4 - 2 * margin;
         auto crop = gil::subimage_view(v, margin, margin, n, n);
+        auto window =
+            geo::raster::box{{margin, margin}, {margin + n, margin + n}};
         auto background = gil::rgb8_pixel_t{201, 202, 203};
         gil::fill_pixels(v, background);
         gil::copy_pixels(
@@ -138,12 +137,19 @@ BOOST_AUTO_TEST_CASE(gdal_image_io)
             BOOST_REQUIRE_EQUAL(
                 GDALFillRaster(GDALGetRasterBand(ds.get(), i + 1), 201 + i, 0),
                 CE_None);
-        boat::gdal::image_io(ds.get(), GF_Write, margin, margin, n, n, crop);
-        boat::gdal::image_io(ds.get(), GF_Read, 0, 0, 4, 4, gil::view(actual));
+        boat::gdal::image_io(ds.get(), GF_Write, window, crop);
         boat::gdal::image_io(
-            ds.get(), GF_Write, 0, 0, 4, 4, gil::const_view(expected));
+            ds.get(),
+            GF_Read,
+            {{0, 0}, {int(actual.width()), int(actual.height())}},
+            gil::view(actual));
+        boat::gdal::image_io(
+            ds.get(),
+            GF_Write,
+            {{0, 0}, {int(expected.width()), int(expected.height())}},
+            gil::const_view(expected));
         gil::fill_pixels(v, background);
-        boat::gdal::image_io(ds.get(), GF_Read, margin, margin, n, n, crop);
+        boat::gdal::image_io(ds.get(), GF_Read, window, crop);
         for (int y = 0; y < 4; ++y)
             for (int x = 0; x < 4; ++x) {
                 BOOST_CHECK(
@@ -161,8 +167,8 @@ BOOST_AUTO_TEST_CASE(gdal_image_io)
 
 BOOST_AUTO_TEST_CASE(gdal_raster_edge_tiles)
 {
-    for (auto [width, height] :
-         {std::pair{512, 512},
+    for (auto ext :
+         {boat::geometry::raster::point{512, 512},
           {513, 513},
           {515, 515},
           {513, 1},
@@ -171,8 +177,7 @@ BOOST_AUTO_TEST_CASE(gdal_raster_edge_tiles)
         auto cat = boat::gdal::catalog{};
         auto rast = boat::db::raster{
             .bands{{"gray", "byte"}},
-            .width = width,
-            .height = height,
+            .extent = ext,
             .xscale = 1,
             .yscale = -1,
             .epsg = 4326};
@@ -180,17 +185,17 @@ BOOST_AUTO_TEST_CASE(gdal_raster_edge_tiles)
         BOOST_REQUIRE_EQUAL(
             GDALFillRaster(GDALGetRasterBand(cat.dataset.get(), 1), 29, 0),
             CE_None);
-        for (int z = 0; z <= boat::tile::zmax(width, height); ++z) {
-            auto tiles = boat::tile::all(width, height, z) |
-                         std::ranges::to<std::vector>();
+        for (int z = 0; z <= boat::tile::zmax(ext); ++z) {
+            auto tiles =
+                boat::tile::all(ext, z) | std::ranges::to<std::vector>();
             auto images = cat.read(rast, tiles) | std::ranges::to<std::map>();
             BOOST_REQUIRE_EQUAL(images.size(), tiles.size());
             for (auto& [t, img] : images) {
-                auto [x, y, w, h] = t.rect(width, height);
-                auto scale = boat::tile::scale(width, height, z);
+                auto [x, y, w, h] = boat::geometry::xywh(t.rect(ext));
+                auto scale = boat::tile::scale(ext, z);
                 BOOST_REQUIRE_EQUAL(img.width(), std::ceil(double(w) / scale));
                 BOOST_REQUIRE_EQUAL(img.height(), std::ceil(double(h) / scale));
-                auto [a] = t.affine(width, height);
+                auto [a] = t.affine(ext);
                 BOOST_CHECK_EQUAL(a[0][2], x);
                 BOOST_CHECK_EQUAL(a[1][2], y);
                 BOOST_CHECK_SMALL(

@@ -24,11 +24,11 @@ void check(std::string const& wkt)
 {
     auto ll = from_wkt<Geom1>(wkt);
     auto xy = Geom2{};
-    BOOST_CHECK(transform(ll, xy, srs_forward(tf)));
+    BOOST_CHECK(transform(ll, xy, forward(tf)));
     BOOST_CHECK_NE(wkt, to_wkt(xy));
     auto wkb = boat::blob{} << xy;
     boat::blob_view{wkb} >> xy;
-    BOOST_CHECK(transform(xy, ll, srs_inverse(tf)));
+    BOOST_CHECK(transform(xy, ll, backward(tf)));
     BOOST_CHECK_EQUAL(wkt, to_wkt(ll));
 }
 
@@ -115,8 +115,7 @@ BOOST_AUTO_TEST_CASE(geometry_fibonacci_vs_rtree)
 BOOST_AUTO_TEST_CASE(geometry_raster)
 {
     auto ext = cartesian::box{};
-    transform(
-        geographic::box{{-180., -85.}, {180., 85.}}, ext, srs_forward(tf));
+    transform(geographic::box{{-180., -85.}, {180., 85.}}, ext, forward(tf));
     for (auto p : geographic_random() | std::views::take(10)) {
         auto node = geographic::point{};
         auto step = 0.;
@@ -125,18 +124,18 @@ BOOST_AUTO_TEST_CASE(geometry_raster)
             tf.forward(geographic::segment{p, add_meters(p, 0, res)}, px);
             auto steps = std::unordered_set<double>{};
             for (auto w : {width, width / 2}) {
-                auto mat = affine(w, height, px);
-                auto in = *transform(mat_forward(mat))(
-                    bounds<cartesian::box>(w, height));
+                auto mat = affine({w, height}, px);
+                auto in = *transform(forward(mat))(
+                    cartesian::box{{0., 0.}, {double(w), double(height)}});
                 if (!covered_by(in, ext))
                     continue;
                 auto grid =
-                    geographic_interpolate(w, height, mat, crs, res * 256.);
+                    geographic_interpolate({w, height}, mat, crs, res * 256.);
                 BOOST_REQUIRE(!grid.empty());
                 auto& lls = grid.begin()->second;
                 steps.insert(grid.begin()->first);
                 auto footprint = geographic::box{};
-                BOOST_REQUIRE(transform(in, footprint, srs_inverse(tf)));
+                BOOST_REQUIRE(transform(in, footprint, backward(tf)));
                 for (auto const& level : grid)
                     for (auto const& ll : level.second)
                         BOOST_CHECK_LE(distance(ll, footprint), level.first);

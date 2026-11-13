@@ -4,6 +4,7 @@
 #define BOAT_GDAL_IMAGE_IO_HPP
 
 #include <boat/gdal/detail/utility.hpp>
+#include <boat/geometry/vocabulary.hpp>
 #include <boost/gil.hpp>
 #include <cstdint>
 
@@ -32,10 +33,7 @@ template <specialized<boost::gil::image_view> T>
 void image_io(
     GDALDatasetH ds,
     GDALRWFlag rw,
-    int x,
-    int y,
-    int width,
-    int height,
+    geometry::raster::box const& rect,
     T img,
     std::vector<int> bands = {})
 {
@@ -47,6 +45,7 @@ void image_io(
         bands.assign_range(std::views::iota(0, num_channels));
     for (int& i : bands)
         ++i;
+    auto [x, y, w, h] = geometry::xywh(rect);
     for (size_t i{}; i < (planar ? bands.size() : 1); ++i) {
         void* data;
         if constexpr (planar)
@@ -59,8 +58,8 @@ void image_io(
             rw,
             x,
             y,
-            width,
-            height,
+            w,
+            h,
             data,
             static_cast<int>(img.width()),
             static_cast<int>(img.height()),

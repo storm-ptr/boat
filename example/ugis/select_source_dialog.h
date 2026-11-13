@@ -7,7 +7,6 @@
 
 class QComboBox;
 class QLineEdit;
-class QPushButton;
 
 class select_source_dialog : public QDialog {
 public:
@@ -16,12 +15,8 @@ public:
     QString address() const;
 
 private:
-    void browse_file();
-    void update_ok();
-
     QLineEdit* name_ = nullptr;
     QComboBox* address_ = nullptr;
-    QPushButton* ok_ = nullptr;
 };
 
 #endif  // SELECT_SOURCE_DIALOG_H

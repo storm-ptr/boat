@@ -46,7 +46,8 @@ void draw_image(
     geometry::srs_spec auto&& out_crs)
 {
     auto img = QImage{};
-    auto wnd = out.window();
+    int x, y, w, h;
+    out.window().getRect(&x, &y, &w, &h);
     auto rect = draw_image(
         policy,
         in,
@@ -54,14 +55,14 @@ void draw_image(
         in_crs,
         out_affine,
         out_crs,
-        {wnd.x(), wnd.y(), wnd.width(), wnd.height()},
+        {{x, y}, {x + w, y + h}},
         [&](int w, int h) {
             img = QImage{w, h, QImage::Format_RGBA8888};
             return [bits = reinterpret_cast<boost::gil::rgba8_pixel_t*>(
                         img.bits())](auto i, auto px) { bits[i] = px; };
         });
     if (rect)
-        out.drawImage((*rect)[0], (*rect)[1], img);
+        out.drawImage(detail::qt(rect->min_corner()), img);
 }
 
 }  // namespace boat::gui

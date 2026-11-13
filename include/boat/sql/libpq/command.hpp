@@ -25,7 +25,7 @@ public:
         char err[256]{};
         auto stop = std::stop_callback{
             tok, [&] { PQcancel(cxl.get(), err, sizeof(err)); }};
-        auto txt = qry.text(id_quote(), param_mark());
+        auto txt = qry.text('"', "${}");
         auto ps = qry.params() | std::views::transform(params::make) |
                   std::ranges::to<std::vector>();
         if (ps.empty()) {
@@ -38,11 +38,14 @@ public:
         auto lengths = std::vector<int>(ps.size());
         auto formats = std::vector<int>(ps.size());
         for (size_t i{}; i < ps.size(); ++i) {
-            auto& p = ps[i];
-            types[i] = params::type(p);
-            values[i] = params::value(p);
-            lengths[i] = params::length(p);
-            formats[i] = params::format(p);
+            std::visit(
+                [&](auto const& p) {
+                    types[i] = p.type();
+                    values[i] = p.value();
+                    lengths[i] = p.length();
+                    formats[i] = p.format();
+                },
+                ps[i]);
         }
         auto res = unique_ptr<PGresult, PQclear>{PQexecParams(
             dbc_.get(),
@@ -58,8 +61,6 @@ public:
 
     void set_autocommit(bool on) override { exec(on ? "rollback;" : "begin;"); }
     void commit() override { exec("commit;begin;"); }
-    char id_quote() override { return '"'; }
-    std::string param_mark() override { return "${}"; }
     std::string dbms() override { return "postgres"; }
 };
 

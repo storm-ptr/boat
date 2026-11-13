@@ -11,14 +11,14 @@ namespace boat::gui {
 
 struct view {
     geometry::geographic::point center{0, 0};
-    double resolution = 9'783.94;  ///< metres per pixel
+    double resolution = 9'783.94;  ///< Metres per pixel.
 };
 
 struct layer {
     db::layer db{};
-    uint32_t color = 0xff000000;   ///< ARGB
-    double width = 1;              ///< pixels; 0 selects a cosmetic pen.
-    std::optional<uint32_t> fill;  ///< ARGB
+    uint32_t color = 0xff000000;   ///< ARGB.
+    double width = 1;              ///< Pixels; 0 selects a cosmetic pen.
+    std::optional<uint32_t> fill;  ///< ARGB.
     bool hidden = false;
 };
 

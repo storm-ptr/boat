@@ -87,7 +87,9 @@ struct fibonacci {
         return *std::ranges::max_element(indices, std::less{}, proj);
     }
 
-    template <std::predicate<geographic::point const&> Pred = always_true>
+    template <
+        std::predicate<geographic::point const&> Pred =
+            decltype([](geographic::point const&) { return true; })>
     std::generator<size_t> nearests(geographic::point p, Pred pred = {}) const
     {
         auto done = std::unordered_set<size_t>{};

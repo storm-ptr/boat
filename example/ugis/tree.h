@@ -23,7 +23,7 @@ struct leaf {
     QPen pen;
     QBrush brush;
     Qt::CheckState state = Qt::Unchecked;
-    size_t cache = 0;
+    size_t cache_key = 0;
 };
 
 struct tree {

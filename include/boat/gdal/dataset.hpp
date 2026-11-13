@@ -29,7 +29,7 @@ inline dataset_ptr create(char const* file, char const* driver)
     return ret;
 }
 
-/// rast must contain at least one band.
+/// Requires at least one raster band.
 inline dataset_ptr
 create(char const* file, char const* driver, db::raster const& rast)
 {
@@ -39,8 +39,8 @@ create(char const* file, char const* driver, db::raster const& rast)
     auto ret = dataset_ptr{GDALCreate(
         drv,
         file,
-        rast.width,
-        rast.height,
+        rast.extent.x(),
+        rast.extent.y(),
         static_cast<int>(rast.bands.size()),
         GDALGetDataTypeByName(rast.bands.at(0).type_name.data()),
         0)};

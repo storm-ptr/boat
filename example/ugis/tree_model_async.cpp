@@ -2,8 +2,9 @@
 
 #include <QDebug>
 #include <boat/db/io.hpp>
+#include <boat/geometry/raster.hpp>
 #include <boat/gui/caches/cache.hpp>
-#include <boat/gui/utility.hpp>
+#include <boat/tile.hpp>
 #include <filesystem>
 #include "copy_layer.h"
 #include "db.h"
@@ -93,7 +94,10 @@ void tree_model::drop(QModelIndex const& idx)
             return;
         make_catalog(adr, true)->drop(scm, tbl);
         qInfo() << "dropped" << boat::concat(scm, scm.empty() ? "" : ".", tbl);
-        post(this, [=] { on_dropped(per); });
+        post(this, [this, per] {
+            if (per.isValid() && to_leaf(per))
+                removeRows(per.row(), 1, per.parent());
+        });
     });
 }
 
@@ -116,7 +120,7 @@ void tree_model::fetchMore(QModelIndex const& idx)
                     children.push_back(std::make_unique<tree>(leaf{
                         .address = src.address,
                         .layer = item,
-                        .cache = boat::gui::caches::next_key()}));
+                        .cache_key = boat::gui::caches::next_key()}));
                 qInfo() << "fetched" << children.size() << "items from"
                         << src.source_name;
             }
@@ -169,20 +173,19 @@ void tree_model::sample(QModelIndex const& idx, viewport const& vp)
             std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
         if (it == tbl.columns.end())
             return;
-        auto w = vp.width, h = vp.height;
-        if (w <= 0 || h <= 0)
+        auto ext = vp.extent;
+        if (ext.x() <= 0 || ext.y() <= 0)
             return;
         auto ortho = boat::geometry::ortho(vp.view.center);
-        auto mat = affine(w, h, vp.view, ortho);
-        auto query_grid =
-            boat::gui::make_query_grid(w, h, mat, ortho, vp.view.resolution);
-        auto crs = boat::gui::to_srs_variant(*it);
-        for (auto& box : boat::gui::query_boxes(query_grid, crs)) {
+        auto mat = boat::geometry::affine(
+            ext, vp.view.center, vp.view.resolution, ortho);
+        auto footprint = boat::geometry::geographic_interpolate(
+            ext, mat, ortho, vp.view.resolution * boat::tile::half_size);
+        auto crs = boat::geometry::to_srs_variant(it->epsg, it->proj4);
+        for (auto& box : boat::geometry::make_boxes(footprint, crs)) {
             if (tok.stop_requested())
                 return;
-            auto a = box.min_corner(), b = box.max_corner();
-            auto rs = cat->select(
-                tbl, boat::db::bbox{{}, col, a.x(), a.y(), b.x(), b.y(), 10});
+            auto rs = cat->select(tbl, boat::db::bbox{{}, col, box, 10});
             if (!rs.empty()) {
                 qInfo().noquote() << boat::concat(rs);
                 return;

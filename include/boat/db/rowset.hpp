@@ -22,7 +22,7 @@ struct rowset {
     variant const& value() const { return rows.at(0).at(0); }
 };
 
-/// Converts a rowset row to a structure.
+/// Columns must match the field count and order; scalars need one column.
 template <class T>
 constexpr auto view = std::views::transform([](range_of<variant> auto&& r) {
     T ret;
@@ -39,7 +39,7 @@ constexpr auto view = std::views::transform([](range_of<variant> auto&& r) {
     return ret;
 });
 
-/// Converts a range of structures to a rowset.
+/// Uses aggregate field names as column names.
 rowset to_rowset(std::ranges::input_range auto&& r)
 {
     auto ret = rowset{

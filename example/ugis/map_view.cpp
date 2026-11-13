@@ -4,15 +4,14 @@
 #include <QMouseEvent>
 #include <QStatusBar>
 #include <QWheelEvent>
+#include <boat/geometry/raster.hpp>
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/qt.hpp>
-#include <boat/gui/utility.hpp>
 #include <boost/gil.hpp>
 #include "map_view.h"
 #include "tree.h"
 
 namespace geo = boat::geometry;
-using boat::gui::affine;
 using point = geo::geographic::point;
 
 namespace {
@@ -25,8 +24,8 @@ constexpr auto resolution_max = 19'567.88;
 auto unproject(viewport const& vp, QPointF cursor)
 {
     return [=, tf = geo::transformation(geo::ortho(vp.view.center))](auto res) {
-        auto mat = affine(vp.width, vp.height, {vp.view.center, res}, tf);
-        return geo::transform(geo::mat_forward(mat), geo::srs_inverse(tf))(
+        auto mat = geo::affine(vp.extent, vp.view.center, res, tf);
+        return geo::transform(geo::forward(mat), geo::backward(tf))(
             point(cursor.x(), cursor.y()));
     };
 }
@@ -35,7 +34,7 @@ auto unproject(viewport const& vp, QPointF cursor)
 
 map_view::map_view(QWidget* parent)
     : QWidget(parent)
-    , cache_(std::make_shared<boat::gui::caches::lru>(1024))
+    , cache_(std::make_shared<boat::gui::caches::lru>(2'000))
     , tasks_{1}
 {
     setMouseTracking(true);
@@ -52,30 +51,29 @@ void map_view::leaveEvent(QEvent*)
 
 void map_view::mouseMoveEvent(QMouseEvent* event)
 {
+    auto const& [mid, res] = map_;
     auto pos = event->pos();
     auto guard = qScopeGuard([&] { update_status(pos); });
     if (!panning_pos_)
         return;
     auto delta = pos - *std::exchange(panning_pos_, pos);
-    auto tf = geo::transformation(geo::ortho(map_.center));
-    auto fwd = geo::transform(geo::srs_forward(tf));
-    auto xy = fwd(map_.center);
+    auto tf = geo::transformation(geo::ortho(mid));
+    auto fwd = geo::transform(geo::forward(tf));
+    auto xy = fwd(mid);
     if (!xy)
         return;
-    auto mat = affine(width(), height(), map_, fwd);
-    auto cursor =
-        geo::transform(geo::mat_forward(mat))(point(pos.x(), pos.y()));
+    auto mat = geo::affine({width(), height()}, mid, res, fwd);
+    auto cursor = geo::transform(geo::forward(mat))(point(pos.x(), pos.y()));
     auto pole_y = boat::numbers::earth::mean_radius *
-                  std::cos(map_.center.y() * boat::numbers::degree);
-    auto flip =
-        cursor && std::copysign(1., map_.center.y()) * cursor->y() > pole_y;
-    auto dx = (flip ? delta.x() : -delta.x()) * map_.resolution;
-    auto dy = delta.y() * map_.resolution;
+                  std::cos(mid.y() * boat::numbers::degree);
+    auto flip = cursor && std::copysign(1., mid.y()) * cursor->y() > pole_y;
+    auto dx = (flip ? delta.x() : -delta.x()) * res;
+    auto dy = delta.y() * res;
     auto ll =
-        geo::transform(geo::srs_inverse(tf))(point(xy->x() + dx, xy->y() + dy));
+        geo::transform(geo::backward(tf))(point(xy->x() + dx, xy->y() + dy));
     if (!ll)
         return;
-    map_ = bounded({*ll, map_.resolution}).value_or(map_);
+    map_ = bounded({*ll, res}).value_or(map_);
     schedule_paint();
 }
 
@@ -97,17 +95,20 @@ void map_view::mouseReleaseEvent(QMouseEvent* event)
 
 void map_view::paintEvent(QPaintEvent*)
 {
+    auto const& [mid, res] = map_;
+    auto const& [img_mid, img_res] = img_view_;
     auto art = QPainter{this};
     art.fillRect(rect(), Qt::white);
     if (img_.isNull())
         return;
-    if (boost::geometry::equals(img_view_.center, map_.center) &&
-        img_view_.resolution == map_.resolution && img_.size() == size())
+    if (boost::geometry::equals(img_mid, mid) && img_res == res &&
+        img_.size() == size())
         return art.drawImage(0, 0, img_);
-    auto img_crs = geo::ortho(img_view_.center);
-    auto img_mat = affine(img_.width(), img_.height(), img_view_, img_crs);
-    auto map_crs = geo::ortho(map_.center);
-    auto map_mat = affine(width(), height(), map_, map_crs);
+    auto img_crs = geo::ortho(img_mid);
+    auto img_mat =
+        geo::affine({img_.width(), img_.height()}, img_mid, img_res, img_crs);
+    auto map_crs = geo::ortho(mid);
+    auto map_mat = geo::affine({width(), height()}, mid, res, map_crs);
     auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
     auto gil = boost::gil::interleaved_view(
         img_.width(), img_.height(), bits, img_.bytesPerLine());
@@ -157,7 +158,7 @@ void map_view::update_status(QPointF cursor)
 
 viewport map_view::view() const
 {
-    return {map_, width(), height()};
+    return {map_, {width(), height()}};
 }
 
 void map_view::watch_task(QFuture<void> fut)
@@ -193,15 +194,14 @@ std::optional<boat::gui::view> map_view::bounded(boat::gui::view v)
 
 void map_view::wheelEvent(QWheelEvent* event)
 {
+    auto const& [mid, res] = map_;
     auto pos = event->position();
     auto factor = std::pow(2., event->angleDelta().y() / 8. / 60.);
-    auto next = bounded({map_.center, map_.resolution / factor}).value_or(map_);
+    auto next = bounded({mid, res / factor}).value_or(map_);
     auto ll = unproject(view(), pos);
-    auto a = ll(map_.resolution), b = ll(next.resolution);
+    auto a = ll(res), b = ll(next.resolution);
     if (a && b)
-        next.center = {
-            map_.center.x() + a->x() - b->x(),
-            map_.center.y() + a->y() - b->y()};
+        next.center = {mid.x() + a->x() - b->x(), mid.y() + a->y() - b->y()};
     map_ = bounded(next).value_or(map_);
     schedule_paint();
     update_status(pos);

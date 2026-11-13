@@ -14,7 +14,7 @@ struct command : db::command {
 
     db::rowset exec(db::query const& qry, std::stop_token = {}) override
     {
-        auto txt = qry.text(id_quote(), param_mark());
+        auto txt = qry.text('"', {});
         if (auto lyr = execute(dataset.get(), txt.data(), dialect.data()))
             return select(lyr.get(), fields::make(lyr.get()), INT_MAX);
         auto err = error_or("");
@@ -27,8 +27,6 @@ struct command : db::command {
     }
 
     void commit() override { gdal::commit(dataset.get()); }
-    char id_quote() override { return '"'; }
-    std::string param_mark() override { return {}; }
     std::string dbms() override { return to_lower(dialect); }
 };
 

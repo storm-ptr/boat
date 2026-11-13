@@ -62,10 +62,7 @@ inline void check(boat::db::catalog& cat)
 
     auto bbox = db::bbox{
         .select_list{std::string(boost::pfr::get_name<0, udt>())},
-        .xmin = 9,
-        .ymin = 9,
-        .xmax = 11,
-        .ymax = 11,
+        .bounds{{9, 9}, {11, 11}},
         .limit = int(objs.size())};
     BOOST_CHECK(std::ranges::equal(
         std::array{2}, cat.select(tbl, bbox) | db::view<int>));

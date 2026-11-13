@@ -56,7 +56,7 @@ public:
         auto stop = std::stop_callback{tok, [&] { SQLCancel(stmt_.get()); }};
         check(SQLFreeStmt(stmt_.get(), SQL_RESET_PARAMS), stmt_);
         auto ret = db::rowset{};
-        auto txt = qry.text(id_quote_, param_mark()) | unicode::utf<SQLWCHAR>;
+        auto txt = qry.text(id_quote_, "?") | unicode::utf<SQLWCHAR>;
         if (txt != prepared_) {
             check(SQLPrepareW(stmt_.get(), txt.data(), SQL_NTS), stmt_);
             prepared_ = std::move(txt);
@@ -106,8 +106,6 @@ public:
         check(SQLEndTran(SQL_HANDLE_DBC, dbc_.get(), SQL_COMMIT), dbc_);
     }
 
-    char id_quote() override { return id_quote_; }
-    std::string param_mark() override { return "?"; }
     std::string dbms() override { return dbms_; }
 };
 

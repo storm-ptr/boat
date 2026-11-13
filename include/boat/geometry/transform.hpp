@@ -16,6 +16,7 @@
 namespace boat::geometry {
 
 namespace srs = boost::geometry::srs;
+
 using srs_variant = std::variant<srs::epsg, srs::proj4>;
 
 template <class T>
@@ -33,7 +34,6 @@ concept projection_or_transformation =
 
 static auto const lonlat = srs::proj4{" +proj=lonlat +datum=WGS84 +no_defs"};
 
-/// Orthographic SRS centered at v.
 inline auto ortho(geographic::point const& v)
 {
     return srs::proj4{std::format(
@@ -55,32 +55,36 @@ auto transformation(srs_spec auto const& a, srs_spec auto const& b)
         return srs::transformation<>(a, b);
 }
 
-/// Creates a transformation from WGS 84 longitude/latitude to v.
+/// From WGS 84 lon/lat to the specified CRS.
 auto transformation(srs_spec auto const& v)
 {
     return transformation(lonlat, v);
 }
 
+inline auto forward(matrix const& v)
+{
+    return boost::geometry::strategy::transform::
+        matrix_transformer<double, 2, 2>{v};
+}
+
 template <projection_or_transformation T>
-auto srs_forward(T const& v)
+auto forward(T const& v)
 {
     return boost::geometry::strategy::transform::srs_forward_transformer<T>{v};
 }
 
+inline auto backward(matrix const& v)
+{
+    return forward(inverse(v));
+}
+
 template <projection_or_transformation T>
-auto srs_inverse(T const& v)
+auto backward(T const& v)
 {
     return boost::geometry::strategy::transform::srs_inverse_transformer<T>{v};
 }
 
-using mat_forward =
-    boost::geometry::strategy::transform::matrix_transformer<double, 2, 2>;
-
-inline auto mat_inverse(matrix const& v)
-{
-    return mat_forward{inverse(v)};
-}
-
+/// Collections succeed if any element succeeds; failed elements are omitted.
 template <tagged T1, same_tag<T1> T2, class Strategy>
 bool transform(T1 const& geom1, T2& geom2, Strategy const& strategy)
 {
@@ -103,7 +107,7 @@ bool transform(T1 const& geom1, T2& geom2, Strategy const& strategy)
         }}(geom1, geom2);
 }
 
-/// Composes strategies and returns std::nullopt if a transformation fails.
+/// Strategies run left to right; a failed step returns std::nullopt.
 auto transform(auto const&... strategies)
 {
     return [=]<tagged T>(T a) {
@@ -112,6 +116,16 @@ auto transform(auto const&... strategies)
                    ? std::optional{std::move(a)}
                    : std::nullopt;
     };
+}
+
+/// Prefers positive EPSG to PROJ.4; throws if neither is available.
+inline srs_variant to_srs_variant(int epsg, std::string const& proj4)
+{
+    if (epsg > 0)
+        return srs::epsg{epsg};
+    if (!proj4.empty())
+        return srs::proj4{proj4};
+    throw std::runtime_error("no SRS");
 }
 
 }  // namespace boat::geometry

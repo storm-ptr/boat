@@ -8,7 +8,7 @@
 
 namespace boat::db {
 
-/// Reads WKB from a blob; NULL produces a default-constructed geometry.
+/// Reads WKB from a blob; NULL resets the geometry.
 void read(variant const& in, geometry::ogc auto& out)
 {
     if (in.has_value())
@@ -17,7 +17,7 @@ void read(variant const& in, geometry::ogc auto& out)
         out = {};
 }
 
-/// Serializes an OGC geometry as WKB in a blob.
+/// Stores WKB in a blob.
 void write(variant& out, geometry::ogc auto const& in)
 {
     out.emplace<blob>() << in;

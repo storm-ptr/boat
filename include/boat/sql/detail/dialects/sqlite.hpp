@@ -5,6 +5,7 @@
 
 #include <boat/sql/detail/dialects/dialect.hpp>
 #include <boat/sql/detail/manip.hpp>
+#include <format>
 
 namespace boat::sql::dialects {
 
@@ -66,14 +67,15 @@ struct sqlite : dialect {
         auto key = std::ranges::find(
             tbl.index_keys, col.column_name, &db::index_key::column_name);
         check(key != tbl.index_keys.end(), "no spatial index");
+        auto a = rq.bounds.min_corner(), b = rq.bounds.max_corner();
         auto q = db::query{};
         q << "\n select " << select_list{tbl, rq.select_list}  //
           << "\n from " << db::id{tbl.table_name}
           << "\n where rowid in (select pkid from " << db::id{key->index_name}
-          << "\n  where xmax >= " << db::variant(rq.xmin)
-          << "\n  and xmin <= " << db::variant(rq.xmax)
-          << "\n  and ymax >= " << db::variant(rq.ymin)
-          << "\n  and ymin <= " << db::variant(rq.ymax)  //
+          << "\n  where xmax >= " << db::variant(a.x())
+          << "\n  and xmin <= " << db::variant(b.x())
+          << "\n  and ymax >= " << db::variant(a.y())
+          << "\n  and ymin <= " << db::variant(b.y())  //
           << "\n  limit " << to_chars(rq.limit) << ");";
         return q;
     }
@@ -90,14 +92,13 @@ struct sqlite : dialect {
 
     db::query create(db::table const& tbl) const override
     {
-        auto q = db::query{};
-        q << "\n create table " << db::id{tbl.table_name};
+        auto q = db::query{"\n create table ", db::id{tbl.table_name}};
         auto sep{"\n ( "};
         for (auto& col : tbl.columns | std::views::filter(std::not_fn(geo)))
             q << std::exchange(sep, "\n , ") << db::id{col.column_name} << " "
               << col.type_name;
         for (auto idx :
-             tbl.indices() | std::views::filter(primary) | std::views::take(1))
+             indices(tbl) | std::views::filter(primary) | std::views::take(1))
             q << std::exchange(sep, "\n , ") << "primary key "
               << index_spec{idx};
         q << "\n );";
@@ -106,17 +107,17 @@ struct sqlite : dialect {
               << ", " << db::variant{col.column_name} << ", "
               << to_chars(col.srid) << ", 'GEOMETRY', 'XY');";
         int i{};
-        for (auto idx : tbl.indices() | std::views::filter(constructible) |
+        for (auto idx : indices(tbl) | std::views::filter(constructible) |
                             std::views::filter(std::not_fn(primary))) {
-            auto key = std::ranges::begin(idx);
-            if (!geo(tbl.columns, key->column_name))
-                q << "\n create " << (key->unique ? "unique " : "") << "index "
-                  << concat("_", tbl.table_name, "_", ++i) << " on "
+            auto& key = idx.front();
+            if (!geo(tbl.columns, key.column_name))
+                q << "\n create " << (key.unique ? "unique " : "") << "index "
+                  << std::format("_{}_{}", tbl.table_name, ++i) << " on "
                   << db::id{tbl.table_name} << " " << index_spec{idx} << ";";
             else if (std::ranges::size(idx) == 1u)
                 q << "\n select CreateSpatialIndex("
                   << db::variant{tbl.table_name} << ", "
-                  << db::variant{key->column_name} << ");";
+                  << db::variant{key.column_name} << ");";
         }
         return q;
     }

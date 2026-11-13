@@ -20,7 +20,7 @@ struct variant : variant_base {
 };
 
 /// NULL becomes T{}.
-/// @throws std::bad_variant_access if the stored type is incompatible with T.
+/// @throws std::bad_variant_access if the stored type is incompatible.
 template <std::convertible_to<variant_base> T>
 void read(variant const& in, T& out)
 {
@@ -53,7 +53,6 @@ variant to_variant(auto const& val)
     return ret;
 }
 
-/// Maps a C++ type to the database-neutral type name used by boat.
 template <class>
 struct kind;
 

@@ -8,13 +8,15 @@
 #include <boost/geometry/geometries/geometries.hpp>
 #include <boost/qvm/mat.hpp>
 #include <map>
+#include <tuple>
 
 namespace boat::geometry {
 
+namespace cs = boost::geometry::cs;
 namespace model = boost::geometry::model;
 
 template <class T>
-using tag = boost::geometry::tag<T>::type;
+using tag = boost::geometry::tag_t<T>;
 
 template <class T>
 constexpr bool has_tag = !std::is_same_v<tag<T>, void>;
@@ -58,9 +60,9 @@ concept single = std::derived_from<tag<T>, boost::geometry::single_tag>;
 template <class T>
 concept curve = single<T> && point<std::ranges::range_value_t<T>>;
 
-template <class CoordSys>
+template <class Coord, class CoordSys>
 struct d2 {
-    using point = model::d2::point_xy<double, CoordSys>;
+    using point = model::d2::point_xy<Coord, CoordSys>;
     using linestring = model::linestring<point>;
     using polygon = model::polygon<point, false, true>;
     using multi_point = model::multi_point<point>;
@@ -68,7 +70,7 @@ struct d2 {
     using multi_polygon = model::multi_polygon<polygon>;
     using box = model::box<point>;
     using segment = model::segment<point>;
-    using grid = std::map<double, multi_point>;
+    using grid = std::map<Coord, multi_point>;
 
     struct geometry_collection;
 
@@ -86,29 +88,39 @@ struct d2 {
         using boat_geometry_tag = boost::geometry::geometry_collection_tag;
     };
 
-    d2<CoordSys>::point operator()(geometry::point auto const& v) const
+    static point operator()(geometry::point auto const& v)
     {
-        return {v.x(), v.y()};
+        return {Coord(v.x()), Coord(v.y())};
     }
 
-    d2<CoordSys>::box operator()(geometry::box auto const& v) const
+    static box operator()(geometry::box auto const& v)
     {
-        return {(*this)(v.min_corner()), (*this)(v.max_corner())};
+        return {operator()(v.min_corner()), operator()(v.max_corner())};
     }
 };
 
-using cartesian = d2<boost::geometry::cs::cartesian>;
-using geographic = d2<boost::geometry::cs::geographic<boost::geometry::degree>>;
+using cartesian = d2<double, cs::cartesian>;
+using geographic = d2<double, cs::geographic<boost::geometry::degree>>;
 using matrix = boost::qvm::mat<double, 3, 3>;
+using raster = d2<int, cs::cartesian>;
 
 template <class T>
-using d2_of = d2<typename boost::geometry::coordinate_system<T>::type>;
+using d2_t =
+    d2<boost::geometry::coordinate_type_t<T>,
+       boost::geometry::coordinate_system_t<T>>;
 
 template <class T>
-concept ogc = tagged<T> && std::convertible_to<T, typename d2_of<T>::variant>;
+concept ogc =
+    tagged<T> && std::same_as<boost::geometry::coordinate_type_t<T>, double> &&
+    std::convertible_to<T, typename d2_t<T>::variant>;
 
 template <class T>
-constexpr auto variant_index_v = variant_index<typename d2_of<T>::variant, T>();
+constexpr auto variant_index_v = variant_index<typename d2_t<T>::variant, T>();
+
+constexpr auto xywh = [](box auto const& v) {
+    auto a = v.min_corner(), b = v.max_corner();
+    return std::tuple{a.x(), a.y(), b.x() - a.x(), b.y() - a.y()};
+};
 
 }  // namespace boat::geometry
 

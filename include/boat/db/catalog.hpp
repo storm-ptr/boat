@@ -12,7 +12,6 @@
 
 namespace boat::db {
 
-/// Uniform access to vector and raster data.
 struct catalog {
     virtual ~catalog() = default;
 
@@ -45,8 +44,8 @@ struct catalog {
         raster,
         std::vector<tile>) = 0;
 
-    /// rect coordinates are pixels.
-    virtual void write(raster const&, rect const&, gil::any_image_view) = 0;
+    virtual void
+    write(raster const&, geometry::raster::box const&, gil::any_image_view) = 0;
 
     virtual void set_autocommit(bool) = 0;
 

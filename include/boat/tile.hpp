@@ -4,10 +4,8 @@
 #define BOAT_TILE_HPP
 
 #include <boat/detail/utility.hpp>
+#include <boat/geometry/vocabulary.hpp>
 #include <boost/pfr/ops_fields.hpp>
-#include <boost/qvm/map_vec_mat.hpp>
-#include <boost/qvm/mat_operations.hpp>
-#include <boost/qvm/vec.hpp>
 #include <generator>
 
 namespace boat {
@@ -16,22 +14,22 @@ struct tile {
     int z, y, x;
 
     static constexpr int size = 256;  ///< Maximum tile side in pixels.
+    static constexpr int half_size = size / 2;
 
     friend auto operator<=>(tile const&, tile const&) = default;
 
     friend auto hash_value(tile const& v) { return boost::pfr::hash_fields(v); }
 
-    /// Finest zoom, with one raster pixel per tile pixel.
-    static int zmax(int width, int height)
+    /// One raster pixel per tile pixel.
+    static int zmax(geometry::raster::point ext)
     {
-        auto px = static_cast<size_t>(std::max<>({width, height, size}));
-        auto tl = static_cast<size_t>(std::bit_ceil(px) / size);
-        return static_cast<int>(std::bit_width(tl)) - 1;
+        auto n = std::max<>({ext.x(), ext.y(), size});
+        return std::bit_width(unsigned((n - 1) / size));
     }
 
-    static int zoom(int width, int height, double scale)
+    static int zoom(geometry::raster::point ext, double scale)
     {
-        int lim = zmax(width, height);
+        int lim = zmax(ext);
         scale *= pow2(lim);
         for (int i = lim; i > 0; --i)
             if (scale >= pow2(i))
@@ -40,45 +38,44 @@ struct tile {
     }
 
     /// Raster pixels per tile pixel.
-    static int scale(int width, int height, int zoom)
+    static int scale(geometry::raster::point ext, int zoom)
     {
-        return pow2(zmax(width, height) - zoom);
+        return pow2(zmax(ext) - zoom);
     }
 
-    static std::generator<tile> all(int width, int height, int zoom)
+    static std::generator<tile> all(geometry::raster::point ext, int zoom)
     {
-        if (width <= 0 || height <= 0)
+        if (ext.x() <= 0 || ext.y() <= 0)
             co_return;
-        int px = scale(width, height, zoom);
-        int tl = size * px;
-        int xmax = (width - 1) / tl;
-        int ymax = (height - 1) / tl;
-        for (int y{}; y <= ymax; ++y)
-            for (int x{}; x <= xmax; ++x)
+        int tl = size * scale(ext, zoom);
+        auto nx = ext.x() / tl + (ext.x() % tl != 0);
+        auto ny = ext.y() / tl + (ext.y() % tl != 0);
+        for (int y{}; y < ny; ++y)
+            for (int x{}; x < nx; ++x)
                 co_yield {.z = zoom, .y = y, .x = x};
     }
 
-    /// Clipped raster-pixel rectangle `{x, y, width, height}`.
-    std::tuple<int, int, int, int> rect(int width, int height) const
+    /// Clips the tile window to the raster extent.
+    geometry::raster::box rect(geometry::raster::point ext) const
     {
-        int px = scale(width, height, z);
-        int tl = size * px;
-        int x1 = std::clamp(x * tl, 0, width);
-        int y1 = std::clamp(y * tl, 0, height);
-        int x2 = std::clamp((x + 1) * tl, 0, width);
-        int y2 = std::clamp((y + 1) * tl, 0, height);
-        return {x1, y1, x2 - x1, y2 - y1};
+        int tl = size * scale(ext, z);
+        return {
+            {std::clamp(x * tl, 0, ext.x()), std::clamp(y * tl, 0, ext.y())},
+            {std::clamp((x + 1) * tl, 0, ext.x()),
+             std::clamp((y + 1) * tl, 0, ext.y())}};
     }
 
     /// Maps tile pixels to raster pixels.
-    auto affine(int width, int height) const
+    auto affine(geometry::raster::point ext) const
     {
-        auto [x, y, w, h] = rect(width, height);
-        auto px = scale(width, height, z);
-        double sx = double(w) / ((w + px - 1) / px);
-        double sy = double(h) / ((h + px - 1) / px);
-        return boost::qvm::translation_mat(boost::qvm::vec{{x * 1., y * 1.}}) *
-               boost::qvm::diag_mat(boost::qvm::vec{{sx, sy, 1.}});
+        auto [x, y, w, h] = geometry::xywh(rect(ext));
+        auto px = scale(ext, z);
+        auto nx = w / px + (w % px != 0);
+        auto ny = h / px + (h % px != 0);
+        return geometry::matrix{
+            {{double(w) / nx, 0., double(x)},
+             {0., double(h) / ny, double(y)},
+             {0., 0., 1.}}};
     }
 };
 

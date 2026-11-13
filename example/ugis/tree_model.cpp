@@ -243,13 +243,6 @@ void tree_model::on_pasted(QPersistentModelIndex per, leaf const& lyr)
     endInsertRows();
 }
 
-void tree_model::on_dropped(QPersistentModelIndex per)
-{
-    if (!per.isValid() || !to_leaf(per))
-        return;
-    removeRows(per.row(), 1, per.parent());
-}
-
 void tree_model::on_fetch_canceled(QPersistentModelIndex per)
 {
     if (!per.isValid())

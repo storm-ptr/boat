@@ -37,7 +37,7 @@ public:
         auto stop =
             std::stop_callback{tok, [&] { sqlite3_interrupt(dbc_.get()); }};
         auto ret = db::rowset{};
-        auto const txt = qry.text(id_quote(), param_mark());
+        auto const txt = qry.text('"', "?");
         auto first = txt.data();
         auto last = first + txt.size();
         auto ps = qry.params();
@@ -72,8 +72,6 @@ public:
 
     void set_autocommit(bool on) override { exec(on ? "rollback;" : "begin;"); }
     void commit() override { exec("commit;begin;"); }
-    char id_quote() override { return '"'; }
-    std::string param_mark() override { return "?"; }
     std::string dbms() override { return "sqlite"; }
 };
 

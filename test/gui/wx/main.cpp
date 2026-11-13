@@ -5,8 +5,9 @@
 #include <wx/pen.h>
 #include <boat/gui/wx.hpp>
 #include <boost/test/included/unit_test.hpp>
+#include <format>
 #include "../context.hpp"
-#include "../parameters.hpp"
+#include "../queries.hpp"
 
 namespace {
 
@@ -44,26 +45,25 @@ BOOST_AUTO_TEST_CASE(wx_draw)
 {
     wxInitAllImageHandlers();
     auto pixels_sum = 0., transparent_sum = 0.;
-    auto params = parameters() | std::ranges::to<std::vector>();
+    auto qs = queries() | std::ranges::to<std::vector>();
     for (auto [i, ctx] : std::views::enumerate(contexts())) {
-        auto img = wxImage(ctx.width, ctx.height);
+        auto img = wxImage(ctx.extent.x(), ctx.extent.y());
         img.InitAlpha();
-        auto num_pixels = ctx.width * ctx.height;
+        auto num_pixels = 1LL * ctx.extent.x() * ctx.extent.y();
         std::memset(img.GetAlpha(), wxIMAGE_ALPHA_TRANSPARENT, num_pixels);
         std::memset(img.GetData(), UCHAR_MAX, 3 * num_pixels);
-        for (auto& p : params) {
-            p.query_grid = ctx.query_grid;
+        for (auto& q : qs) {
+            q.footprint = ctx.footprint;
             auto tmp = img.Copy();
             auto art = make_graphics_context(tmp);
             auto drw = boat::gui::draw_variant(
                 std::execution::par, *art, ctx.affine, ctx.crs);
-            for (auto var : renderables(p))
+            for (auto var : fetch(q))
                 std::visit(drw, var);
             art.reset();
             compose_darken(img, tmp);
         }
-        auto path =
-            boat::concat("drop.", std::setfill('0'), std::setw(2), i, ".png");
+        auto path = std::format("drop.{:02}.png", i);
         img.SaveFile(wxASCII_STR(path.data()), wxBITMAP_TYPE_PNG);
         pixels_sum += num_pixels;
         transparent_sum += std::count(

@@ -5,6 +5,7 @@
 
 #include <boat/sql/odbc/drivers.hpp>
 #include <boost/preprocessor/stringize.hpp>
+#include <format>
 #include <regex>
 #include <unordered_map>
 
@@ -45,28 +46,22 @@ constexpr auto postgres_host =
         ;
 
 inline static auto const mysql_address =
-    boat::concat("mysql://root:", password, "@", mysql_host, "/mysql");
+    std::format("mysql://root:{}@{}/mysql", password, mysql_host);
 
-inline static auto const mysql_gdal_address = boat::concat(
-    "mysql:mysql,user=root,password=",
+inline static auto const mysql_gdal_address = std::format(
+    "mysql:mysql,user=root,password={},host={},port=3306",
     password,
-    ",host=",
-    mysql_host,
-    ",port=3306");
+    mysql_host);
 
-inline static auto const postgres_address = boat::concat(
-    "postgres://postgres:",
+inline static auto const postgres_address = std::format(
+    "postgres://postgres:{}@{}/postgres?client_encoding=UTF8",
     password,
-    "@",
-    postgres_host,
-    "/postgres?client_encoding=UTF8");
+    postgres_host);
 
-inline static auto const postgres_gdal_address = boat::concat(
-    "postgresql://postgres:",
+inline static auto const postgres_gdal_address = std::format(
+    "postgresql://postgres:{}@{}/postgres",
     password,
-    "@",
-    postgres_host,
-    "/postgres");
+    postgres_host);
 
 inline auto odbc_drivers(std::initializer_list<std::string> servers)
 {
@@ -100,21 +95,17 @@ inline std::vector<std::string> odbc_address()
     auto ret = std::vector<std::string>{};
     for (auto [srv, drv] : odbc_drivers({"mysql", "postgres"})) {
         if (srv == "mysql")
-            ret.push_back(boat::concat(
-                "odbc://root:",
+            ret.push_back(std::format(
+                "odbc://root:{}@{}/mysql?MULTI_STATEMENTS=1"
+                "&INITSTMT=SET time_zone='+00:00'&DRIVER={}",
                 password,
-                "@",
                 mysql_host,
-                "/mysql?MULTI_STATEMENTS=1"
-                "&INITSTMT=SET time_zone='+00:00'&DRIVER=",
                 drv));
         else if (srv == "postgres")
-            ret.push_back(boat::concat(
-                "odbc://postgres:",
+            ret.push_back(std::format(
+                "odbc://postgres:{}@{}/postgres?BoolsAsChar=0&DRIVER={}",
                 password,
-                "@",
                 postgres_host,
-                "/postgres?BoolsAsChar=0&DRIVER=",
                 drv));
     }
     return ret;
@@ -125,12 +116,11 @@ inline std::string mssql_gdal_address()
 #if defined(BOAT_TEST_MSSQL_HOST)
     for (auto [srv, drv] : odbc_drivers({"sql server"}))
         if (srv == "sql server")
-            return boat::concat(
-                "mssql:driver={",
+            return std::format(
+                "mssql:driver={{{}}};Encrypt=no;server={};"
+                "database=master;uid=sa;pwd={}",
                 drv,
-                "};Encrypt=no;server=",
                 mssql_host,
-                ";database=master;uid=sa;pwd=",
                 password);
 #endif
     return {};

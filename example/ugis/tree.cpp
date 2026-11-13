@@ -28,7 +28,7 @@ std::unique_ptr<tree> from_source(boat::gui::source const& in, tree* parent)
                 .brush =
                     l->fill ? QBrush{QColor::fromRgba(*l->fill)} : QBrush{},
                 .state = l->hidden ? Qt::Unchecked : Qt::Checked,
-                .cache = boat::gui::caches::next_key()});
+                .cache_key = boat::gui::caches::next_key()});
             ptr->parent = ret.get();
             ret->children.push_back(std::move(ptr));
         }

@@ -62,7 +62,6 @@ public:
         override;
 
 private:
-    void on_dropped(QPersistentModelIndex);
     void on_fetch_canceled(QPersistentModelIndex);
     void on_fetched(QPersistentModelIndex, std::vector<std::unique_ptr<tree>>);
     void on_pasted(QPersistentModelIndex, leaf const&);

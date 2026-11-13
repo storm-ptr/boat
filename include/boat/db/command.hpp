@@ -14,13 +14,7 @@ struct command {
     virtual rowset exec(query const&, std::stop_token = {}) = 0;
     virtual void set_autocommit(bool) = 0;
     virtual void commit() = 0;
-    virtual char id_quote() = 0;
-
-    /// "{}" in the result is replaced with the parameter number.
-    virtual std::string param_mark() = 0;
-
-    /// The result is lower-case.
-    virtual std::string dbms() = 0;
+    virtual std::string dbms() = 0;  ///< Lowercase.
 };
 
 }  // namespace boat::db

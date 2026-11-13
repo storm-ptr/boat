@@ -35,8 +35,8 @@ auto draw_variant(
     return overloaded{
         [=](vector const& in) {
             auto fwd = geometry::transform(
-                geometry::srs_forward(geometry::transformation(out_crs)),
-                geometry::mat_inverse(out_affine));
+                geometry::forward(geometry::transformation(out_crs)),
+                geometry::backward(out_affine));
             if (auto g = fwd(in.geoms))
                 draw_geometry(ref)(*g);
         },

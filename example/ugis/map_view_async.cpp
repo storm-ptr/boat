@@ -1,9 +1,10 @@
 // Andrew Naplavkov
 
 #include <QPainter>
+#include <boat/geometry/raster.hpp>
+#include <boat/gui/fetch.hpp>
 #include <boat/gui/qt.hpp>
-#include <boat/gui/renderables.hpp>
-#include <boat/gui/utility.hpp>
+#include <boat/tile.hpp>
 #include "db.h"
 #include "map_view.h"
 #include "tree.h"
@@ -20,11 +21,11 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     auto cat = make_catalog(lyr.address);
     if (lyr.layer.raster) {
         auto rast = cat->get_raster(lyr.layer);
-        auto crs = boat::gui::to_srs_variant(rast);
+        auto crs = geo::to_srs_variant(rast.epsg, rast.proj4);
         return geo::transform(
-            geo::mat_forward(boat::gui::affine(rast)),
-            geo::srs_inverse(geo::transformation(crs)))(
-            point{rast.width * .5, rast.height * .5});
+            geo::forward(affine(rast)),
+            geo::backward(geo::transformation(crs)))(
+            point{rast.extent.x() * .5, rast.extent.y() * .5});
     }
     auto tbl = cat->get_table(lyr.layer.schema_name, lyr.layer.table_name);
     auto& col = lyr.layer.column_name;
@@ -32,7 +33,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
     if (it == tbl.columns.end())
         return {};
-    auto crs = boat::gui::to_srs_variant(*it);
+    auto crs = geo::to_srs_variant(it->epsg, it->proj4);
     if (tok.stop_requested())
         return {};
     auto rs =
@@ -54,7 +55,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         else
             return v.empty() ? std::nullopt : self(v.front());
     }(var);
-    return p ? geo::transform(geo::srs_inverse(geo::transformation(crs)))(*p)
+    return p ? geo::transform(geo::backward(geo::transformation(crs)))(*p)
              : std::nullopt;
 }
 
@@ -82,8 +83,8 @@ void map_view::locate(leaf lyr)
 
 void map_view::redraw()
 {
-    auto [view, w, h] = this->view();
-    if (w <= 0 || h <= 0)
+    auto [view, ext] = this->view();
+    if (ext.x() <= 0 || ext.y() <= 0)
         return;
     tasks_.request_stop();
     watch_task(tasks_.run([=, lyrs = layers_](auto tok) {
@@ -91,13 +92,13 @@ void map_view::redraw()
             return;
         auto cats = std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
         auto crs = geo::ortho(view.center);
-        auto mat = affine(w, h, view, crs);
-        auto params = boat::gui::render_params{
+        auto mat = geo::affine(ext, view.center, view.resolution, crs);
+        auto query = boat::gui::layer_query{
             .cache = cache_,
-            .query_grid =
-                boat::gui::make_query_grid(w, h, mat, crs, view.resolution),
+            .footprint = geo::geographic_interpolate(
+                ext, mat, crs, view.resolution * boat::tile::half_size),
             .stop = tok};
-        auto img = QImage{w, h, QImage::Format_RGBA8888};
+        auto img = QImage{ext.x(), ext.y(), QImage::Format_RGBA8888};
         img.fill(Qt::white);
         auto art = QPainter{&img};
         art.setRenderHint(QPainter::Antialiasing);
@@ -107,17 +108,17 @@ void map_view::redraw()
             try {
                 if (tok.stop_requested())
                     return;
-                params.catalog = [&] -> boat::db::catalog& {
+                query.catalog = [&] -> boat::db::catalog& {
                     auto& cat = cats[l.address];
                     if (!cat)
                         cat = make_catalog(l.address);
                     return *cat;
                 };
-                params.layer = l.layer;
-                params.cache_key = l.cache;
+                query.layer = l.layer;
+                query.cache_key = l.cache_key;
                 art.setPen(l.pen);
                 art.setBrush(l.brush);
-                for (auto var : renderables(params)) {
+                for (auto var : fetch(query)) {
                     if (tok.stop_requested())
                         return;
                     auto vec = std::get_if<boat::gui::vector>(&var);

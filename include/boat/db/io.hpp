@@ -39,10 +39,10 @@ auto& operator<<(ostream auto& out, table const& in)
             {col.column_name,
              suf > 0 ? concat(col.type_name, ":", suf) : col.type_name});
     }
-    for (auto idx : in.indices()) {
+    for (auto idx : indices(in)) {
         auto key = std::ranges::begin(idx);
         auto spatial = std::ranges::any_of(in.columns, [&](auto& col) {
-            return col.has_coord_sys() && col.column_name == key->column_name;
+            return has_coord_sys(col) && col.column_name == key->column_name;
         });
         rs.columns.push_back(concat(
             key->partial   ? "part:"
@@ -70,11 +70,12 @@ auto& operator<<(ostream auto& out, raster const& in)
     for (auto sep = ""; auto& band : in.bands)
         out << std::exchange(sep, ", ") << band.color_name << ":"
             << band.type_name;
-    return out << "}\n, width: " << in.width << "\n, height: " << in.height
-               << "\n, xorig: " << in.xorig << "\n, yorig: " << in.yorig
-               << "\n, xscale: " << in.xscale << "\n, yscale: " << in.yscale
-               << "\n, xskew: " << in.xskew << "\n, yskew: " << in.yskew
-               << "\n, srid: " << in.srid << " }\n";
+    return out << "}\n, width: " << in.extent.x()
+               << "\n, height: " << in.extent.y() << "\n, xorig: " << in.xorig
+               << "\n, yorig: " << in.yorig << "\n, xscale: " << in.xscale
+               << "\n, yscale: " << in.yscale << "\n, xskew: " << in.xskew
+               << "\n, yskew: " << in.yskew << "\n, srid: " << in.srid
+               << " }\n";
 }
 
 }  // namespace boat::db

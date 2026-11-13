@@ -19,7 +19,6 @@ public:
 
 private:
     void run();
-    void watch_task(QFuture<void>);
 
     std::string address_;
     QPlainTextEdit* query_;

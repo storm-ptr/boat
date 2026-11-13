@@ -11,31 +11,20 @@
 
 namespace boat::db {
 
-/// Creates a `std::array` from `kind<Field>::value` for each field of `T`.
-template <class T>
-constexpr auto kinds_as_array()
-{
-    auto ret = std::array<std::string_view, boost::pfr::tuple_size_v<T>>{};
-    [&]<size_t... Is>(std::integer_sequence<size_t, Is...>) {
-        ((ret[Is] = kind<boost::pfr::tuple_element_t<Is, T>>::value), ...);
-    }(std::make_integer_sequence<size_t, boost::pfr::tuple_size_v<T>>{});
-    return ret;
-}
-
 template <class T>
 table to_table()
 {
     auto ret = table{.table_name{
         boost::typeindex::ctti_type_index::type_id<T>().pretty_name()}};
-    if (auto pos = ret.table_name.find_last_of(' '); pos != std::string::npos)
-        ret.table_name = ret.table_name.substr(pos + 1);
-    for (auto [k, n] : std::views::zip(
-             kinds_as_array<T>(), boost::pfr::names_as_array<T>())) {
-        auto col = column{.kind{k}, .column_name{n}};
+    ret.table_name.erase(0, ret.table_name.find_last_of(' ') + 1);
+    [&]<size_t... Is>(std::index_sequence<Is...>) {
+        ret.columns = {column{
+            .kind{kind<boost::pfr::tuple_element_t<Is, T>>::value},
+            .column_name{boost::pfr::get_name<Is, T>()}}...};
+    }(std::make_index_sequence<boost::pfr::tuple_size_v<T>>{});
+    for (auto& col : ret.columns)
         if (col.kind == kind<geometry::geographic::variant>::value)
             col.epsg = 4326;
-        ret.columns.push_back(std::move(col));
-    }
     return ret;
 }
 

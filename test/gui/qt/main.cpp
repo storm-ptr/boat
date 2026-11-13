@@ -4,15 +4,17 @@
 
 #include <boat/gui/qt.hpp>
 #include <boost/test/included/unit_test.hpp>
+#include <format>
 #include "../context.hpp"
-#include "../parameters.hpp"
+#include "../queries.hpp"
 
 BOOST_AUTO_TEST_CASE(qt_draw)
 {
     auto pixels_sum = 0., transparent_sum = 0.;
-    auto params = parameters() | std::ranges::to<std::vector>();
+    auto qs = queries() | std::ranges::to<std::vector>();
     for (auto [i, ctx] : std::views::enumerate(contexts())) {
-        auto img = QImage{ctx.width, ctx.height, QImage::Format_ARGB32};
+        auto img =
+            QImage{ctx.extent.x(), ctx.extent.y(), QImage::Format_ARGB32};
         img.fill(Qt::transparent);
         auto art = QPainter{&img};
         art.setCompositionMode(QPainter::CompositionMode_Darken);
@@ -21,16 +23,15 @@ BOOST_AUTO_TEST_CASE(qt_draw)
         art.setBrush(Qt::cyan);
         auto drw = boat::gui::draw_variant(
             std::execution::par, art, ctx.affine, ctx.crs);
-        for (auto& p : params) {
-            p.query_grid = ctx.query_grid;
-            for (auto var : renderables(p))
+        for (auto& q : qs) {
+            q.footprint = ctx.footprint;
+            for (auto var : fetch(q))
                 std::visit(drw, var);
         }
-        auto path =
-            boat::concat("drop.", std::setfill('0'), std::setw(2), i, ".png");
+        auto path = std::format("drop.{:02}.png", i);
         img.save(path.data());
         auto rgb = reinterpret_cast<QRgb*>(img.bits());
-        auto num_pixels = ctx.width * ctx.height;
+        auto num_pixels = 1LL * ctx.extent.x() * ctx.extent.y();
         pixels_sum += num_pixels;
         transparent_sum += std::count_if(
             rgb, rgb + num_pixels, [](auto c) { return !qAlpha(c); });

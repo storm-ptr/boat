@@ -95,7 +95,20 @@ select_source_dialog::select_source_dialog(QWidget* parent) : QDialog(parent)
         QComboBox::AdjustToMinimumContentsLengthWithIcon);
     address_->setMinimumContentsLength(60);
     auto browse = new QPushButton{"...", this};
-    connect(browse, &QPushButton::clicked, this, [this] { browse_file(); });
+    connect(browse, &QPushButton::clicked, this, [this] {
+        auto path = QFileDialog::getOpenFileName(
+            this,
+            {},
+            {},
+            open_filter(),
+            nullptr,
+            QFileDialog::DontUseNativeDialog);
+        if (path.isEmpty())
+            return;
+        address_->setEditText(path);
+        if (name_->text().trimmed().isEmpty())
+            name_->setText(QFileInfo(path).fileName());
+    });
     auto address_row = new QHBoxLayout{};
     address_row->addWidget(address_, 1);
     address_row->addWidget(browse);
@@ -104,16 +117,16 @@ select_source_dialog::select_source_dialog(QWidget* parent) : QDialog(parent)
     form->addRow("address", address_row);
     auto buttons = new QDialogButtonBox{
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this};
-    ok_ = buttons->button(QDialogButtonBox::Ok);
+    auto ok = buttons->button(QDialogButtonBox::Ok);
+    auto update_ok = [this, ok] {
+        ok->setEnabled(
+            !name_->text().trimmed().isEmpty() &&
+            !address_->currentText().trimmed().isEmpty());
+    };
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(
-        name_, &QLineEdit::textChanged, this, &select_source_dialog::update_ok);
-    connect(
-        address_->lineEdit(),
-        &QLineEdit::textChanged,
-        this,
-        &select_source_dialog::update_ok);
+    connect(name_, &QLineEdit::textChanged, this, update_ok);
+    connect(address_->lineEdit(), &QLineEdit::textChanged, this, update_ok);
     connect(address_, &QComboBox::activated, this, [this] {
         if (name_->text().trimmed().isEmpty())
             name_->setText(QString::fromStdString(
@@ -134,22 +147,4 @@ QString select_source_dialog::name() const
 QString select_source_dialog::address() const
 {
     return address_->currentText();
-}
-
-void select_source_dialog::browse_file()
-{
-    auto path = QFileDialog::getOpenFileName(
-        this, {}, {}, open_filter(), nullptr, QFileDialog::DontUseNativeDialog);
-    if (path.isEmpty())
-        return;
-    address_->setEditText(path);
-    if (name_->text().trimmed().isEmpty())
-        name_->setText(QFileInfo(path).fileName());
-}
-
-void select_source_dialog::update_ok()
-{
-    ok_->setEnabled(
-        !name_->text().trimmed().isEmpty() &&
-        !address_->currentText().trimmed().isEmpty());
 }

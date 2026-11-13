@@ -17,7 +17,7 @@ public:
     std::string agent;  ///< HTTP User-Agent.
     int epsg = 3857;    ///< Tiled Mercator projection: 3857 or 3395.
     int ssl = 1;        ///< Verify peer certificate.
-    int zmax = 19;      ///< Maximum server zoom.
+    int zmax = 19;
 
     std::vector<db::source> sources() override { return {}; }
 
@@ -58,8 +58,7 @@ public:
                 {"green", "byte"},
                 {"blue", "byte"},
                 {"alpha", "byte"}},
-            .width = sz,
-            .height = sz,
+            .extent{sz, sz},
             .xorig = -lim,
             .yorig = lim,
             .xscale = 2 * lim / sz,
@@ -88,7 +87,10 @@ public:
         }
     }
 
-    void write(db::raster const&, db::rect const&, gil::any_image_view) override
+    void write(
+        db::raster const&,
+        geometry::raster::box const&,
+        gil::any_image_view) override
     {
         throw err;
     }

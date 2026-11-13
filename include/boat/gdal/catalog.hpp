@@ -62,13 +62,14 @@ struct catalog : db::catalog {
         auto lyr =
             GDALDatasetGetLayerByName(dataset.get(), tbl.table_name.data());
         auto fd = OGR_L_GetLayerDefn(lyr);
+        auto a = rq.bounds.min_corner(), b = rq.bounds.max_corner();
         OGR_L_SetSpatialFilterRectEx(
             lyr,
             std::max<>(0, OGR_FD_GetGeomFieldIndex(fd, rq.layer_column.data())),
-            rq.xmin,
-            rq.ymin,
-            rq.xmax,
-            rq.ymax);
+            a.x(),
+            a.y(),
+            b.x(),
+            b.y());
         return gdal::select(lyr, fields::make(lyr, rq.select_list), rq.limit);
     }
 
@@ -107,7 +108,7 @@ struct catalog : db::catalog {
 
     void write(
         db::raster const& rast,
-        db::rect const& rect,
+        geometry::raster::box const& rect,
         gil::any_image_view img) override
     {
         gdal::write(dataset.get(), rast, rect, img);

@@ -59,9 +59,9 @@ inline db::table migrate(db::command& cmd, db::table const& tbl)
         ret.columns.push_back(std::move(out));
     }
     for (auto& col : ret.columns) {
-        if (!col.has_coord_sys())
+        if (!has_coord_sys(col))
             continue;
-        if (std::ranges::any_of(ret.indices(), [&](auto idx) {
+        if (std::ranges::any_of(indices(ret), [&](auto idx) {
                 return idx.front().column_name == col.column_name;
             }))
             continue;

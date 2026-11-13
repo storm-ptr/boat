@@ -33,8 +33,7 @@ inline db::raster get_raster(GDALDatasetH ds)
         .table_name{"_layer"},
         .column_name{"raster"},
         .bands{get_bands(ds)},
-        .width = GDALGetRasterXSize(ds),
-        .height = GDALGetRasterYSize(ds),
+        .extent{GDALGetRasterXSize(ds), GDALGetRasterYSize(ds)},
         .xorig = a[0],
         .yorig = a[3],
         .xscale = a[1],
@@ -85,30 +84,24 @@ read(GDALDatasetH ds, db::raster const& rast, tile const& t)
                 throw std::runtime_error(rast.bands.at(0).type_name);
         }
     }();
-    auto [x, y, w, h] = t.rect(rast.width, rast.height);
-    auto scale = tile::scale(rast.width, rast.height, t.z);
-    ret.recreate((w + scale - 1) / scale, (h + scale - 1) / scale);
-    visit([&](auto v) { image_io(ds, GF_Read, x, y, w, h, v); }, view(ret));
+    auto rect = t.rect(rast.extent);
+    auto [x, y, w, h] = geometry::xywh(rect);
+    auto px = tile::scale(rast.extent, t.z);
+    ret.recreate(w / px + (w % px != 0), h / px + (h % px != 0));
+    visit([&](auto v) { image_io(ds, GF_Read, rect, v); }, view(ret));
     return ret;
 }
 
 inline void write(
     GDALDatasetH ds,
     db::raster const& rast,
-    db::rect const& rect,
+    geometry::raster::box const& rect,
     gil::any_image_view img)
 {
     visit(
         [&]<class T>(T v) {
             image_io(
-                ds,
-                GF_Write,
-                rect.x,
-                rect.y,
-                rect.width,
-                rect.height,
-                v,
-                color_mapping<T>(to_colors(rast.bands)));
+                ds, GF_Write, rect, v, color_mapping<T>(to_colors(rast.bands)));
         },
         img);
 }

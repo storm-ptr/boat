@@ -6,7 +6,6 @@
 #include <boat/db/adapted/adapted.hpp>
 #include <boat/detail/unicode.hpp>
 #include <boost/algorithm/string.hpp>
-#include <functional>
 #include <generator>
 #include <vector>
 
@@ -44,6 +43,7 @@ public:
         return *this;
     }
 
+    /// "{}" in param_mark is replaced with the one-based parameter number.
     std::string text(char id_quote, std::string_view param_mark) const
     {
         auto os = std::ostringstream{};
@@ -70,11 +70,11 @@ public:
         return std::move(os).str();
     }
 
-    std::generator<std::reference_wrapper<variant const>> params() const
+    std::generator<variant const&> params() const
     {
         for (auto& item : *this)
             if (auto* ptr = std::get_if<variant>(&item); ptr and *ptr)
-                co_yield std::cref(*ptr);
+                co_yield *ptr;
     }
 };
 

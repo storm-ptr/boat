@@ -3,6 +3,7 @@
 #ifndef BOAT_DB_META_HPP
 #define BOAT_DB_META_HPP
 
+#include <boat/geometry/vocabulary.hpp>
 #include <cstdint>
 #include <ranges>
 #include <string>
@@ -27,18 +28,18 @@ struct layer {
 struct column {
     std::string kind;
     std::string column_name;
-    std::string type_name;  ///< lower case
+    std::string type_name;  ///< Lowercase.
     int length;
     int srid;
     int epsg;
     std::string wkt;
     std::string proj4;
-
-    bool has_coord_sys() const
-    {
-        return epsg > 0 || !wkt.empty() || !proj4.empty();
-    }
 };
+
+inline bool has_coord_sys(column const& col)
+{
+    return col.epsg > 0 || !col.wkt.empty() || !col.proj4.empty();
+}
 
 struct index_key {
     std::string schema_name;
@@ -48,32 +49,28 @@ struct index_key {
     bool partial;
     bool primary;
     bool unique;
-    int ordinal;  ///< one-based
+    int ordinal;  ///< One-based.
 };
 
 struct table {
-    std::string dbms;  ///< lower case
+    std::string dbms;  ///< Lowercase.
     std::string schema_name;
     std::string table_name;
     std::vector<column> columns;
     std::vector<index_key> index_keys;
-
-    auto indices() const
-    {
-        return index_keys | std::views::chunk_by([](auto& lhs, auto& rhs) {
-                   return lhs.ordinal < rhs.ordinal;
-               });
-    }
 };
 
-/// Spatial filter for row selection.
+inline auto indices(table const& tbl)
+{
+    return tbl.index_keys | std::views::chunk_by([](auto& lhs, auto& rhs) {
+               return lhs.ordinal < rhs.ordinal;
+           });
+}
+
 struct bbox {
     std::vector<std::string> select_list;
     std::string layer_column;
-    double xmin;
-    double ymin;
-    double xmax;
-    double ymax;
+    geometry::cartesian::box bounds;  //< Layer column's SRS.
     int limit;
 };
 
@@ -82,7 +79,6 @@ struct order_key {
     bool descending;
 };
 
-/// Pagination filter for row selection.
 struct page {
     std::vector<std::string> select_list;
     std::vector<order_key> order_by;
@@ -91,8 +87,8 @@ struct page {
 };
 
 struct band {
-    std::string color_name;  ///< lower case
-    std::string type_name;   ///< lower case
+    std::string color_name;  ///< Lowercase.
+    std::string type_name;   ///< Lowercase.
 };
 
 struct raster {
@@ -100,8 +96,7 @@ struct raster {
     std::string table_name;
     std::string column_name;
     std::vector<band> bands;
-    int width;
-    int height;
+    geometry::raster::point extent;
     double xorig;
     double yorig;
     double xscale;
@@ -114,12 +109,14 @@ struct raster {
     std::string proj4;
 };
 
-struct rect {
-    int x;
-    int y;
-    int width;
-    int height;
-};
+/// Maps pixels to spatial coordinates.
+inline geometry::matrix affine(raster const& r)
+{
+    return {
+        {{r.xscale, r.xskew, r.xorig},
+         {r.yskew, r.yscale, r.yorig},
+         {0., 0., 1.}}};
+}
 
 }  // namespace boat::db
 
