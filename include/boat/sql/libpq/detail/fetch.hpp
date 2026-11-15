@@ -12,7 +12,8 @@ namespace boat::sql::libpq {
 template <arithmetic T>
 T get(PGresult* res, int row, int col)
 {
-    return from_chars<T>(PQgetvalue(res, row, col), PQgetlength(res, row, col));
+    return from_chars<T>(
+        {PQgetvalue(res, row, col), size_t(PQgetlength(res, row, col))});
 }
 
 inline db::variant get_blob(PGresult* res, int row, int col)

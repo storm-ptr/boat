@@ -56,16 +56,13 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     auto add = [&menu, this](bool on, char const* text, auto fn) {
         if (on)
             menu.addAction(text, this, std::move(fn));
-        return on;
     };
 
     // other
-    auto populated = false;
-    populated |=
-        add(opt || model_.is_branch(idx), "describe in log", [this, idx] {
-            model_.describe(idx);
-        });
-    populated |= add(is_vector, "drop layer", [this, idx] {
+    add(opt || model_.is_branch(idx), "describe in log", [this, idx] {
+        model_.describe(idx);
+    });
+    add(is_vector, "drop layer", [this, idx] {
         if (QMessageBox::question(
                 this,
                 {},
@@ -74,25 +71,22 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
                 QMessageBox::No) == QMessageBox::Yes)
             model_.drop(idx);
     });
-    populated |= add(bool(opt), "locate on map", [this, opt] {
+    add(bool(opt), "locate on map", [this, opt] {
         if (map_)
             map_->locate(*opt);
     });
-    populated |= add(model_.can_refresh(idx), "refresh source", [this, idx] {
+    add(model_.can_refresh(idx), "refresh source", [this, idx] {
         model_.refresh(idx);
     });
-    populated |=
-        add(model_.is_branch(idx), "rename source", [this, idx] { edit(idx); });
-    populated |= add(is_vector && map_, "sample from map to log", [this, idx] {
+    add(model_.is_branch(idx), "rename source", [this, idx] { edit(idx); });
+    add(is_vector && map_, "sample from map to log", [this, idx] {
         if (map_)
             model_.sample(idx, map_->view());
     });
-    populated |=
-        add(source && sql_handler_ && !boat::is_http_url(source->address),
-            "sql",
-            [this, source] { sql_handler_(*source); });
-    if (populated)
-        menu.addSeparator();
+    add(source && sql_handler_ && !boat::is_http_url(source->address),
+        "sql",
+        [this, source] { sql_handler_(*source); });
+    menu.addSeparator();
 
     // color/width
     if (is_vector) {
@@ -126,10 +120,8 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
     }
 
     // copy/paste
-    populated = false;
-    populated |=
-        add(is_vector, "copy layer", [this, idx] { model_.copy_layer(idx); });
-    populated |= add(bool(opt), "copy layer as", [this, idx, opt] {
+    add(is_vector, "copy layer", [this, idx] { model_.copy_layer(idx); });
+    add(bool(opt), "copy layer as", [this, idx, opt] {
         auto fmts = copy_formats(opt->layer.raster);
         auto selected = QString{};
         auto path = QFileDialog::getSaveFileName(
@@ -148,7 +140,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
                 ensure_extension(std::move(path), fmt->extension),
                 fmt->driver);
     });
-    populated |= add(model_.can_paste_to(idx), "paste layer", [this, idx] {
+    add(model_.can_paste_to(idx), "paste layer", [this, idx] {
         auto ok = false;
         auto name = QInputDialog::getText(
             this,
@@ -160,8 +152,7 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
         if (ok && !name.isEmpty())
             model_.paste_layer(idx, name);
     });
-    if (populated)
-        menu.addSeparator();
+    menu.addSeparator();
 
     // mount/unmount
     add(true, "mount source", [this] {

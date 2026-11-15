@@ -41,9 +41,7 @@ inline std::unique_ptr<db::command> make_command(std::string_view url)
             std::string{u.user}.data(),
             std::string{u.password}.data(),
             std::string{sock.host}.data(),
-            sock.port.empty()
-                ? 0
-                : from_chars<int>(sock.port.data(), sock.port.size()),
+            sock.port.empty() ? 0 : from_chars<int>(sock.port),
             std::string{u.path}.data());
     }
 #else
@@ -65,9 +63,8 @@ inline std::unique_ptr<db::command> make_command(std::string_view url)
             os << "port=" << sock.port << ';';
         if (!u.path.empty())
             os << "database=" << u.path << ';';
-        constexpr auto replace_sep = [](char c) { return c == '&' ? ';' : c; };
-        for (char c : u.query | std::views::transform(replace_sep))
-            os << c;
+        for (char c : u.query)
+            os << (c == '&' ? ';' : c);
         return std::make_unique<odbc::command>(std::move(os).str().data());
     }
 #else

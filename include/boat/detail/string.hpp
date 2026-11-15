@@ -45,11 +45,12 @@ std::basic_string<T> concat(auto&&... vs)
 }
 
 template <arithmetic T>
-T from_chars(char const* str, size_t len)
+T from_chars(std::string_view str)
 {
     T ret;
-    auto [end, ec] = std::from_chars(str, str + len, ret);
-    check(ec == std::errc{} && end == str + len, "from_chars");
+    auto last = str.data() + str.size();
+    auto [end, ec] = std::from_chars(str.data(), last, ret);
+    check(ec == std::errc{} && end == last, "from_chars");
     return ret;
 }
 

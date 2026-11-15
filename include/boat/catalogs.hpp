@@ -39,15 +39,15 @@ inline std::unique_ptr<db::catalog> make_catalog(
                     continue;
                 }
                 if (key == "epsg") {
-                    ret->epsg = from_chars<int>(val.data(), val.size());
+                    ret->epsg = from_chars<int>(val);
                     continue;
                 }
                 if (key == "zmax") {
-                    ret->zmax = from_chars<int>(val.data(), val.size());
+                    ret->zmax = from_chars<int>(val);
                     continue;
                 }
                 if (key == "ssl") {
-                    ret->ssl = from_chars<int>(val.data(), val.size());
+                    ret->ssl = from_chars<int>(val);
                     continue;
                 }
             }

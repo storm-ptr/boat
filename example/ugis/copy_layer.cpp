@@ -25,7 +25,7 @@ void copy_raster(
     qInfo() << "copying tiles";
     for (auto chunk :
          boat::tile::all(rast1.extent, z) | std::views::chunk(100)) {
-        auto batch = chunk | std::ranges::to<std::vector>();
+        auto batch = std::vector{std::from_range, chunk};
         for (auto [tile, img] : cat1->read(rast1, batch)) {
             if (tok.stop_requested())
                 return;

@@ -13,8 +13,7 @@ auto format(ostream auto const& fmt, variant const& var)
 {
     auto os = std::wostringstream{};
     os.imbue(fmt.getloc());
-    os.unsetf(os.flags());
-    os.setf(fmt.flags());
+    os.flags(fmt.flags());
     os.precision(fmt.precision());
     auto vis = overloaded{
         [&](null) { os << ""; },

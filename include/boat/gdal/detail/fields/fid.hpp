@@ -16,7 +16,7 @@ struct fid {
 
     static std::optional<fid> make(OGRLayerH lyr)
     {
-        if (auto col = OGR_L_GetFIDColumn(lyr); col && std::strlen(col))
+        if (auto col = OGR_L_GetFIDColumn(lyr); col && *col)
             return fid{col};
         return std::nullopt;
     }

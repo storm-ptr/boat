@@ -75,7 +75,7 @@ inline int get_epsg(OGRSpatialReferenceH crs)
     auto code = OSRGetAuthorityCode(crs, 0);
     if (!name || !code || std::strcmp(name, "EPSG"))
         return 0;
-    return from_chars<int>(code, std::strlen(code));
+    return from_chars<int>(code);
 }
 
 inline std::string get_proj4(OGRSpatialReferenceH crs)

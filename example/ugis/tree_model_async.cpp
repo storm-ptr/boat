@@ -160,6 +160,7 @@ void tree_model::paste_layer(QModelIndex const& idx, QString const& name)
 
 void tree_model::sample(QModelIndex const& idx, viewport const& vp)
 {
+    namespace geo = boat::geometry;
     auto l = to_leaf(idx);
     if (!l || l->layer.raster)
         return;
@@ -176,13 +177,12 @@ void tree_model::sample(QModelIndex const& idx, viewport const& vp)
         auto ext = vp.extent;
         if (ext.x() <= 0 || ext.y() <= 0)
             return;
-        auto ortho = boat::geometry::ortho(vp.view.center);
-        auto mat = boat::geometry::affine(
-            ext, vp.view.center, vp.view.resolution, ortho);
-        auto footprint = boat::geometry::geographic_interpolate(
+        auto ortho = geo::ortho(vp.view.center);
+        auto mat = geo::affine(ext, vp.view.center, vp.view.resolution, ortho);
+        auto footprint = geo::geographic_interpolate(
             ext, mat, ortho, vp.view.resolution * boat::tile::half_size);
-        auto crs = boat::geometry::to_srs_variant(it->epsg, it->proj4);
-        for (auto& box : boat::geometry::make_boxes(footprint, crs)) {
+        auto crs = geo::to_srs_variant(it->epsg, it->proj4);
+        for (auto& box : geo::make_boxes(footprint, crs)) {
             if (tok.stop_requested())
                 return;
             auto rs = cat->select(tbl, boat::db::bbox{{}, col, box, 10});

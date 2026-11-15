@@ -55,11 +55,10 @@ create(char const* file, char const* driver, db::raster const& rast)
     check(GDALSetGeoTransform(ret.get(), a.data()));
     auto crs = make_srs(rast.epsg, rast.wkt, rast.proj4);
     check(GDALSetSpatialRef(ret.get(), crs.get()));
-    for (int i{}, n = static_cast<int>(rast.bands.size()); i < n; ++i) {
-        auto b = GDALGetRasterBand(ret.get(), i + 1);
-        auto ci =
-            GDALGetColorInterpretationByName(rast.bands[i].color_name.data());
-        boat::check(ci != GCI_Undefined, rast.bands[i].color_name);
+    for (auto [i, band] : std::views::enumerate(rast.bands)) {
+        auto b = GDALGetRasterBand(ret.get(), int(i + 1));
+        auto ci = GDALGetColorInterpretationByName(band.color_name.data());
+        boat::check(ci != GCI_Undefined, band.color_name);
         check(GDALSetRasterColorInterpretation(b, ci));
     }
     return ret;

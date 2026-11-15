@@ -150,13 +150,9 @@ BOOST_AUTO_TEST_CASE(gdal_image_io)
             gil::const_view(expected));
         gil::fill_pixels(v, background);
         boat::gdal::image_io(ds.get(), GF_Read, window, crop);
-        for (int y = 0; y < 4; ++y)
-            for (int x = 0; x < 4; ++x) {
-                BOOST_CHECK(
-                    gil::const_view(actual)(x, y) ==
-                    gil::const_view(want)(x, y));
-                BOOST_CHECK(v(x, y) == gil::const_view(want)(x, y));
-            }
+        BOOST_CHECK(
+            gil::equal_pixels(gil::const_view(actual), gil::const_view(want)));
+        BOOST_CHECK(gil::equal_pixels(v, gil::const_view(want)));
     };
     for (size_t alignment : {0, 16})
         for (int margin : {0, 1}) {

@@ -27,15 +27,15 @@ void read(variant const& in, std::chrono::time_point<Clock, Duration>& out)
     auto m = std::cmatch{};
     check(std::regex_match(str.data(), str.data() + str.size(), m, regex), str);
     auto ymd = sc::year_month_day(
-        sc::year(from_chars<int>(m[1].first, m[1].length())),
-        sc::month(from_chars<int>(m[2].first, m[2].length())),
-        sc::day(from_chars<int>(m[3].first, m[3].length())));
-    auto h = from_chars<int>(m[4].first, m[4].length());
-    auto min = from_chars<int>(m[5].first, m[5].length());
-    auto s = from_chars<int>(m[6].first, m[6].length());
+        sc::year(from_chars<int>({m[1].first, m[1].second})),
+        sc::month(from_chars<int>({m[2].first, m[2].second})),
+        sc::day(from_chars<int>({m[3].first, m[3].second})));
+    auto h = from_chars<int>({m[4].first, m[4].second});
+    auto min = from_chars<int>({m[5].first, m[5].second});
+    auto s = from_chars<int>({m[6].first, m[6].second});
     auto fraction = m[8].str();
     fraction.resize(6, '0');
-    auto us = from_chars<int>(fraction.data(), fraction.size());
+    auto us = from_chars<int>(fraction);
     check(ymd.ok() && h < 24 && min < 60 && s < 60, str.data());
     out = sc::time_point_cast<Duration>(
         sc::time_point<Clock, sc::microseconds>{

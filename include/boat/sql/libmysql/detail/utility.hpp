@@ -72,12 +72,12 @@ get_value(MYSQL_FIELD& fld, char const* ptr, unsigned long len)
         case MYSQL_TYPE_LONGLONG:
         case MYSQL_TYPE_SHORT:
         case MYSQL_TYPE_TINY:
-            return from_chars<int64_t>(ptr, len);
+            return from_chars<int64_t>({ptr, len});
         case MYSQL_TYPE_DECIMAL:
         case MYSQL_TYPE_DOUBLE:
         case MYSQL_TYPE_FLOAT:
         case MYSQL_TYPE_NEWDECIMAL:
-            return from_chars<double>(ptr, len);
+            return from_chars<double>({ptr, len});
         case MYSQL_TYPE_BLOB:
         case MYSQL_TYPE_LONG_BLOB:
         case MYSQL_TYPE_MEDIUM_BLOB:

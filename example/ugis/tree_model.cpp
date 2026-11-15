@@ -35,22 +35,22 @@ std::optional<leaf> tree_model::get_leaf(QModelIndex const& idx) const
 std::optional<boat::db::source> tree_model::get_source(
     QModelIndex const& idx) const
 {
-    if (auto b = to_branch(idx); b && to_tree(idx) != root_.get())
-        return b->source;
+    if (is_branch(idx))
+        return to_branch(idx)->source;
     return {};
 }
 
 std::vector<leaf> tree_model::checked_leaves() const
 {
     auto ret = std::vector<leaf>{};
-    auto collect = [&](auto& self, tree const& node) -> void {
+    auto collect = [&](this auto&& self, tree const& node) -> void {
         if (auto l = std::get_if<leaf>(&node.data);
             l && l->state == Qt::Checked)
             ret.push_back(*l);
         for (auto& ch : node.children)
-            self(self, *ch);
+            self(*ch);
     };
-    collect(collect, *root_);
+    collect(*root_);
     return ret;
 }
 
@@ -77,19 +77,16 @@ QString tree_model::clipboard_name() const
 
 bool tree_model::can_refresh(QModelIndex const& idx) const
 {
-    auto b = to_branch(idx);
-    return b && to_tree(idx) != root_.get() &&
-           b->state != branch_state::fetching;
+    return is_branch(idx) && to_branch(idx)->state != branch_state::fetching;
 }
 
 void tree_model::mount(boat::db::source const& val)
 {
     auto& children = root_->children;
-    int row = static_cast<int>(children.size());
+    auto row = rowCount({});
     beginInsertRows({}, row, row);
-    auto ch = std::make_unique<tree>(branch{named_source(val)});
-    ch->parent = root_.get();
-    children.push_back(std::move(ch));
+    children.push_back(
+        std::make_unique<tree>(branch{named_source(val)}, root_.get()));
     endInsertRows();
 }
 
@@ -104,7 +101,7 @@ void tree_model::refresh(QModelIndex const& idx)
     if (!can_refresh(idx))
         return;
     to_branch(idx)->state = branch_state::blank;
-    if (int count = static_cast<int>(to_tree(idx)->children.size()))
+    if (int count = rowCount(idx))
         removeRows(0, count, idx);
     else
         Q_EMIT dataChanged(idx, idx);
@@ -156,7 +153,7 @@ Qt::ItemFlags tree_model::flags(QModelIndex const& idx) const
 QModelIndex tree_model::index(int row, int, QModelIndex const& parent) const
 {
     auto ptr = to_tree(parent);
-    if (row < 0 || row >= static_cast<int>(ptr->children.size()))
+    if (row < 0 || row >= rowCount(parent))
         return {};
     return createIndex(row, 0, ptr->children[row].get());
 }
@@ -168,13 +165,10 @@ QModelIndex tree_model::parent(QModelIndex const& idx) const
     auto ptr = to_tree(idx)->parent;
     if (!ptr || ptr == root_.get())
         return {};
-    auto& rows = ptr->parent->children;
-    auto it =
-        std::ranges::find_if(rows, [ptr](auto& p) { return p.get() == ptr; });
-    if (it == rows.end())
-        return {};
-    auto row = static_cast<int>(std::distance(rows.begin(), it));
-    return createIndex(row, 0, ptr);
+    for (auto [row, ch] : std::views::enumerate(ptr->parent->children))
+        if (ch.get() == ptr)
+            return createIndex(int(row), 0, ptr);
+    return {};
 }
 
 int tree_model::rowCount(QModelIndex const& parent) const
@@ -235,11 +229,9 @@ void tree_model::on_pasted(QPersistentModelIndex per, leaf const& lyr)
     for (auto& ch : ptr->children)
         if (auto l = std::get_if<leaf>(&ch->data); l && l->layer == lyr.layer)
             return;
-    int row = static_cast<int>(ptr->children.size());
+    auto row = rowCount(per);
     beginInsertRows(per, row, row);
-    auto ch = std::make_unique<tree>(lyr);
-    ch->parent = ptr;
-    ptr->children.push_back(std::move(ch));
+    ptr->children.push_back(std::make_unique<tree>(lyr, ptr));
     endInsertRows();
 }
 

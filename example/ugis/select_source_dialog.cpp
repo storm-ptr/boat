@@ -71,8 +71,7 @@ void add_group(QComboBox* box, QString const& header, QStringList const& items)
     font.setBold(true);
     sep->setFont(font);
     sep->setFlags(Qt::NoItemFlags);
-    for (auto& item : items)
-        box->addItem(item);
+    box->addItems(items);
 }
 
 }  // namespace

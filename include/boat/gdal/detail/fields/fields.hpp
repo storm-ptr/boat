@@ -105,7 +105,7 @@ inline std::vector<field> make(
         return ret;
     }
     auto fn = [&](auto& col) { return make(lyr, col.data()); };
-    return cols | std::views::transform(fn) | std::ranges::to<std::vector>();
+    return {std::from_range, cols | std::views::transform(fn)};
 }
 
 }  // namespace boat::gdal::fields

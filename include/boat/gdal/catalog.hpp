@@ -43,7 +43,7 @@ struct catalog : db::catalog {
         q << "\n select";
         if (auto col = OGR_L_GetFIDColumn(GDALDatasetGetLayerByName(
                 dataset.get(), tbl.table_name.data()));
-            col && std::strlen(col))
+            col && *col)
             q << " FID as \"" << col << "\",";
         q << " * from " << db::id{tbl.table_name};
         for (auto sep{"\n order by "}; auto& key : rq.order_by)

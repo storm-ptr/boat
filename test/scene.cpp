@@ -81,9 +81,8 @@ BOOST_AUTO_TEST_CASE(scene_addresses)
         scene.sources[3].db.address == "/vsicurl/https://example.com/file.tif");
     BOOST_TEST(scene.sources[4].db.address == "DSN=test;UID=user;PWD=secret");
     auto restored = gui::read_scene_json(gui::write_scene_json(scene));
-    for (size_t i = 0; i < scene.sources.size(); ++i)
-        BOOST_TEST(
-            restored.sources[i].db.address == scene.sources[i].db.address);
+    for (auto [i, source] : std::views::enumerate(scene.sources))
+        BOOST_TEST(restored.sources[i].db.address == source.db.address);
 }
 
 BOOST_AUTO_TEST_CASE(scene_invalid)
