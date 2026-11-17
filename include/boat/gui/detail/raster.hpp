@@ -4,13 +4,13 @@
 #define BOAT_GUI_RASTER_HPP
 
 #include <boat/geometry/raster.hpp>
-#include <boost/gil.hpp>
+#include <boat/gui/variant.hpp>
 
 namespace boat::gui {
 
 std::optional<geometry::raster::box> draw_image(
     execution_policy auto policy,
-    boost::gil::rgba8c_view_t in,
+    rgba8_view auto in,
     geometry::matrix const& in_affine,
     geometry::srs_spec auto const& in_crs,
     geometry::matrix const& out_affine,

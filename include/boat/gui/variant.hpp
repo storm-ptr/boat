@@ -13,6 +13,11 @@ struct vector {
     bool partial = false;  ///< Query limit reached.
 };
 
+template <class T>
+concept rgba8_view =
+    specialized<T, boost::gil::image_view> &&
+    std::same_as<typename T::value_type, boost::gil::rgba8_pixel_t>;
+
 struct raster {
     boost::gil::rgba8_image_t rgba;
     geometry::matrix affine;  ///< Maps pixels to spatial coordinates.

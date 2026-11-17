@@ -40,12 +40,13 @@ inline auto draw_geometry(wxGraphicsContext& out)
 /// Affine matrices map pixels to spatial coordinates.
 void draw_image(
     execution_policy auto policy,
-    boost::gil::rgba8c_view_t in,
+    rgba8_view auto in,
     geometry::matrix const& in_affine,
     geometry::srs_spec auto&& in_crs,
     wxGraphicsContext& out,
     geometry::matrix const& out_affine,
     geometry::srs_spec auto&& out_crs)
+    requires(sizeof(wxImage::RGBValue) == 3)
 {
     auto img = wxImage{};
     wxDouble w, h;

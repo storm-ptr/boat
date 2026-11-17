@@ -16,10 +16,10 @@ using point = geo::geographic::point;
 
 namespace {
 
-constexpr auto longitude_max = 180.;
-constexpr auto latitude_max = 85.;
-constexpr auto resolution_min = 0.5972;
-constexpr auto resolution_max = 19'567.88;
+constexpr auto lon_max = 180.;
+constexpr auto lat_max = 85.;
+constexpr auto res_min = 0.5972;
+constexpr auto res_max = 19'567.88;
 
 auto unproject(viewport const& vp, QPointF cursor)
 {
@@ -109,9 +109,15 @@ void map_view::paintEvent(QPaintEvent*)
         geo::affine({img_.width(), img_.height()}, img_mid, img_res, img_crs);
     auto map_crs = geo::ortho(mid);
     auto map_mat = geo::affine({width(), height()}, mid, res, map_crs);
-    auto bits = reinterpret_cast<boost::gil::rgba8_pixel_t const*>(img_.bits());
+    auto bits = img_.constBits();
     auto gil = boost::gil::interleaved_view(
-        img_.width(), img_.height(), bits, img_.bytesPerLine());
+        img_.width(),
+        img_.height(),
+        boost::gil::make_step_iterator(
+            boost::gil::planar_pixel_iterator<uchar const*, boost::gil::rgba_t>{
+                bits, bits + 1, bits + 2, bits + 3},
+            4),
+        img_.bytesPerLine());
     boat::gui::draw_image(
         std::execution::par, gil, img_mat, img_crs, art, map_mat, map_crs);
 }
@@ -173,10 +179,9 @@ void map_view::watch_task(QFuture<void> fut)
 
 void map_view::set_view(boat::gui::view const& v)
 {
-    auto valid = std::abs(v.center.x()) <= longitude_max &&
-                 std::abs(v.center.y()) <= latitude_max &&
-                 v.resolution >= resolution_min &&
-                 v.resolution <= resolution_max;
+    auto valid = std::abs(v.center.x()) <= lon_max &&
+                 std::abs(v.center.y()) <= lat_max && v.resolution >= res_min &&
+                 v.resolution <= res_max;
     map_ = valid ? v : boat::gui::view{};
     redraw();
 }
@@ -186,9 +191,9 @@ std::optional<boat::gui::view> map_view::bounded(boat::gui::view v)
     for (auto x : {v.center.x(), v.center.y(), v.resolution})
         if (!std::isfinite(x))
             return {};
-    v.center = geo::wrap(
-        {v.center.x(), std::clamp(v.center.y(), -latitude_max, latitude_max)});
-    v.resolution = std::clamp(v.resolution, resolution_min, resolution_max);
+    v.center =
+        geo::wrap({v.center.x(), std::clamp(v.center.y(), -lat_max, lat_max)});
+    v.resolution = std::clamp(v.resolution, res_min, res_max);
     return v;
 }
 

@@ -38,7 +38,7 @@ inline auto draw_geometry(QPainter& out)
 /// Affine matrices map pixels to spatial coordinates.
 void draw_image(
     execution_policy auto policy,
-    boost::gil::rgba8c_view_t in,
+    rgba8_view auto in,
     geometry::matrix const& in_affine,
     geometry::srs_spec auto&& in_crs,
     QPainter& out,
@@ -58,8 +58,10 @@ void draw_image(
         {{x, y}, {x + w, y + h}},
         [&](int w, int h) {
             img = QImage{w, h, QImage::Format_RGBA8888};
-            return [bits = reinterpret_cast<boost::gil::rgba8_pixel_t*>(
-                        img.bits())](auto i, auto px) { bits[i] = px; };
+            return [bits = img.bits()](auto i, auto px) {
+                for (int j{}; j < 4; ++j)
+                    bits[4 * i + j] = px[j];
+            };
         });
     if (rect)
         out.drawImage(detail::qt(rect->min_corner()), img);
