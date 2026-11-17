@@ -3,7 +3,6 @@
 #ifndef BOAT_CATALOGS_HPP
 #define BOAT_CATALOGS_HPP
 
-#include <boat/detail/uri.hpp>
 #if __has_include(<gdal.h>)
 #include <boat/gdal/catalog.hpp>
 #endif

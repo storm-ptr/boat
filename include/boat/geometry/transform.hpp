@@ -119,7 +119,7 @@ auto transform(auto const&... strategies)
 }
 
 /// Prefers positive EPSG to PROJ.4; throws if neither is available.
-inline srs_variant to_srs_variant(int epsg, std::string const& proj4)
+inline srs_variant make_srs_variant(int epsg, std::string const& proj4)
 {
     if (epsg > 0)
         return srs::epsg{epsg};

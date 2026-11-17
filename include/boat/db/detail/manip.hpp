@@ -5,7 +5,6 @@
 
 #include <boat/db/variant.hpp>
 #include <boat/detail/unicode.hpp>
-#include <cctype>
 
 namespace boat::db {
 

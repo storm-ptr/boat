@@ -4,7 +4,6 @@
 #define BOAT_SQL_EXEC_HPP
 
 #include <boat/db/command.hpp>
-#include <boat/detail/string.hpp>
 #include <boat/sql/detail/dialects/dialects.hpp>
 
 namespace boat::sql {

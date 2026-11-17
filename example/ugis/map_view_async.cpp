@@ -1,10 +1,7 @@
 // Andrew Naplavkov
 
-#include <QPainter>
-#include <boat/geometry/raster.hpp>
 #include <boat/gui/fetch.hpp>
 #include <boat/gui/qt.hpp>
-#include <boat/tile.hpp>
 #include "db.h"
 #include "map_view.h"
 #include "tree.h"
@@ -21,7 +18,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     auto cat = make_catalog(lyr.address);
     if (lyr.layer.raster) {
         auto rast = cat->get_raster(lyr.layer);
-        auto crs = geo::to_srs_variant(rast.epsg, rast.proj4);
+        auto crs = geo::make_srs_variant(rast.epsg, rast.proj4);
         return geo::transform(
             geo::forward(affine(rast)),
             geo::backward(geo::transformation(crs)))(
@@ -33,7 +30,7 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
         std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
     if (it == tbl.columns.end())
         return {};
-    auto crs = geo::to_srs_variant(it->epsg, it->proj4);
+    auto crs = geo::make_srs_variant(it->epsg, it->proj4);
     if (tok.stop_requested())
         return {};
     auto rs =

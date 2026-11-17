@@ -3,7 +3,6 @@
 #ifndef BOAT_GEOMETRY_RASTER_HPP
 #define BOAT_GEOMETRY_RASTER_HPP
 
-#include <boat/geometry/algorithm.hpp>
 #include <boat/geometry/detail/fibonacci.hpp>
 #include <boat/geometry/transform.hpp>
 #include <boost/qvm/map_vec_mat.hpp>

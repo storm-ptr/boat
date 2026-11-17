@@ -3,7 +3,6 @@
 #include <QStringList>
 #include <algorithm>
 #include <boat/gdal/drivers.hpp>
-#include <ranges>
 #include "formats.h"
 
 namespace {

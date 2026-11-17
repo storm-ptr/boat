@@ -7,7 +7,6 @@
 #include <boat/db/rowset.hpp>
 #include <boat/gil.hpp>
 #include <boat/tile.hpp>
-#include <generator>
 #include <stop_token>
 
 namespace boat::db {

@@ -4,10 +4,8 @@
 #include <QMouseEvent>
 #include <QStatusBar>
 #include <QWheelEvent>
-#include <boat/geometry/raster.hpp>
 #include <boat/gui/caches/lru.hpp>
 #include <boat/gui/qt.hpp>
-#include <boost/gil.hpp>
 #include "map_view.h"
 #include "tree.h"
 

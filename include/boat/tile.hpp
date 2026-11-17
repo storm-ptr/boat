@@ -3,7 +3,6 @@
 #ifndef BOAT_TILE_HPP
 #define BOAT_TILE_HPP
 
-#include <boat/detail/utility.hpp>
 #include <boat/geometry/vocabulary.hpp>
 #include <boost/pfr/ops_fields.hpp>
 #include <generator>

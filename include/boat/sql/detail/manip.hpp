@@ -3,7 +3,6 @@
 #ifndef BOAT_SQL_MANIP_HPP
 #define BOAT_SQL_MANIP_HPP
 
-#include <boat/db/query.hpp>
 #include <boat/sql/detail/adaptors/adaptors.hpp>
 #include <boost/geometry/algorithms/convert.hpp>
 

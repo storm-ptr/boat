@@ -8,7 +8,6 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QUrl>
-#include <algorithm>
 #include "map_view.h"
 #include "tree_view.h"
 

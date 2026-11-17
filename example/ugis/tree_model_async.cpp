@@ -4,7 +4,6 @@
 #include <boat/db/io.hpp>
 #include <boat/geometry/raster.hpp>
 #include <boat/gui/caches/cache.hpp>
-#include <boat/tile.hpp>
 #include <filesystem>
 #include "copy_layer.h"
 #include "db.h"
@@ -49,9 +48,9 @@ void tree_model::copy_layer_as(
         post(this, [=] {
             if (tok.stop_requested())
                 return;
-            mount(boat::db::source{
-                .source_name = std::filesystem::path(adr).filename().string(),
-                .address = adr});
+            mount(
+                {.source_name = std::filesystem::path(adr).filename().string(),
+                 .address = adr});
             qInfo() << "copy_layer_as completed";
         });
     });
@@ -60,9 +59,7 @@ void tree_model::copy_layer_as(
 void tree_model::describe(QModelIndex const& idx)
 {
     if (auto b = to_branch(idx); b && to_tree(idx) != root_.get()) {
-        qInfo().noquote().nospace()
-            << "\n"
-            << QString::fromStdString(b->source.address);
+        qInfo().noquote().nospace() << "\n" << b->source.address;
         return;
     }
     auto l = to_leaf(idx);
@@ -174,14 +171,14 @@ void tree_model::sample(QModelIndex const& idx, viewport const& vp)
             std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
         if (it == tbl.columns.end())
             return;
-        auto ext = vp.extent;
+        auto& [view, ext] = vp;
         if (ext.x() <= 0 || ext.y() <= 0)
             return;
-        auto ortho = geo::ortho(vp.view.center);
-        auto mat = geo::affine(ext, vp.view.center, vp.view.resolution, ortho);
+        auto ortho = geo::ortho(view.center);
+        auto mat = geo::affine(ext, view.center, view.resolution, ortho);
         auto footprint = geo::geographic_interpolate(
-            ext, mat, ortho, vp.view.resolution * boat::tile::half_size);
-        auto crs = geo::to_srs_variant(it->epsg, it->proj4);
+            ext, mat, ortho, view.resolution * boat::tile::half_size);
+        auto crs = geo::make_srs_variant(it->epsg, it->proj4);
         for (auto& box : geo::make_boxes(footprint, crs)) {
             if (tok.stop_requested())
                 return;

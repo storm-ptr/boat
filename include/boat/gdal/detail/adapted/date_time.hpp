@@ -4,7 +4,6 @@
 #define BOAT_GDAL_ADAPTED_DATE_TIME_HPP
 
 #include <boat/gdal/detail/utility.hpp>
-#include <chrono>
 
 namespace boat::gdal {
 

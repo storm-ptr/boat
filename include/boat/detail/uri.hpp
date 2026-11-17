@@ -4,7 +4,6 @@
 #define BOAT_URI_HPP
 
 #include <regex>
-#include <stdexcept>
 
 namespace boat {
 

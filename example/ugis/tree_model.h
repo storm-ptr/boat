@@ -4,9 +4,6 @@
 #define TREE_MODEL_H
 
 #include <QAbstractItemModel>
-#include <QString>
-#include <concepts>
-#include <optional>
 #include "task_group.h"
 #include "tree.h"
 

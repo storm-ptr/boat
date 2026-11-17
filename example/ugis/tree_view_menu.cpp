@@ -8,10 +8,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QStringList>
-#include <algorithm>
 #include <boat/detail/uri.hpp>
-#include <ranges>
-#include <span>
 #include "formats.h"
 #include "map_view.h"
 #include "select_source_dialog.h"

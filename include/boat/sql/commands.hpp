@@ -23,7 +23,6 @@
 #else
 #pragma message("no sqlite")
 #endif
-#include <boat/detail/string.hpp>
 #include <boat/detail/uri.hpp>
 #include <boat/sql/url.hpp>
 

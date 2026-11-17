@@ -4,7 +4,6 @@
 #define BOAT_GUI_SCENE_HPP
 
 #include <boat/db/meta.hpp>
-#include <boat/geometry/vocabulary.hpp>
 #include <optional>
 
 namespace boat::gui {

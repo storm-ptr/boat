@@ -14,13 +14,8 @@ namespace boat::sql::sqlite {
 void check(int ec, auto& dbc)
     requires requires { sqlite3_errmsg(dbc.get()); }
 {
-    switch (ec) {
-        case SQLITE_DONE:
-        case SQLITE_OK:
-        case SQLITE_ROW:
-            return;
-    }
-    throw std::runtime_error(dbc ? sqlite3_errmsg(dbc.get()) : "sqlite");
+    if (ec != SQLITE_DONE && ec != SQLITE_OK && ec != SQLITE_ROW)
+        throw std::runtime_error(dbc ? sqlite3_errmsg(dbc.get()) : "sqlite");
 }
 
 inline int bind_value(sqlite3_stmt* stmt, int i, db::variant const& var)

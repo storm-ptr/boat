@@ -5,7 +5,6 @@
 
 #include <boat/gui/scene.hpp>
 #include <charconv>
-#include <cmath>
 #include <format>
 #include <nlohmann/json.hpp>
 

@@ -3,9 +3,7 @@
 #ifndef TREE_VIEW_H
 #define TREE_VIEW_H
 
-#include <QString>
 #include <QTreeView>
-#include <functional>
 #include "tree_model.h"
 
 class QContextMenuEvent;

@@ -4,7 +4,6 @@
 #define SQL_VIEW_H
 
 #include <QWidget>
-#include <functional>
 #include <string>
 #include "task_group.h"
 

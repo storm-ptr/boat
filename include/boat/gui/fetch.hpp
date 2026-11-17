@@ -4,13 +4,10 @@
 #define BOAT_GUI_FETCH_HPP
 
 #include <boat/db/catalog.hpp>
-#include <boat/geometry/raster.hpp>
-#include <boat/geometry/wkb.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/tile.hpp>
 #include <boat/gui/variant.hpp>
-#include <stop_token>
 
 namespace boat::gui {
 
@@ -38,7 +35,7 @@ std::generator<variant> vectors(layer_query const& q)
     auto& col = q.layer.column_name;
     auto it = std::ranges::find(tbl.columns, col, &db::column::column_name);
     check(it != tbl.columns.end(), col);
-    auto crs = geometry::to_srs_variant(it->epsg, it->proj4);
+    auto crs = geometry::make_srs_variant(it->epsg, it->proj4);
     auto inv =
         geometry::transform(geometry::backward(geometry::transformation(crs)));
     auto done = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
@@ -80,7 +77,7 @@ std::generator<variant> rasters(layer_query const& q)
     });
     auto meters = std::next(footprint.begin(), footprint.size() > 1)->first;
     auto mat = affine(r);
-    auto crs = geometry::to_srs_variant(r.epsg, r.proj4);
+    auto crs = geometry::make_srs_variant(r.epsg, r.proj4);
     auto uncached = std::vector<tile>{};
     for (auto& t :
          tiles(footprint.begin()->second, meters, r.extent, mat, crs)) {
@@ -109,6 +106,8 @@ std::generator<variant> rasters(layer_query const& q)
 
 }  // namespace detail
 
+/// Raster queries use larger boxes. Smaller vector query boxes spread sampled
+/// features more evenly across the view.
 inline std::generator<variant> fetch(layer_query const& q)
 {
     return q.layer.raster ? detail::rasters(q) : detail::vectors(q);

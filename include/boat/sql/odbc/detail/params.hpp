@@ -5,7 +5,6 @@
 
 #include <boat/db/variant.hpp>
 #include <boat/sql/odbc/detail/utility.hpp>
-#include <variant>
 
 namespace boat::sql::odbc::params {
 

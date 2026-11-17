@@ -9,8 +9,6 @@
 #include <QWidget>
 #include <boat/gui/caches/cache.hpp>
 #include <memory>
-#include <optional>
-#include <vector>
 #include "task_group.h"
 #include "viewport.h"
 

@@ -4,13 +4,11 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QSplitter>
-#include <QStatusBar>
 #include <QTabWidget>
 #include <numbers>
 #include "main_window.h"
 #include "map_view.h"
 #include "sql_view.h"
-#include "task_group.h"
 #include "tree_view.h"
 
 namespace {

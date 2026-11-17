@@ -5,7 +5,6 @@
 
 #include <boat/geometry/vocabulary.hpp>
 #include <cstdint>
-#include <ranges>
 #include <string>
 #include <vector>
 

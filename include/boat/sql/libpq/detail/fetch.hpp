@@ -4,7 +4,6 @@
 #define BOAT_SQL_LIBPQ_FETCH_HPP
 
 #include <boat/db/rowset.hpp>
-#include <boat/detail/string.hpp>
 #include <boat/sql/libpq/detail/utility.hpp>
 
 namespace boat::sql::libpq {

@@ -8,7 +8,6 @@
 #include <QString>
 #include <boat/gui/scene.hpp>
 #include <memory>
-#include <variant>
 
 enum class branch_state { blank, fetching, ready };
 
