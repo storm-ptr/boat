@@ -3,6 +3,7 @@
 #include <boat/gui/fetch.hpp>
 #include <boat/gui/qt.hpp>
 #include "db.h"
+#include "feature.h"
 #include "map_view.h"
 #include "tree.h"
 
@@ -28,20 +29,14 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
     auto& col = lyr.layer.column_name;
     auto it =
         std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
-    if (it == tbl.columns.end())
+    if (it == tbl.columns.end() || tok.stop_requested())
         return {};
     auto crs = geo::make_srs_variant(it->epsg, it->proj4);
-    if (tok.stop_requested())
-        return {};
     auto rs =
-        cat->select(tbl, boat::db::page{.select_list = {col}, .limit = 1});
-    if (rs.empty())
+        cat->select(tbl, boat::db::page{.select_list = {col}, .limit = 1}, tok);
+    if (rs.empty() || !std::holds_alternative<boat::blob>(rs.value()))
         return {};
-    auto wkb = std::get_if<boat::blob>(&rs.value());
-    if (!wkb)
-        return {};
-    auto var = geo::geographic::variant{};
-    boat::blob_view{*wkb} >> var;
+    auto var = boat::db::get<geo::geographic::variant>(rs.value());
     auto p = [](this auto&& self, auto const& v) -> std::optional<point> {
         if constexpr (geo::point<decltype(v)>)
             return point{v.x(), v.y()};
@@ -58,18 +53,29 @@ std::optional<point> any_lonlat(leaf const& lyr, std::stop_token tok)
 
 }  // namespace
 
+void map_view::identify(QPointF cursor, viewport vp)
+{
+    clear_identify();
+    watch_task(query_tasks_.run([=, lyrs = layers_](auto tok) {
+        auto hits = identify_features(
+            lyrs, cursor, vp, cache_.get(), query_limit, feature_limit, tok);
+        post(this, [this, tok, hits = std::move(hits)] mutable {
+            if (!tok.stop_requested())
+                show_hits(std::move(hits));
+        });
+    }));
+}
+
 void map_view::locate(leaf lyr)
 {
-    tasks_.request_stop();
-    watch_task(tasks_.run([=, lyr = std::move(lyr)](auto tok) {
+    query_tasks_.request_stop();
+    watch_task(query_tasks_.run([=, lyr = std::move(lyr)](auto tok) {
         try {
             post(this, [=, mid = any_lonlat(lyr, tok)] {
-                if (tok.stop_requested())
+                if (tok.stop_requested() || !mid)
                     return;
-                if (mid)
-                    map_ = bounded({*mid, map_.resolution}).value_or(map_);
-                update();
-                redraw();
+                map_ = bounded({*mid, map_.resolution}).value_or(map_);
+                schedule_paint();
             });
         }
         catch (std::exception const& e) {
@@ -83,17 +89,17 @@ void map_view::redraw()
     auto [view, ext] = this->view();
     if (ext.x() <= 0 || ext.y() <= 0)
         return;
-    tasks_.request_stop();
-    watch_task(tasks_.run([=, lyrs = layers_](auto tok) {
+    watch_task(render_tasks_.run([=, lyrs = layers_](auto tok) {
         if (tok.stop_requested())
             return;
-        auto cats = std::map<std::string, std::unique_ptr<boat::db::catalog>>{};
+        auto cats = catalog_map{};
         auto crs = geo::ortho(view.center);
         auto mat = geo::affine(ext, view.center, view.resolution, crs);
         auto query = boat::gui::layer_query{
             .cache = cache_,
             .footprint = geo::geographic_interpolate(
                 ext, mat, crs, view.resolution * boat::tile::half_size),
+            .limit = query_limit,
             .stop = tok};
         auto img = QImage{ext.x(), ext.y(), QImage::Format_RGBA8888};
         img.fill(Qt::white);
@@ -105,14 +111,11 @@ void map_view::redraw()
             try {
                 if (tok.stop_requested())
                     return;
-                query.catalog = [&] -> boat::db::catalog& {
-                    auto& cat = cats[l.address];
-                    if (!cat)
-                        cat = make_catalog(l.address);
-                    return *cat;
-                };
-                query.layer = l.layer;
                 query.cache_key = l.cache_key;
+                query.layer = l.layer;
+                query.catalog = [&]() -> auto& {
+                    return get_catalog(cats, l.address);
+                };
                 art.setPen(l.pen);
                 art.setBrush(l.brush);
                 for (auto var : fetch(query)) {
@@ -126,6 +129,7 @@ void map_view::redraw()
             catch (std::exception const& e) {
                 qWarning() << "draw error:" << e.what();
             }
+        art.end();
         post(this, [=, img = std::move(img)] mutable {
             if (tok.stop_requested())
                 return;

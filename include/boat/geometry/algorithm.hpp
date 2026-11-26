@@ -30,6 +30,12 @@ box_interpolate(T const& mbr, size_t edge_points, size_t area_points)
     return ret;
 }
 
+inline auto cartesian_envelope(geographic::multi_point const& points)
+{
+    return return_envelope<cartesian::box>(
+        points, boost::geometry::strategies::envelope::cartesian<>{});
+}
+
 inline auto buffer(double distance, size_t num_points)
 {
     return [=]<single T>(T const& geom) -> polygon auto {
@@ -60,6 +66,19 @@ constexpr auto meter = overloaded{
         auto den = std::cos(lat * numbers::degree);
         return den ? self() / den : 0.;
     }};
+
+inline std::vector<geographic::box> split_at_antimeridian(
+    geographic::box const& box)
+{
+    auto a = box.min_corner(), b = box.max_corner();
+    if (a.x() < -180.) {
+        a.x(a.x() + 360.);
+        b.x(b.x() + 360.);
+    }
+    if (b.x() <= 180.)
+        return {{a, b}};
+    return {{a, {180., b.y()}}, {{-180., a.y()}, {b.x() - 360., b.y()}}};
+}
 
 auto visitor(auto... fn)
 {

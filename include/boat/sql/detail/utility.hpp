@@ -20,15 +20,6 @@ constexpr auto geo = overloaded{
         });
     }};
 
-db::column const& find(
-    range_of<db::column> auto&& cols,
-    std::string_view column_name)
-{
-    auto it = std::ranges::find(cols, column_name, &db::column::column_name);
-    check(it != cols.end(), column_name);
-    return *it;
-}
-
 db::column const& find_geo(
     range_of<db::column> auto&& cols,
     std::string_view column_name)

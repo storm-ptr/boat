@@ -39,5 +39,6 @@ boat::gui::scene to_scene(tree const&);
 boat::gui::scene read_scene(QString const& path);
 bool write_scene(QString const& path, boat::gui::scene const&);
 QString to_string(tree*);
+QString to_string(boat::db::layer const&);
 
 #endif  // TREE_H

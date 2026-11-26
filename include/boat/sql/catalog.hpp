@@ -33,18 +33,24 @@ public:
         return sql::get_table(*command, schema_name, table_name);
     }
 
-    db::rowset select(db::table const& tbl, db::page const& rq) override
+    db::rowset select(
+        db::table const& tbl,
+        db::page const& rq,
+        std::stop_token tok = {}) override
     {
         auto q = db::query{};
         q << "\n select " << select_list{tbl, rq.select_list} << "\n from "
           << id{tbl} << order_by{tbl, rq.order_by} << "\n limit "
           << to_chars(rq.limit) << "\n offset " << to_chars(rq.offset);
-        return command->exec(q);
+        return command->exec(q, tok);
     }
 
-    db::rowset select(db::table const& tbl, db::bbox const& rq) override
+    db::rowset select(
+        db::table const& tbl,
+        db::bbox const& rq,
+        std::stop_token tok = {}) override
     {
-        return command->exec(dial().select(tbl, rq));
+        return command->exec(dial().select(tbl, rq), tok);
     }
 
     void insert(
@@ -57,7 +63,8 @@ public:
         check(!rs.columns.empty(), "no columns");
         auto cols = std::vector<std::unique_ptr<adaptors::adaptor>>{};
         for (auto& col : rs.columns)
-            cols.push_back(adaptors::make(tbl.dbms, find(tbl.columns, col)));
+            cols.push_back(
+                adaptors::make(tbl.dbms, db::find(tbl.columns, col)));
         for (auto&& rows :
              rs | std::views::chunk(std::max<>(1uz, 999uz / cols.size()))) {
             if (tok.stop_requested())

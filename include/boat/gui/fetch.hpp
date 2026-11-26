@@ -3,8 +3,7 @@
 #ifndef BOAT_GUI_FETCH_HPP
 #define BOAT_GUI_FETCH_HPP
 
-#include <boat/db/catalog.hpp>
-#include <boat/gui/caches/cache.hpp>
+#include <boat/gui/describe.hpp>
 #include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/tile.hpp>
 #include <boat/gui/variant.hpp>
@@ -12,10 +11,10 @@
 namespace boat::gui {
 
 struct layer_query {
-    std::move_only_function<db::catalog&() const> catalog;
-    db::layer layer;
     std::shared_ptr<caches::cache> cache;
     size_t cache_key;  ///< Unique within the cache.
+    db::layer layer;
+    catalog_getter catalog;
     geometry::geographic::grid footprint;
     int limit = 512;
     std::stop_token stop;
@@ -23,19 +22,14 @@ struct layer_query {
 
 namespace detail {
 
-using caches::detail::get_or_invoke;
-
-std::generator<variant> vectors(layer_query const& q)
+inline std::generator<variant> vectors(layer_query const& q)
 {
     namespace bgi = boost::geometry::index;
     auto cells = std::max<>(1, int(std::sqrt(2 * q.limit)));
-    auto tbl = get_or_invoke(q.cache.get(), q.cache_key, [&] {
-        return q.catalog().get_table(q.layer.schema_name, q.layer.table_name);
-    });
+    auto tbl = get_table(q.cache.get(), q.cache_key, q.layer, q.catalog);
     auto& col = q.layer.column_name;
-    auto it = std::ranges::find(tbl.columns, col, &db::column::column_name);
-    check(it != tbl.columns.end(), col);
-    auto crs = geometry::make_srs_variant(it->epsg, it->proj4);
+    auto& fld = db::find(tbl.columns, col);
+    auto crs = geometry::make_srs_variant(fld.epsg, fld.proj4);
     auto inv =
         geometry::transform(geometry::backward(geometry::transformation(crs)));
     auto done = bgi::rtree<geometry::cartesian::box, bgi::rstar<4>>{};
@@ -45,42 +39,40 @@ std::generator<variant> vectors(layer_query const& q)
         if (done.qbegin(bgi::contains(box)) != done.qend())
             continue;
         auto a = box.min_corner(), b = box.max_corner();
-        auto vec = get_or_invoke(
-            q.cache.get(),
-            std::tuple{q.cache_key, a.x(), a.y(), b.x(), b.y(), q.limit},
-            [&] {
-                auto rs = q.catalog().select(tbl, {{col}, col, box, q.limit});
-                auto ret = vector{};
-                for (auto&& wkb : rs | db::view<blob>)
-                    blob_view{wkb} >> ret.geoms.emplace_back();
-                ret.partial = ret.geoms.size() >= q.limit;
-                if (ret.partial)
-                    ret.geoms = sample(std::move(ret.geoms), box, cells);
-                ret.geoms =
-                    inv(std::move(ret.geoms)).value_or(decltype(ret.geoms){});
-                return ret;
-            });
+        auto key = std::tuple{q.cache_key, a.x(), a.y(), b.x(), b.y(), q.limit};
+        auto read = [&] {
+            auto rs =
+                q.catalog().select(tbl, {{col}, col, box, q.limit}, q.stop);
+            if (q.stop.stop_requested())
+                return vector{};
+            auto ret = vector{.partial = rs.rows.size() >= q.limit};
+            for (auto&& wkb : rs | db::view<blob>)
+                blob_view{wkb} >> ret.geoms.emplace_back();
+            if (ret.partial)
+                ret.geoms = sample(std::move(ret.geoms), box, cells);
+            ret.geoms =
+                inv(std::move(ret.geoms)).value_or(decltype(ret.geoms){});
+            return ret;
+        };
+        auto vec = get_or_invoke(q.cache.get(), key, q.stop, read);
         if (!vec.partial)
             done.insert(box);
-        if (!vec.geoms.empty())
+        if (!vec.geoms.empty() && !q.stop.stop_requested())
             co_yield std::move(vec);
     }
 }
 
-std::generator<variant> rasters(layer_query const& q)
+inline std::generator<variant> rasters(layer_query const& q)
 {
-    auto& footprint = q.footprint;
-    if (footprint.empty())
+    auto& grid = q.footprint;
+    if (grid.empty())
         co_return;
-    auto r = get_or_invoke(q.cache.get(), q.cache_key, [&] {
-        return q.catalog().get_raster(q.layer);
-    });
-    auto meters = std::next(footprint.begin(), footprint.size() > 1)->first;
+    auto r = get_raster(q.cache.get(), q.cache_key, q.layer, q.catalog);
+    auto meters = std::next(grid.begin(), grid.size() > 1)->first;
     auto mat = affine(r);
     auto crs = geometry::make_srs_variant(r.epsg, r.proj4);
     auto uncached = std::vector<tile>{};
-    for (auto& t :
-         tiles(footprint.begin()->second, meters, r.extent, mat, crs)) {
+    for (auto& t : tiles(grid.begin()->second, meters, r.extent, mat, crs)) {
         auto any =
             q.cache ? q.cache->get(std::pair{q.cache_key, t}) : std::any{};
         if (!any.has_value()) {

@@ -119,19 +119,22 @@ catch (std::exception const&) {
     return false;
 }
 
+QString to_string(boat::db::layer const& l)
+{
+    return QString::fromStdString(boat::concat(
+        l.schema_name,
+        l.schema_name.empty() ? "" : ".",
+        l.table_name,
+        ".",
+        l.column_name));
+}
+
 QString to_string(tree* ptr)
 {
     auto vis = boat::overloaded{
         [](branch const& v) {
             return QString::fromStdString(v.source.source_name);
         },
-        [](leaf const& v) {
-            return QString::fromStdString(boat::concat(
-                v.layer.schema_name,
-                v.layer.schema_name.empty() ? "" : ".",
-                v.layer.table_name,
-                ".",
-                v.layer.column_name));
-        }};
+        [](leaf const& v) { return to_string(v.layer); }};
     return std::visit(vis, ptr->data);
 }

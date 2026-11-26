@@ -29,13 +29,7 @@ std::optional<geometry::raster::box> draw_image(
     auto num_points = std::max<>({iw, ih, 4}) / 4;
     auto points = geo::box_interpolate(
         in_box, size_t(2 * std::sqrt(num_points)), num_points);
-    auto out_box = fwd(std::move(points)).transform([](auto const& points) {
-        auto ret =
-            geo::cartesian::box{{INFINITY, INFINITY}, {-INFINITY, -INFINITY}};
-        for (auto const& p : points)
-            boost::geometry::expand(ret, geo::cartesian{}(p));
-        return ret;
-    });
+    auto out_box = fwd(std::move(points)).transform(geo::cartesian_envelope);
     auto clipped = geo::cartesian::box{};
     if (!out_box || !boost::geometry::intersection(*out_box, out_rect, clipped))
         return {};

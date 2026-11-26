@@ -5,6 +5,8 @@
 
 #include <atomic>
 #include <boat/detail/any_hashable.hpp>
+#include <functional>
+#include <stop_token>
 
 namespace boat::gui::caches {
 
@@ -25,19 +27,22 @@ struct cache {
     virtual cache_stats stats() const = 0;
 };
 
-namespace detail {
-
-auto get_or_invoke(cache* ptr, any_hashable const& key, auto&& fn)
+template <class F, class... Args>
+auto get_or_invoke(
+    cache* ptr,
+    any_hashable const& key,
+    std::stop_token tok,
+    F&& f,
+    Args&&... args)
 {
     if (auto any = ptr ? ptr->get(key) : std::any{}; any.has_value())
-        return std::any_cast<decltype(fn())>(std::move(any));
-    auto ret = fn();
-    if (ptr)
+        return std::any_cast<std::decay_t<std::invoke_result_t<F, Args...>>>(
+            std::move(any));
+    auto ret = std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+    if (ptr && !tok.stop_requested())
         ptr->put(key, ret);
     return ret;
 }
-
-}  // namespace detail
 
 /// Process-wide sequence.
 inline size_t next_key()

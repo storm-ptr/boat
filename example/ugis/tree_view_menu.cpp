@@ -76,10 +76,6 @@ void tree_view::contextMenuEvent(QContextMenuEvent* event)
         model_.refresh(idx);
     });
     add(model_.is_branch(idx), "rename source", [this, idx] { edit(idx); });
-    add(is_vector && map_, "sample from map to log", [this, idx] {
-        if (map_)
-            model_.sample(idx, map_->view());
-    });
     add(source && sql_handler_ && !boat::is_http_url(source->address),
         "sql",
         [this, source] { sql_handler_(*source); });

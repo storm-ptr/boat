@@ -31,9 +31,17 @@ public:
         throw err;
     }
 
-    db::rowset select(db::table const&, db::page const&) override { throw err; }
+    db::rowset select(db::table const&, db::page const&, std::stop_token = {})
+        override
+    {
+        throw err;
+    }
 
-    db::rowset select(db::table const&, db::bbox const&) override { throw err; }
+    db::rowset select(db::table const&, db::bbox const&, std::stop_token = {})
+        override
+    {
+        throw err;
+    }
 
     void insert(db::table const&, db::rowset const&, std::stop_token = {})
         override

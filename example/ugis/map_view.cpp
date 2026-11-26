@@ -31,10 +31,9 @@ auto unproject(viewport const& vp, QPointF cursor)
 }  // namespace
 
 map_view::map_view(QWidget* parent)
-    : QWidget(parent)
-    , cache_(std::make_shared<boat::gui::caches::lru>(2'000))
-    , tasks_{1}
+    : QWidget(parent), cache_(std::make_shared<boat::gui::caches::lru>(2'000))
 {
+    init_panel();
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent);
 }
@@ -71,6 +70,7 @@ void map_view::mouseMoveEvent(QMouseEvent* event)
         geo::transform(geo::backward(tf))(point(xy->x() + dx, xy->y() + dy));
     if (!ll)
         return;
+    query_tasks_.request_stop();
     map_ = bounded({*ll, res}).value_or(map_);
     schedule_paint();
 }
@@ -88,7 +88,7 @@ void map_view::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() != Qt::LeftButton)
         return;
     panning_pos_.reset();
-    setCursor(tasks_.busy() ? Qt::BusyCursor : Qt::ArrowCursor);
+    update_cursor();
 }
 
 void map_view::paintEvent(QPaintEvent*)
@@ -97,6 +97,7 @@ void map_view::paintEvent(QPaintEvent*)
     auto const& [img_mid, img_res] = img_view_;
     auto art = QPainter{this};
     art.fillRect(rect(), Qt::white);
+    auto guard = qScopeGuard([&] { draw_highlight(art); });
     if (img_.isNull())
         return;
     if (boost::geometry::equals(img_mid, mid) && img_res == res &&
@@ -122,6 +123,7 @@ void map_view::paintEvent(QPaintEvent*)
 
 void map_view::schedule_paint()
 {
+    render_tasks_.request_stop();
     img_timer_.start(350, this);
     if (!map_timer_.isActive())
         map_timer_.start(75, this);
@@ -129,8 +131,10 @@ void map_view::schedule_paint()
 
 void map_view::set_layers(std::vector<leaf> layers)
 {
+    clear_identify();
+    panel()->hide();
     layers_ = std::move(layers);
-    redraw();
+    schedule_paint();
 }
 
 void map_view::timerEvent(QTimerEvent* event)
@@ -167,21 +171,26 @@ viewport map_view::view() const
 
 void map_view::watch_task(QFuture<void> fut)
 {
+    update_cursor();
+    fut.then(this, [this] { update_cursor(); });
+}
+
+void map_view::update_cursor()
+{
     if (!panning_pos_)
-        setCursor(Qt::BusyCursor);
-    fut.then(this, [this] {
-        if (!panning_pos_)
-            setCursor(tasks_.busy() ? Qt::BusyCursor : Qt::ArrowCursor);
-    });
+        setCursor(
+            query_tasks_.busy() || render_tasks_.busy() ? Qt::BusyCursor
+                                                        : Qt::ArrowCursor);
 }
 
 void map_view::set_view(boat::gui::view const& v)
 {
+    query_tasks_.request_stop();
     auto valid = std::abs(v.center.x()) <= lon_max &&
                  std::abs(v.center.y()) <= lat_max && v.resolution >= res_min &&
                  v.resolution <= res_max;
     map_ = valid ? v : boat::gui::view{};
-    redraw();
+    schedule_paint();
 }
 
 std::optional<boat::gui::view> map_view::bounded(boat::gui::view v)
@@ -205,6 +214,7 @@ void map_view::wheelEvent(QWheelEvent* event)
     auto a = ll(res), b = ll(next.resolution);
     if (a && b)
         next.center = {mid.x() + a->x() - b->x(), mid.y() + a->y() - b->y()};
+    query_tasks_.request_stop();
     map_ = bounded(next).value_or(map_);
     schedule_paint();
     update_status(pos);

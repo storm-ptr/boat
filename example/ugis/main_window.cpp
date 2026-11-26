@@ -45,12 +45,17 @@ main_window::main_window(QString const& scene_path)
     log->setReadOnly(true);
     log->setMaximumBlockCount(10'000);
 
-    auto map = new map_view{this};
+    auto page = new QSplitter{Qt::Vertical, this};
+    auto map = new map_view{page};
+    page->addWidget(map->panel());
+    page->setChildrenCollapsible(false);
+    page->setStretchFactor(0, 1);
+    page->setSizes({height, 1});
 
     auto tabs = new QTabWidget{this};
     tabs->setTabPosition(QTabWidget::East);
     tabs->setElideMode(Qt::ElideRight);
-    tabs->addTab(map, "map");
+    tabs->addTab(page, "map");
     tabs->addTab(log, "log");
 
     auto splitter = new QSplitter{Qt::Horizontal, this};

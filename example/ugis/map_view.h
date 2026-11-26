@@ -4,21 +4,19 @@
 #define MAP_VIEW_H
 
 #include <QBasicTimer>
-#include <QImage>
-#include <QPoint>
 #include <QWidget>
 #include <boat/gui/caches/cache.hpp>
-#include <memory>
 #include "task_group.h"
 #include "viewport.h"
 
-class QContextMenuEvent;
+struct feature;
 struct leaf;
 
 class map_view : public QWidget {
 public:
     explicit map_view(QWidget* parent = nullptr);
     ~map_view() override;
+    QWidget* panel() const;
     void locate(leaf);
     void set_layers(std::vector<leaf>);
     void set_view(boat::gui::view const&);
@@ -36,10 +34,19 @@ protected:
     void wheelEvent(QWheelEvent*) override;
 
 private:
+    static constexpr auto query_limit = 512;
+    static constexpr auto feature_limit = 10;
+
     static std::optional<boat::gui::view> bounded(boat::gui::view);
+    void clear_identify();
     QString coordinate_text(QPointF cursor) const;
+    void draw_highlight(QPainter&) const;
+    void identify(QPointF cursor, viewport);
+    void init_panel();
     void redraw();
     void schedule_paint();
+    void show_hits(std::vector<feature>);
+    void update_cursor();
     void update_status(QPointF cursor);
     void watch_task(QFuture<void>);
 
@@ -56,7 +63,10 @@ private:
     QBasicTimer map_timer_;
 
     std::optional<QPoint> panning_pos_;
-    task_group tasks_;
+    struct selection;
+    selection* panel_{};
+    task_group query_tasks_{1};
+    task_group render_tasks_{1};
 };
 
 #endif  // MAP_VIEW_H

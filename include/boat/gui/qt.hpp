@@ -6,7 +6,6 @@
 #include <QImage>
 #include <QPainter>
 #include <QPainterPath>
-#include <boat/gui/detail/geometry.hpp>
 #include <boat/gui/detail/raster.hpp>
 
 namespace boat::gui {

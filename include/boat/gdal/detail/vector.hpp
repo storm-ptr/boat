@@ -72,20 +72,21 @@ inline void delete_table(GDALDatasetH ds, std::string_view tbl)
 {
     for (int i{}, n = GDALDatasetGetLayerCount(ds); i < n; ++i) {
         auto lyr = GDALDatasetGetLayer(ds, i);
-        auto fd = OGR_L_GetLayerDefn(lyr);
-        if (tbl == OGR_FD_GetName(fd)) {
-            check(OGR_DS_DeleteLayer(ds, i));
-            break;
-        }
+        if (tbl == OGR_FD_GetName(OGR_L_GetLayerDefn(lyr)))
+            return check(OGR_DS_DeleteLayer(ds, i));
     }
 }
 
-db::rowset select(OGRLayerH lyr, range_of<fields::field> auto&& flds, int limit)
+db::rowset select(
+    OGRLayerH lyr,
+    range_of<fields::field> auto&& flds,
+    int limit,
+    std::stop_token tok = {})
 {
     auto ret = db::rowset{};
     for (auto& fld : flds)
-        ret.columns.push_back(std::visit([&](auto& v) { return v.name; }, fld));
-    for (int i = 0; i < limit; ++i) {
+        ret.columns.push_back(std::visit([](auto& v) { return v.name; }, fld));
+    for (int i{}; i < limit && !tok.stop_requested(); ++i) {
         auto feat = feature_ptr{OGR_L_GetNextFeature(lyr)};
         if (!feat)
             break;

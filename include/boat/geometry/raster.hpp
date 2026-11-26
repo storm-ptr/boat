@@ -75,17 +75,18 @@ geographic::grid geographic_interpolate(
 }
 
 /// Boxes use crs coordinates; footprint keys are spacings in metres.
-/// Skips boxes touching the poles or antimeridian.
+/// Splits at the antimeridian and skips boxes touching the poles.
 auto make_boxes(geographic::grid const& footprint, srs_spec auto const& crs)
 {
     auto ret = std::vector<cartesian::box>{};
     auto fwd = transform(forward(transformation(crs)));
     auto add = [&](geographic::box const& ll) {
         auto a = ll.min_corner(), b = ll.max_corner();
-        if (a.x() <= -180. || b.x() >= 180. || a.y() <= -90. || b.y() >= 90.)
+        if (a.y() <= -90. || b.y() >= 90.)
             return;
-        if (auto xy = fwd(ll).transform(cartesian{}))
-            ret.push_back(*xy);
+        for (auto& part : split_at_antimeridian(ll))
+            if (auto xy = fwd(box_interpolate(part, 2, 0)))
+                ret.push_back(cartesian_envelope(*xy));
     };
     for (auto& lvl : footprint | std::views::reverse) {
         auto d = lvl.first * numbers::inv_sqrt_2;

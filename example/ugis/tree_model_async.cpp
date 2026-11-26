@@ -1,14 +1,13 @@
 // Andrew Naplavkov
 
 #include <QDebug>
+#include <boat/db/catalog.hpp>
 #include <boat/db/io.hpp>
-#include <boat/geometry/raster.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include <filesystem>
 #include "copy_layer.h"
 #include "db.h"
 #include "tree_model.h"
-#include "viewport.h"
 
 namespace {
 
@@ -153,41 +152,4 @@ void tree_model::paste_layer(QModelIndex const& idx, QString const& name)
                 qInfo() << "paste_layer completed";
             });
         });
-}
-
-void tree_model::sample(QModelIndex const& idx, viewport const& vp)
-{
-    namespace geo = boat::geometry;
-    auto l = to_leaf(idx);
-    if (!l || l->layer.raster)
-        return;
-    run(tasks_, [lyr = *l, vp](auto tok) {
-        if (tok.stop_requested())
-            return;
-        auto cat = make_catalog(lyr.address);
-        auto tbl = cat->get_table(lyr.layer.schema_name, lyr.layer.table_name);
-        auto& col = lyr.layer.column_name;
-        auto it =
-            std::ranges::find(tbl.columns, col, &boat::db::column::column_name);
-        if (it == tbl.columns.end())
-            return;
-        auto& [view, ext] = vp;
-        if (ext.x() <= 0 || ext.y() <= 0)
-            return;
-        auto ortho = geo::ortho(view.center);
-        auto mat = geo::affine(ext, view.center, view.resolution, ortho);
-        auto footprint = geo::geographic_interpolate(
-            ext, mat, ortho, view.resolution * boat::tile::half_size);
-        auto crs = geo::make_srs_variant(it->epsg, it->proj4);
-        for (auto& box : geo::make_boxes(footprint, crs)) {
-            if (tok.stop_requested())
-                return;
-            auto rs = cat->select(tbl, boat::db::bbox{{}, col, box, 10});
-            if (!rs.empty()) {
-                qInfo().noquote() << boat::concat(rs);
-                return;
-            }
-        }
-        qInfo() << "sample: no data found";
-    });
 }

@@ -13,6 +13,7 @@
 #include <boat/geometry/raster.hpp>
 #include "formats.h"
 #include "map_view.h"
+#include "tree.h"
 
 namespace geo = boat::geometry;
 
@@ -45,6 +46,13 @@ void save_png(
 void map_view::contextMenuEvent(QContextMenuEvent* event)
 {
     auto menu = QMenu{this};
+    auto pos = event->pos();
+    auto text = coordinate_text(pos);
+    if (!text.isEmpty() &&
+        std::ranges::any_of(layers_, [](auto& l) { return !l.layer.raster; }))
+        menu.addAction("identify features", this, [this, pos, vp = view()] {
+            identify(pos, vp);
+        });
     menu.addAction("save map as PNG", this, [this] {
         auto path = QFileDialog::getSaveFileName(this, {}, {}, "PNG (*.png)");
         if (path.isEmpty())
@@ -60,7 +68,7 @@ void map_view::contextMenuEvent(QContextMenuEvent* event)
             QMessageBox::warning(this, {}, QString::fromUtf8(e.what()));
         }
     });
-    if (auto text = coordinate_text(event->pos()); !text.isEmpty())
+    if (!text.isEmpty())
         menu.addAction("copy coordinates", this, [text] {
             QGuiApplication::clipboard()->setText(text);
         });

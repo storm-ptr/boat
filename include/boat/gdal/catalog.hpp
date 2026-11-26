@@ -33,17 +33,17 @@ struct catalog : db::catalog {
 
     db::table get_table(std::string_view, std::string_view table_name) override
     {
-        return gdal::get_table(GDALDatasetGetLayerByName(
-            dataset.get(), std::string{table_name}.data()));
+        return gdal::get_table(layer(std::string{table_name}));
     }
 
-    db::rowset select(db::table const& tbl, db::page const& rq) override
+    db::rowset select(
+        db::table const& tbl,
+        db::page const& rq,
+        std::stop_token tok = {}) override
     {
         auto q = db::query{};
         q << "\n select";
-        if (auto col = OGR_L_GetFIDColumn(GDALDatasetGetLayerByName(
-                dataset.get(), tbl.table_name.data()));
-            col && *col)
+        if (auto col = OGR_L_GetFIDColumn(layer(tbl.table_name)); col && *col)
             q << " FID as \"" << col << "\",";
         q << " * from " << db::id{tbl.table_name};
         for (auto sep{"\n order by "}; auto& key : rq.order_by)
@@ -53,14 +53,19 @@ struct catalog : db::catalog {
           << to_chars(rq.offset);
         if (auto lyr = execute(dataset.get(), q.text('"', {}).data(), "OGRSQL"))
             return gdal::select(
-                lyr.get(), fields::make(lyr.get(), rq.select_list), rq.limit);
+                lyr.get(),
+                fields::make(lyr.get(), rq.select_list),
+                rq.limit,
+                tok);
         return {};
     }
 
-    db::rowset select(db::table const& tbl, db::bbox const& rq) override
+    db::rowset select(
+        db::table const& tbl,
+        db::bbox const& rq,
+        std::stop_token tok = {}) override
     {
-        auto lyr =
-            GDALDatasetGetLayerByName(dataset.get(), tbl.table_name.data());
+        auto lyr = layer(tbl.table_name);
         auto fd = OGR_L_GetLayerDefn(lyr);
         auto a = rq.bounds.min_corner(), b = rq.bounds.max_corner();
         OGR_L_SetSpatialFilterRectEx(
@@ -70,7 +75,8 @@ struct catalog : db::catalog {
             a.y(),
             b.x(),
             b.y());
-        return gdal::select(lyr, fields::make(lyr, rq.select_list), rq.limit);
+        return gdal::select(
+            lyr, fields::make(lyr, rq.select_list), rq.limit, tok);
     }
 
     void insert(
@@ -78,9 +84,7 @@ struct catalog : db::catalog {
         db::rowset const& rs,
         std::stop_token tok = {}) override
     {
-        auto lyr =
-            GDALDatasetGetLayerByName(dataset.get(), tbl.table_name.data());
-        gdal::insert(lyr, rs, tok);
+        gdal::insert(layer(tbl.table_name), rs, tok);
     }
 
     db::table create(db::table const& tbl) override
@@ -120,6 +124,12 @@ struct catalog : db::catalog {
     }
 
     void commit() override { gdal::commit(dataset.get()); }
+
+private:
+    OGRLayerH layer(std::string const& name) const
+    {
+        return GDALDatasetGetLayerByName(dataset.get(), name.data());
+    }
 };
 
 }  // namespace boat::gdal

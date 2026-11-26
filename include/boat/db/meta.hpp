@@ -35,6 +35,13 @@ struct column {
     std::string proj4;
 };
 
+column const& find(range_of<column> auto&& cols, std::string_view column_name)
+{
+    auto it = std::ranges::find(cols, column_name, &column::column_name);
+    check(it != cols.end(), column_name);
+    return *it;
+}
+
 inline bool has_coord_sys(column const& col)
 {
     return col.epsg > 0 || !col.wkt.empty() || !col.proj4.empty();

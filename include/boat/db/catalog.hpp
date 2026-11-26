@@ -23,9 +23,9 @@ struct catalog {
         std::string_view schema_name,
         std::string_view table_name) = 0;
 
-    virtual rowset select(table const&, page const&) = 0;
-
-    virtual rowset select(table const&, bbox const&) = 0;
+    /// Drivers may ignore cancellation, return partial results, or throw.
+    virtual rowset select(table const&, page const&, std::stop_token = {}) = 0;
+    virtual rowset select(table const&, bbox const&, std::stop_token = {}) = 0;
 
     /// Cancellation may leave a partially inserted range.
     virtual void insert(table const&, rowset const&, std::stop_token = {}) = 0;

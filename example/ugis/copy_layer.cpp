@@ -1,6 +1,7 @@
 // Andrew Naplavkov
 
 #include <QDebug>
+#include <boat/db/catalog.hpp>
 #include <boat/gui/caches/cache.hpp>
 #include "copy_layer.h"
 #include "db.h"
@@ -64,9 +65,9 @@ leaf copy_vector(
     cat2->set_autocommit(false);
     qInfo() << "copying rows";
     for (size_t done{};;) {
-        auto rs =
-            cat1->select(tbl1, boat::db::page{.offset = done, .limit = 20'000});
-        if (rs.empty())
+        auto rs = cat1->select(
+            tbl1, boat::db::page{.offset = done, .limit = 20'000}, tok);
+        if (rs.empty() || tok.stop_requested())
             break;
         cat2->insert(tbl2, rs, tok);
         if (tok.stop_requested())

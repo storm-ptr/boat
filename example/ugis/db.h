@@ -3,9 +3,19 @@
 #ifndef DB_H
 #define DB_H
 
-#include <boat/db/catalog.hpp>
-#include <boat/db/command.hpp>
+#include <map>
 #include <memory>
+#include <string>
+
+namespace boat::db {
+struct catalog;
+struct command;
+struct raster;
+}  // namespace boat::db
+
+using catalog_map = std::map<std::string, std::unique_ptr<boat::db::catalog>>;
+
+boat::db::catalog& get_catalog(catalog_map&, std::string const& address);
 
 std::unique_ptr<boat::db::catalog> make_catalog(
     std::string_view address,

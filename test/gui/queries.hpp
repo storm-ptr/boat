@@ -50,10 +50,10 @@ inline std::generator<boat::gui::layer_query> queries()
     for (auto cat : catalogs())
         for (auto& lyr : cat->layers())
             co_yield gui::layer_query{
-                .catalog = [=] -> db::catalog& { return *cat; },
-                .layer = std::move(lyr),
                 .cache = cache,
-                .cache_key = ++cache_key};
+                .cache_key = ++cache_key,
+                .layer = std::move(lyr),
+                .catalog = [=] -> db::catalog& { return *cat; }};
 }
 
 #endif  // BOAT_TEST_GUI_QUERIES_HPP

@@ -4,6 +4,14 @@
 #include <boat/commands.hpp>
 #include "db.h"
 
+boat::db::catalog& get_catalog(catalog_map& cats, std::string const& address)
+{
+    auto& cat = cats[address];
+    if (!cat)
+        cat = make_catalog(address);
+    return *cat;
+}
+
 std::unique_ptr<boat::db::catalog> make_catalog(
     std::string_view address,
     bool update)

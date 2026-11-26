@@ -7,8 +7,6 @@
 #include "task_group.h"
 #include "tree.h"
 
-struct viewport;
-
 class tree_model : public QAbstractItemModel {
 public:
     explicit tree_model(QObject* parent);
@@ -34,7 +32,6 @@ public:
     void paste_layer(QModelIndex const&, QString const& name);
     void request_stop();
     void refresh(QModelIndex const&);
-    void sample(QModelIndex const& idx, viewport const& vp);
     void unmount(QModelIndex const&);
 
     void mutate_leaf(QModelIndex const& idx, std::invocable<leaf&> auto&& fn)

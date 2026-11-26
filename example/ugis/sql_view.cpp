@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <boat/db/command.hpp>
 #include <boat/db/io.hpp>
 #include "db.h"
 #include "sql_view.h"
